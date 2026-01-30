@@ -37,6 +37,24 @@
   max-width: 600px;
   padding: var(--space-8);
   text-align: center;
+  position: relative;
+}
+
+.onboarding-skip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  padding: var(--space-2) var(--space-3);
+  transition: color 0.2s ease;
+}
+
+.onboarding-skip:hover {
+  color: var(--color-text-secondary);
 }
 
 .onboarding-progress {

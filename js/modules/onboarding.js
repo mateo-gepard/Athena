@@ -303,12 +303,23 @@ const OnboardingModule = {
     const isFirst = this.currentStep === 0;
     const isLast = this.currentStep === this.steps.length - 1;
     
-    const overlay = document.createElement('div');
-    overlay.className = 'onboarding-overlay';
-    overlay.id = 'onboarding-overlay';
+    // Check if overlay already exists
+    let overlay = document.getElementById('onboarding-overlay');
+    const isNewOverlay = !overlay;
+    
+    if (isNewOverlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'onboarding-overlay';
+      overlay.id = 'onboarding-overlay';
+    }
     
     overlay.innerHTML = `
       <div class="onboarding-container">
+        <!-- Skip button -->
+        <button class="onboarding-skip" id="onboarding-skip" title="Überspringen">
+          Überspringen ✕
+        </button>
+        
         <!-- Progress -->
         <div class="onboarding-progress">
           ${this.steps.map((s, i) => `
@@ -331,11 +342,10 @@ const OnboardingModule = {
       </div>
     `;
     
-    // Remove existing overlay
-    const existing = document.getElementById('onboarding-overlay');
-    if (existing) existing.remove();
-    
-    document.body.appendChild(overlay);
+    // Only append if new overlay
+    if (isNewOverlay) {
+      document.body.appendChild(overlay);
+    }
     
     // Focus input if present
     setTimeout(() => {
@@ -347,6 +357,12 @@ const OnboardingModule = {
   // Setup event listeners
   setupEventListeners() {
     document.addEventListener('click', (e) => {
+      // Skip button
+      if (e.target.id === 'onboarding-skip') {
+        this.skip();
+        return;
+      }
+      
       // Next button
       if (e.target.id === 'onboarding-next') {
         this.next();
@@ -421,6 +437,27 @@ const OnboardingModule = {
       document.querySelectorAll('.sphere-option.selected').forEach(s => {
         this.userData.focusAreas.push(s.dataset.sphere);
       });
+    }
+  },
+  
+  // Skip onboarding
+  skip() {
+    if (confirm('Onboarding wirklich überspringen? Du kannst die Features später in den Einstellungen entdecken.')) {
+      // Mark complete without creating sample data
+      this.markComplete();
+      
+      // Remove overlay with animation
+      const overlay = document.getElementById('onboarding-overlay');
+      if (overlay) {
+        overlay.classList.add('fade-out');
+        setTimeout(() => {
+          overlay.remove();
+          if (typeof NexusApp !== 'undefined') {
+            NexusApp.startApp();
+          }
+        }, 300);
+      }
+      console.log('⏭️ Onboarding skipped');
     }
   },
   

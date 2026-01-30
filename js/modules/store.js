@@ -643,7 +643,48 @@ const NexusStore = {
   
   // Clear all data
   clearAll() {
-    localStorage.removeItem(this.STORAGE_KEY);
+    // Remove main data store
+    try {
+      localStorage.removeItem(this.STORAGE_KEY);
+      // Remove onboarding flag to show it again
+      localStorage.removeItem('nexus_onboarding_complete');
+      // Remove API key and AI settings
+      localStorage.removeItem('nexus_atlas_api_key');
+      localStorage.removeItem('nexus_atlas_model');
+      // Remove any other nexus keys
+      Object.keys(localStorage).filter(k => k.startsWith('nexus')).forEach(k => {
+        localStorage.removeItem(k);
+      });
+    } catch (e) {
+      console.warn('Could not clear localStorage:', e);
+    }
+    
+    // Reset in-memory state completely
+    this.state = {
+      user: { name: '', email: '', preferences: { theme: 'dark', startPage: 'command-center', defaultSphere: 'freizeit' }},
+      spheres: [
+        { id: 'geschaeft', name: 'Geschäft', color: '#4A7C94', icon: '💼' },
+        { id: 'projekte', name: 'Projekte', color: '#7C6A94', icon: '🚀' },
+        { id: 'schule', name: 'Schule', color: '#94854A', icon: '📚' },
+        { id: 'sport', name: 'Sport', color: '#4A946A', icon: '🏃' },
+        { id: 'freizeit', name: 'Freizeit', color: '#6B6862', icon: '⚪' }
+      ],
+      tasks: [],
+      habits: [],
+      projects: [],
+      ventures: [],
+      goals: [],
+      bucketItems: [],
+      notes: [],
+      events: [],
+      contacts: [],
+      inbox: [],
+      snapshots: [],
+      currentPage: 'command-center',
+      selectedDate: new Date().toISOString().split('T')[0]
+    };
+    
+    // Reload page to restart fresh
     location.reload();
   },
   
