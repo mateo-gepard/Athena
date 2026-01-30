@@ -102,7 +102,27 @@ Antworte NUR mit validem JSON im Format:
     }
   },
   
-  // Core chat function
+  // Simple chat with string input (for Atlas panel)
+  async sendMessage(userMessage, options = {}) {
+    const messages = [
+      {
+        role: 'system',
+        content: `Du bist Atlas, der persönliche AI-Assistent in NEXUS ULTRA - einem Life Operating System.
+Du hilfst dem Nutzer bei der Planung, Organisation und Motivation. 
+Sei freundlich, professionell und antworte auf Deutsch.
+Halte deine Antworten prägnant aber hilfreich.
+Du kannst auf Befehle wie "neuer task", "was steht heute an", "zeige tasks" etc. reagieren.`
+      },
+      {
+        role: 'user',
+        content: userMessage
+      }
+    ];
+    
+    return await this.chat(messages, options);
+  },
+  
+  // Core chat function (expects messages array)
   async chat(messages, options = {}) {
     const apiKey = this.getApiKey();
     

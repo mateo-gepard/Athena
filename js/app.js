@@ -421,7 +421,7 @@ const NexusApp = {
     try {
       // Try to use AI service if available
       if (typeof AtlasAI !== 'undefined' && AtlasAI.hasApiKey()) {
-        const response = await AtlasAI.chat(message);
+        const response = await AtlasAI.sendMessage(message);
         thinkingMsg.remove();
         
         const aiMsg = document.createElement('div');
