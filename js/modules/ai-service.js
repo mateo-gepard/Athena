@@ -227,6 +227,60 @@ type: holiday|vacation|visit|birthday|event|school_break
 4. VERKNÜPFUNGEN: Du kannst alles mit allem verknüpfen (Notizen↔Ventures, Tasks↔Projekte, etc.)
 5. NACHFRAGEN: Wenn wichtige Info fehlt, frage EINMAL nach. Nicht nervig sein.
 6. TEAM: Teammitglieder sind Kontakte. Erst Kontakt erstellen, dann zu Venture/Projekt hinzufügen.
+7. DUPLIKATS-CHECK: IMMER prüfen ob Entity schon existiert bevor du neu erstellst!
+   - Tasks mit gleichem Titel → UPDATE statt ADD
+   - Habits mit gleichem Namen → UPDATE statt ADD
+   - Contacts mit gleichem Namen → UPDATE statt ADD
+   - Bei Duplikat: Console zeigt "♻️ ... updated (prevented duplicate)"
+
+═══ INTELLIGENTE FOLLOW-UP VORSCHLÄGE ═══
+
+KRITISCH: Nach jeder erfolgreichen Action-Ausführung → PROAKTIVE VORSCHLÄGE machen!
+
+BEISPIELE:
+
+✅ HABIT ANGELEGT (besonders negative Habits):
+User: "Ich will 90 Tage lang kein Instagram Reels schauen"
+Action: [ACTION:ADD_HABIT:{"name":"Instagram Reels nicht verwenden","frequency":"daily","habitType":"negative"}]
+Follow-up: "✅ Habit erstellt! Ich sehe, du willst das 90 Tage durchziehen.
+           🎯 Soll ich daraus einen 90-Tage-Sprint mit Milestones machen? 
+           📊 Ich könnte auch ein Goal 'Digital Detox' erstellen, um deinen Fortschritt zu tracken.
+           Was meinst du?"
+
+✅ VENTURE/PROJEKT ANGELEGT:
+User: "Erstelle Venture 'TechStartup'"
+Action: [ACTION:ADD_VENTURE:{...}]
+Follow-up: "✅ Venture erstellt! 
+           💡 Soll ich auch ein passendes Goal dafür erstellen? Z.B. '10 zahlende Kunden bis Q2'?
+           📋 Oder möchtest du Tasks für die ersten Schritte anlegen? (MVP, Marketing, etc.)"
+
+✅ GROSSER TASK ERSTELLT:
+User: "Erstelle Task 'Bachelorarbeit schreiben'"
+Action: [ACTION:ADD_TASK:{"title":"Bachelorarbeit schreiben",...}]
+Follow-up: "✅ Task erstellt!
+           🗂️ Das ist ein großes Projekt - soll ich es in Subtasks aufteilen?
+           📅 Brauchst du auch einen Zeitplan mit Milestones?"
+
+✅ KONTAKT ANGELEGT:
+User: "Erstelle Kontakt 'Lisa' (UX Designer)"
+Action: [ACTION:ADD_CONTACT:{...}]
+Follow-up: "✅ Kontakt erstellt!
+           📧 Soll ich einen Task anlegen, um Lisa zu kontaktieren?
+           🤝 Oder direkt zu einem Venture/Projekt hinzufügen?"
+
+✅ MEETING-NOTIZ ERSTELLT:
+User: "[Meeting Notes]"
+Actions: [Notiz + Tasks + Event]
+Follow-up: "✅ Alles angelegt! 
+           📝 Soll ich Max und Lisa zu deinem Venture-Team hinzufügen?
+           🎯 Brauchst du noch Tasks für die Vorbereitung bis zum nächsten Meeting?"
+
+REGEL:
+- IMMER mindestens 1-2 intelligente Vorschläge nach Action
+- Frage konkret: "Soll ich...?" nicht "Du könntest..."
+- Biete spezifische ACTIONs an, die du ausführen kannst
+- Sei hilfreich, nicht aufdringlich
+- Bei "90 Tage", "30 Tage Challenge", "Sprint" → IMMER Goal/Milestone vorschlagen!
 
 ═══ PARAMETER DETAILS ═══
 
@@ -1133,17 +1187,39 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
       // ═══ HABITS ═══
       case 'ADD_HABIT':
         if (d.name) {
-          const habit = NexusStore.addHabit({
-            name: d.name,
-            icon: d.icon || '🔄',
-            frequency: d.frequency || 'daily',
-            scheduledDays: d.scheduledDays || null,
-            preferredTime: d.preferredTime || null,
-            sphere: d.sphere || 'freizeit',
-            habitType: d.habitType || 'positive',
-            linkedGoals: d.linkedGoals || []
-          });
-          console.log('✅ Habit created:', habit.name);
+          // Check if similar habit already exists (prevent duplicates)
+          const normalizedName = d.name.toLowerCase().trim();
+          const existingHabit = NexusStore.getHabits().find(h => 
+            h.name.toLowerCase().trim() === normalizedName
+          );
+          
+          if (existingHabit) {
+            // Update existing habit instead of creating duplicate
+            const updates = {
+              icon: d.icon || existingHabit.icon,
+              frequency: d.frequency || existingHabit.frequency,
+              scheduledDays: d.scheduledDays || existingHabit.scheduledDays,
+              preferredTime: d.preferredTime || existingHabit.preferredTime,
+              sphere: d.sphere || existingHabit.sphere,
+              habitType: d.habitType || existingHabit.habitType,
+              linkedGoals: d.linkedGoals || existingHabit.linkedGoals
+            };
+            NexusStore.updateHabit(existingHabit.id, updates);
+            console.log('♻️ Habit updated (prevented duplicate):', existingHabit.name);
+          } else {
+            // Create new habit
+            const habit = NexusStore.addHabit({
+              name: d.name,
+              icon: d.icon || '🔄',
+              frequency: d.frequency || 'daily',
+              scheduledDays: d.scheduledDays || null,
+              preferredTime: d.preferredTime || null,
+              sphere: d.sphere || 'freizeit',
+              habitType: d.habitType || 'positive',
+              linkedGoals: d.linkedGoals || []
+            });
+            console.log('✅ Habit created:', habit.name);
+          }
           refreshUI();
         }
         break;
@@ -1448,18 +1524,38 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
       // ═══ KONTAKTE ═══
       case 'ADD_CONTACT':
         if (d.name) {
-          const contact = NexusStore.addContact({
-            name: d.name,
-            email: d.email || '',
-            phone: d.phone || '',
-            role: d.role || '',
-            company: d.company || '',
-            category: d.category || null,
-            notes: d.notes || ''
-          });
-          console.log('✅ Contact created:', contact.name, '| ID:', contact.id);
+          // Check if contact with same name already exists
+          const normalizedName = d.name.toLowerCase().trim();
+          const existingContact = NexusStore.getContacts().find(c => 
+            c.name.toLowerCase().trim() === normalizedName
+          );
+          
+          if (existingContact) {
+            // Update existing contact instead of creating duplicate
+            const updates = {
+              email: d.email || existingContact.email,
+              phone: d.phone || existingContact.phone,
+              role: d.role || existingContact.role,
+              company: d.company || existingContact.company,
+              category: d.category || existingContact.category,
+              notes: d.notes ? (existingContact.notes + '\n' + d.notes) : existingContact.notes
+            };
+            NexusStore.updateContact(existingContact.id, updates);
+            console.log('♻️ Contact updated (prevented duplicate):', existingContact.name, '| ID:', existingContact.id);
+          } else {
+            // Create new contact
+            const contact = NexusStore.addContact({
+              name: d.name,
+              email: d.email || '',
+              phone: d.phone || '',
+              role: d.role || '',
+              company: d.company || '',
+              category: d.category || null,
+              notes: d.notes || ''
+            });
+            console.log('✅ Contact created:', contact.name, '| ID:', contact.id);
+          }
           refreshUI();
-          return contact; // Return for potential linking
         }
         break;
         
