@@ -401,8 +401,8 @@
 }
 
 .atlas-message.user .atlas-message-content {
-  background: rgba(102, 126, 234, 0.12);
-  border-color: rgba(102, 126, 234, 0.2);
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
 }
 
 .atlas-message-content h3 {
@@ -476,8 +476,8 @@
 }
 
 .atlas-quick-action:hover {
-  background: rgba(102, 126, 234, 0.15);
-  border-color: rgba(102, 126, 234, 0.3);
+  background: var(--color-surface-3);
+  border-color: var(--color-border);
   color: var(--text-primary);
   transform: translateY(-2px);
 }
@@ -506,8 +506,8 @@
 
 .atlas-input-wrapper:focus-within {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(102, 126, 234, 0.4);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--color-border);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
 }
 
 .atlas-input {
