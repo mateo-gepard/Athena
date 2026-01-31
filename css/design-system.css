@@ -24,15 +24,51 @@
   --color-text-tertiary: #5C5A56;  /* Dunkles Warmgrau */
   --color-text-muted: #3D3B38;     /* Kaum sichtbar */
 
-  /* ═══ SPHERE COLORS ═══ */
-  /* Die einzigen "bunten" Farben - gedämpft und funktional */
-  --color-sphere-geschaeft: #4A7C94;   /* Gedämpftes Petrol */
-  --color-sphere-projekte: #7C6A94;    /* Gedämpftes Mauve */
-  --color-sphere-schule: #94854A;      /* Gedämpftes Ocker */
-  --color-sphere-sport: #4A946A;       /* Gedämpftes Salbei */
-  --color-sphere-freizeit: #6B6862;    /* Warmes Dunkelgrau */
+  /* ═══ SPHERE COLORS (Kategorien/Lebensbereiche) ═══ */
+  /* Gedämpft und funktional - für Tasks, Habits, Projects */
+  --color-sphere-geschaeft: #4A7C94;   /* Gedämpftes Petrol - Business */
+  --color-sphere-projekte: #7C6A94;    /* Gedämpftes Mauve - Projekte */
+  --color-sphere-schule: #94854A;      /* Gedämpftes Ocker - Schule/Lernen */
+  --color-sphere-sport: #4A946A;       /* Gedämpftes Salbei - Sport/Gesundheit */
+  --color-sphere-freizeit: #6B6862;    /* Warmes Dunkelgrau - Freizeit */
 
-  /* ═══ SEMANTIC COLORS ═══ */
+  /* Sphere Backgrounds (sehr dezent) */
+  --color-sphere-geschaeft-bg: rgba(74, 124, 148, 0.08);
+  --color-sphere-projekte-bg: rgba(124, 106, 148, 0.08);
+  --color-sphere-schule-bg: rgba(148, 133, 74, 0.08);
+  --color-sphere-sport-bg: rgba(74, 148, 106, 0.08);
+  --color-sphere-freizeit-bg: rgba(107, 104, 98, 0.08);
+
+  /* ═══ PRIORITY COLORS (1-10 Score) ═══ */
+  /* Subtile Abstufung von niedrig → kritisch */
+  --color-priority-1-3: #5C5A56;       /* Niedrig: Sehr gedämpftes Grau */
+  --color-priority-4-5: #7C7A76;       /* Normal: Mittelgrau */
+  --color-priority-6-7: #C4A05C;       /* Wichtig: Gedämpftes Amber */
+  --color-priority-8-9: #C47C5C;       /* Dringend: Gedämpftes Orange */
+  --color-priority-10: #C45C5C;        /* Kritisch: Gedämpftes Rot */
+
+  /* Priority Backgrounds */
+  --color-priority-low-bg: rgba(92, 90, 86, 0.06);
+  --color-priority-medium-bg: rgba(124, 122, 118, 0.08);
+  --color-priority-high-bg: rgba(196, 160, 92, 0.08);
+  --color-priority-urgent-bg: rgba(196, 124, 92, 0.08);
+  --color-priority-critical-bg: rgba(196, 92, 92, 0.08);
+
+  /* ═══ STATUS COLORS (Workflow States) ═══ */
+  --color-status-pending: #7C7A76;     /* Wartend: Gedämpftes Grau */
+  --color-status-active: #5C94C4;      /* Aktiv: Gedämpftes Blau */
+  --color-status-completed: #5CC47C;   /* Erledigt: Gedämpftes Grün */
+  --color-status-archived: #4A4A4E;    /* Archiviert: Sehr dunkel */
+  --color-status-overdue: #C45C5C;     /* Überfällig: Gedämpftes Rot */
+
+  /* Status Backgrounds */
+  --color-status-pending-bg: rgba(124, 122, 118, 0.06);
+  --color-status-active-bg: rgba(92, 148, 196, 0.08);
+  --color-status-completed-bg: rgba(92, 196, 124, 0.08);
+  --color-status-archived-bg: rgba(74, 74, 78, 0.06);
+  --color-status-overdue-bg: rgba(196, 92, 92, 0.08);
+
+  /* ═══ SEMANTIC COLORS (Legacy - für Kompatibilität) ═══ */
   --color-critical: #C45C5C;       /* Gedämpftes Rot - Überfällig, Fehler */
   --color-warning: #C4A05C;        /* Gedämpftes Amber - Bald fällig */
   --color-success: #5CC47C;        /* Gedämpftes Grün - Erledigt */

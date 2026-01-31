@@ -434,11 +434,85 @@
   border-radius: var(--radius-sm);
 }
 
-.badge-critical {
-  color: var(--color-critical);
-  background-color: var(--color-critical-bg);
+/* ═══ Priority Badges (1-10 Score) ═══ */
+.badge-low {
+  color: var(--color-priority-1-3);
+  background-color: var(--color-priority-low-bg);
 }
 
+.badge-medium {
+  color: var(--color-priority-4-5);
+  background-color: var(--color-priority-medium-bg);
+}
+
+.badge-high {
+  color: var(--color-priority-6-7);
+  background-color: var(--color-priority-high-bg);
+}
+
+.badge-urgent {
+  color: var(--color-priority-8-9);
+  background-color: var(--color-priority-urgent-bg);
+}
+
+.badge-critical {
+  color: var(--color-priority-10);
+  background-color: var(--color-priority-critical-bg);
+}
+
+/* ═══ Status Badges ═══ */
+.badge-pending {
+  color: var(--color-status-pending);
+  background-color: var(--color-status-pending-bg);
+}
+
+.badge-active {
+  color: var(--color-status-active);
+  background-color: var(--color-status-active-bg);
+}
+
+.badge-completed {
+  color: var(--color-status-completed);
+  background-color: var(--color-status-completed-bg);
+}
+
+.badge-archived {
+  color: var(--color-status-archived);
+  background-color: var(--color-status-archived-bg);
+}
+
+.badge-overdue {
+  color: var(--color-status-overdue);
+  background-color: var(--color-status-overdue-bg);
+}
+
+/* ═══ Sphere/Category Badges ═══ */
+.badge-geschaeft {
+  color: var(--color-sphere-geschaeft);
+  background-color: var(--color-sphere-geschaeft-bg);
+}
+
+.badge-projekte {
+  color: var(--color-sphere-projekte);
+  background-color: var(--color-sphere-projekte-bg);
+}
+
+.badge-schule {
+  color: var(--color-sphere-schule);
+  background-color: var(--color-sphere-schule-bg);
+}
+
+.badge-sport {
+  color: var(--color-sphere-sport);
+  background-color: var(--color-sphere-sport-bg);
+}
+
+.badge-freizeit {
+  color: var(--color-sphere-freizeit);
+  background-color: var(--color-sphere-freizeit-bg);
+}
+
+/* ═══ Legacy Semantic Badges ═══ */
 .badge-warning {
   color: var(--color-warning);
   background-color: var(--color-warning-bg);

@@ -609,22 +609,31 @@
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  background: var(--surface-2);
+  background: var(--color-surface-2);
   border-radius: 10px;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--sphere-color, var(--primary));
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--sphere-color, var(--color-text-tertiary));
   transition: all 0.2s;
   cursor: pointer;
+  position: relative;
 }
 
+/* Subtle sphere-colored glow on hover */
 .cc-task-card:hover {
-  background: var(--surface-3);
+  background: var(--color-surface-3);
   transform: translateX(2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2), 
+              -1px 0 0 var(--sphere-color, var(--color-text-tertiary));
 }
 
 .cc-task-card.completed {
-  opacity: 0.6;
+  opacity: 0.5;
+  border-left-color: var(--color-status-completed);
+}
+
+.cc-task-card.completed .cc-task-title {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
 }
 
 .cc-task-checkbox {
