@@ -270,46 +270,19 @@ const AtlasController = {
   getWelcomeMessage() {
     return `
       <div class="atlas-message assistant">
-        <div class="atlas-message-avatar">
-          <i data-lucide="brain-circuit"></i>
-        </div>
-        <div class="atlas-message-content">
-          <h3>👋 Willkommen bei ATLAS OMNISCIENT</h3>
-          <p>Ich bin dein KI-gestütztes Command Intelligence Center mit vollständiger Systemkontrolle.</p>
-          
-          <div class="atlas-capabilities-grid">
-            <div class="atlas-capability-card">
-              <i data-lucide="calendar-plus"></i>
-              <span>Tasks & Termine erstellen</span>
-            </div>
-            <div class="atlas-capability-card">
-              <i data-lucide="link"></i>
-              <span>Entities verknüpfen</span>
-            </div>
-            <div class="atlas-capability-card">
-              <i data-lucide="trending-up"></i>
-              <span>Analytics & Insights</span>
-            </div>
-            <div class="atlas-capability-card">
-              <i data-lucide="lightbulb"></i>
-              <span>Proaktive Erinnerungen</span>
-            </div>
-          </div>
-          
-          <div class="atlas-quick-actions">
-            <button class="atlas-quick-action" data-quick-action="briefing">
-              <i data-lucide="sunrise"></i>
-              Morning Briefing
-            </button>
-            <button class="atlas-quick-action" data-quick-action="forgotten">
-              <i data-lucide="alert-triangle"></i>
-              Vergessene Tasks
-            </button>
-            <button class="atlas-quick-action" data-quick-action="insights">
-              <i data-lucide="bar-chart"></i>
-              Insights
-            </button>
-          </div>
+        <div class="atlas-quick-actions" style="width: 100%; margin: 0;">
+          <button class="atlas-quick-action" data-quick-action="briefing">
+            <i data-lucide="sunrise"></i>
+            Briefing
+          </button>
+          <button class="atlas-quick-action" data-quick-action="forgotten">
+            <i data-lucide="alert-triangle"></i>
+            Vergessene Tasks
+          </button>
+          <button class="atlas-quick-action" data-quick-action="insights">
+            <i data-lucide="bar-chart"></i>
+            Insights
+          </button>
         </div>
       </div>
     `;
