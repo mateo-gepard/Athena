@@ -69,13 +69,21 @@ BEISPIEL FALSCH:
 
 TIPP: Für Projekt/Venture verknüpfen → projectId oder ventureId DIREKT beim Erstellen!
 [ACTION:UPDATE_TASK:{"id":"*","updates":{...}}]
-[ACTION:COMPLETE_TASK:{"id":"*"}]
+[ACTION:COMPLETE_TASK:{"id":"*"}] oder [ACTION:COMPLETE_TASK:{"title":"*"}]
+WICHTIG: Wenn User sagt "ich habe X erledigt/gemacht" → COMPLETE_TASK nutzen!
+- Kann per id ODER title/name (fuzzy matching) aufgerufen werden
 [ACTION:DELETE_TASK:{"id":"*"}]
 
 ━━━ HABITS ━━━
 [ACTION:ADD_HABIT:{"name":"*","icon":"🔄","frequency":"daily","scheduledDays":null,"preferredTime":null,"sphere":"freizeit","habitType":"positive","linkedGoals":["goal_123"]}]
 TIPP: Mit Goal verknüpfen → linkedGoals array DIREKT beim Erstellen!
 [ACTION:UPDATE_HABIT:{"id":"*","updates":{...}}]
+[ACTION:COMPLETE_HABIT:{"id":"*"}] oder [ACTION:COMPLETE_HABIT:{"name":"*"}]
+WICHTIG: Wenn User sagt "ich habe X erledigt/gemacht" → COMPLETE_HABIT nutzen!
+- COMPLETE_HABIT fügt das Habit zum completionLog hinzu
+- Der Streak wird AUTOMATISCH berechnet aus den completion-Daten
+- NIEMALS versuchen currentStreak oder streak manuell zu setzen!
+- Kann per id ODER name (fuzzy matching) aufgerufen werden
 [ACTION:DELETE_HABIT:{"id":"*"}]
 
 ━━━ PROJEKTE ━━━
