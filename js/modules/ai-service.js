@@ -280,6 +280,70 @@ WICHTIG - UNTERSCHEIDE:
 - "ich HABE gearbeitet" = VERGANGENHEIT = LOG_EFFORT (Aufwand protokollieren)
 - "ich MUSS/WILL machen" = ZUKUNFT = ADD_TASK (Task planen)
 
+═══ MEETING-NOTIZEN & ACTION ITEMS ═══
+
+KRITISCH: Wenn User Meeting-Notizen oder Gesprächs-Zusammenfassungen gibt:
+→ EXTRAHIERE automatisch ALLE relevanten Informationen und erstelle MEHRERE ACTIONS!
+
+MUSTER ERKENNEN:
+- "Gespräch mit [Person]" → Kontakt erstellen + Notiz verknüpfen
+- "[Person] empfiehlt [Technologie/Tool]" → In Notiz erwähnen
+- "Nächstes Meeting/Treffen in X [Zeitraum]" → EVENT erstellen
+- "[Person] kennt noch [andere Person]" → Kontakt(e) anlegen
+- "Wir sollten [Action]" → TASK erstellen
+- "[Person] hat Interesse aber [Blocker]" → BARRIER zum Venture hinzufügen
+- Todo-Punkte (Aufzählungen) → Als TASKS erstellen
+
+BEISPIEL - User Input:
+"Ich hatte heute ein Gespräch mit Max über das Startup. Hier meine Notizen:
+- Max hat Interesse mitzumachen, aber erst ab April weil Klausuren
+- Er empfiehlt React Native für die App
+- Wir sollten erstmal einen Clickable Prototype mit Figma bauen
+- Er kennt noch jemanden (Lisa) die UX Design macht
+- Nächstes Treffen in 2 Wochen um Prototype zu besprechen"
+
+✅ RICHTIGE REAKTION (ALLE relevanten ACTIONs in RICHTIGER REIHENFOLGE):
+
+Schritt 1: Kontakte anlegen (ohne IDs)
+[ACTION:ADD_CONTACT:{"name":"Max","category":"team","notes":"Interesse am Startup, verfügbar ab April"}]
+
+Schritt 2: Weitere Kontakte
+[ACTION:ADD_CONTACT:{"name":"Lisa","role":"UX Designer","category":"potential","notes":"Von Max empfohlen"}]
+
+Schritt 3: Notiz mit Venture verknüpfen (Venture ID aus Kontext)
+[ACTION:ADD_NOTE:{"content":"Gespräch mit Max über das Startup:\n\n- Max hat Interesse mitzumachen, aber erst ab April wegen Klausuren\n- Er empfiehlt React Native für die App  \n- Wir sollten erstmal einen Clickable Prototype mit Figma bauen\n- Er kennt noch jemanden (Lisa), die UX Design macht\n- Nächstes Treffen in 2 Wochen, um den Prototype zu besprechen\n\nTech Stack Empfehlung: React Native","type":"note","linkedEntities":[{"type":"venture","id":"venture_xyz"}]}]
+
+Schritt 4: Tasks für Action Items erstellen
+[ACTION:ADD_TASK:{"title":"Figma Clickable Prototype erstellen","description":"Für nächstes Meeting mit Max vorbereiten","sphere":"projekte","ventureId":"venture_xyz","deadline":"2026-02-14","priorityScore":7,"timeEstimate":240}]
+
+[ACTION:ADD_TASK:{"title":"Lisa wegen UX Design kontaktieren","description":"Von Max empfohlen für das Startup","sphere":"geschaeft","ventureId":"venture_xyz","priorityScore":6,"timeEstimate":30}]
+
+Schritt 5: Follow-up Meeting als Event
+[ACTION:ADD_EVENT:{"title":"Follow-up Meeting mit Max - Prototype Review","dateTime":"2026-02-14T15:00:00","duration":60}]
+
+Schritt 6: Blocker dokumentieren
+[ACTION:ADD_BARRIER:{"ventureId":"venture_xyz","description":"Max erst ab April verfügbar (Klausuren)","severity":"medium","suggestedAction":"Prototype alleine vorbereiten, Max im April onboarden"}]
+
+FINALE BESTÄTIGUNG (NACH allen ACTIONs):
+"✅ Perfekt! Ich habe alles angelegt:
+• 2 Kontakte: Max (Team, ab April) und Lisa (UX Designer)
+• Notiz mit allen Gesprächsdetails, verknüpft mit dem Venture
+• 2 Tasks: Figma Prototype und Lisa kontaktieren
+• Follow-up Meeting am 14. Februar
+• Blocker dokumentiert: Max erst ab April verfügbar
+
+Dein nächstes Treffen ist in 2 Wochen - bis dahin solltest du den Prototype fertig haben! 🎯"
+
+❌ FALSCH (nur Notiz, Rest vergessen):
+[ACTION:ADD_NOTE:{"content":"..."}]
+
+REGEL: 
+- JEDE erwähnte Person → ADD_CONTACT
+- JEDER Todo-Punkt → ADD_TASK
+- JEDER Termin/Meeting → ADD_EVENT
+- JEDER Blocker → ADD_BARRIER
+- Alles automatisch mit relevanten Entities verknüpfen!
+
 ═══ VERHALTEN ═══
 
 1. INTELLIGENTE KONTEXT-EXTRAKTION:
@@ -1393,8 +1457,9 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
             category: d.category || null,
             notes: d.notes || ''
           });
-          console.log('✅ Contact created:', contact.name);
+          console.log('✅ Contact created:', contact.name, '| ID:', contact.id);
           refreshUI();
+          return contact; // Return for potential linking
         }
         break;
         
