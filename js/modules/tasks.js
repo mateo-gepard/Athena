@@ -140,16 +140,34 @@ const TasksModule = {
     // Filter by status
     switch (this.filter) {
       case 'today':
-        tasks = tasks.filter(t => t.dueDate?.startsWith(today) && t.status !== 'completed');
+        // Show tasks scheduled for today OR with deadline today OR without any date
+        tasks = tasks.filter(t => {
+          if (t.status === 'completed') return false;
+          const hasScheduledToday = t.scheduledDate?.startsWith(today);
+          const hasDeadlineToday = t.deadline?.startsWith(today);
+          const hasNoDate = !t.scheduledDate && !t.deadline;
+          return hasScheduledToday || hasDeadlineToday || hasNoDate;
+        });
         break;
       case 'week':
-        tasks = tasks.filter(t => t.dueDate && t.dueDate <= weekEndStr && t.status !== 'completed');
+        tasks = tasks.filter(t => {
+          if (t.status === 'completed') return false;
+          const scheduledThisWeek = t.scheduledDate && t.scheduledDate <= weekEndStr;
+          const deadlineThisWeek = t.deadline && t.deadline <= weekEndStr;
+          return scheduledThisWeek || deadlineThisWeek;
+        });
         break;
       case 'overdue':
-        tasks = tasks.filter(t => t.dueDate && t.dueDate < today && t.status !== 'completed');
+        tasks = tasks.filter(t => {
+          if (t.status === 'completed') return false;
+          return t.deadline && t.deadline < today;
+        });
         break;
       case 'completed':
         tasks = tasks.filter(t => t.status === 'completed');
+        break;
+      case 'no-date':
+        tasks = tasks.filter(t => !t.scheduledDate && !t.deadline && t.status !== 'completed');
         break;
       default:
         tasks = tasks.filter(t => t.status !== 'completed');
@@ -157,21 +175,26 @@ const TasksModule = {
     
     // Filter by sphere
     if (this.sphereFilter) {
-      tasks = tasks.filter(t => t.sphere === this.sphereFilter);
+      tasks = tasks.filter(t => t.spheres && t.spheres.includes(this.sphereFilter));
     }
     
     // Sort
     tasks.sort((a, b) => {
       switch (this.sortBy) {
         case 'priority':
-          const priorityOrder = { critical: 0, high: 1, normal: 2, low: 3 };
-          return (priorityOrder[a.priority] || 2) - (priorityOrder[b.priority] || 2);
+          const scoreA = a.priorityScore || 5;
+          const scoreB = b.priorityScore || 5;
+          return scoreB - scoreA; // Higher priority first
         case 'createdAt':
           return new Date(b.createdAt) - new Date(a.createdAt);
-        default:
-          if (!a.dueDate) return 1;
-          if (!b.dueDate) return -1;
-          return new Date(a.dueDate) - new Date(b.dueDate);
+        default: // dueDate
+          // Tasks with dates come first, sorted by earliest date (scheduledDate or deadline)
+          const dateA = a.scheduledDate || a.deadline;
+          const dateB = b.scheduledDate || b.deadline;
+          if (!dateA && !dateB) return 0;
+          if (!dateA) return 1;
+          if (!dateB) return -1;
+          return new Date(dateA) - new Date(dateB);
       }
     });
     
@@ -289,19 +312,18 @@ const TasksModule = {
             <div class="task-title ${task.status === 'completed' ? 'line-through text-tertiary' : ''}">
               ${task.title}
             </div>
-            <div class="flex items-center gap-3 text-xs text-tertiary mt-1">
+            <div class="flex items-center gap-2 mt-2">
+              <span class="badge badge-${priorityClass}">${priorityScore}/10</span>
               ${sphere ? `<span class="badge badge-${sphere}">${sphere}</span>` : ''}
-              ${task.projectId ? `<span>📁 ${this.getProjectName(task.projectId)}</span>` : ''}
               ${task.deadline ? `
-                <span class="${isOverdue ? 'text-critical' : ''}">
+                <span class="badge ${isOverdue ? 'badge-overdue' : ''}">
                   📅 ${NexusUI.formatDate(new Date(task.deadline))}
                 </span>
               ` : ''}
-              ${task.timeEstimate ? `<span>⏱️ ${task.timeEstimate}min</span>` : ''}
+              ${task.timeEstimate ? `<span class="badge">⏱️ ${task.timeEstimate}min</span>` : ''}
+              ${task.projectId ? `<span class="badge">📁 ${this.getProjectName(task.projectId)}</span>` : ''}
             </div>
           </div>
-          
-          <span class="badge badge-${priorityClass}">${priorityScore}/10</span>
           
           <div class="task-actions flex items-center gap-1">
             <button class="btn-icon-sm" data-action="edit" title="Bearbeiten">
