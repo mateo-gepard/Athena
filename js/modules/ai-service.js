@@ -12,6 +12,12 @@ const AtlasAI = {
     temperature: 0.7
   },
   
+  // Convert legacy priority strings to scores
+  legacyPriorityToScore(priority) {
+    const map = { critical: 9, high: 7, medium: 5, normal: 5, low: 3 };
+    return map[priority] || 5;
+  },
+  
   // Chat Session Management
   CHAT_STORAGE_KEY: 'atlas_chat_sessions',
   currentSessionId: null,
@@ -52,7 +58,7 @@ REGEL: Schreibe NACH den ACTIONs eine finale Bestätigung mit Zusammenfassung.
 Du kannst ALLES im System steuern. Nutze diese Befehle:
 
 ━━━ TASKS ━━━
-[ACTION:ADD_TASK:{"title":"*","description":null,"priority":"normal","sphere":"freizeit","projectId":"project_123","ventureId":null,"deadline":null,"scheduledDate":"2026-01-31","scheduledTime":"14:00","timeEstimate":60,"tags":[]}]
+[ACTION:ADD_TASK:{"title":"*","description":null,"priorityScore":5,"sphere":"freizeit","projectId":"project_123","ventureId":null,"deadline":null,"scheduledDate":"2026-01-31","scheduledTime":"14:00","timeEstimate":60,"tags":[]}]
 
 WICHTIG - ZEITBASIERTE TASKS:
 Wenn Task zu bestimmter Zeit stattfindet → IMMER scheduledDate + scheduledTime setzen!
@@ -67,11 +73,17 @@ WICHTIG - SPHERE ABLEITEN:
 - Projekt/Code/Website → sphere: "projekte"
 - Rest → sphere: "freizeit"
 
-WICHTIG - PRIORITY ABLEITEN:
-- Deadline in <3 Tagen → priority: "high"
-- Deadline in <24h → priority: "critical"
-- User sagt "dringend" → priority: "high"
-- User sagt "wichtig" → priority: "high"
+WICHTIG - PRIORITYSCORE ABLEITEN (1-10):
+- 10: Extrem kritisch, Deadline heute, absolut dringend
+- 9: Sehr wichtig, Deadline <24h
+- 8: Wichtig und dringend, Deadline <3 Tage
+- 7: Wichtig, User sagt "wichtig"/"dringend"
+- 6: Überdurchschnittlich wichtig
+- 5: Normal (DEFAULT)
+- 4: Eher unwichtig
+- 3: Niedrige Priorität, User sagt "nicht eilig"
+- 2: Sehr niedrig
+- 1: Optional, "wenn Zeit ist"
 
 WICHTIG - TIMEESTIMATE ABLEITEN:
 - Klausur-Vorbereitung kurzfristig (<3 Tage) → timeEstimate: 240 (4h)
@@ -82,10 +94,10 @@ WICHTIG - TIMEESTIMATE ABLEITEN:
 
 BEISPIEL RICHTIG:
 User: "Morgenroutine um 9:00 Uhr"
-→ [ACTION:ADD_TASK:{"title":"Morgenroutine","scheduledDate":"2026-01-31","scheduledTime":"09:00","timeEstimate":60,"sphere":"freizeit"}]
+→ [ACTION:ADD_TASK:{"title":"Morgenroutine","scheduledDate":"2026-01-31","scheduledTime":"09:00","timeEstimate":60,"sphere":"freizeit","priorityScore":5}]
 
 User: "ich muss heute für mathe klausur lernen"
-→ [ACTION:ADD_TASK:{"title":"Für Mathe Klausur lernen","scheduledDate":"2026-01-31","timeEstimate":240,"priority":"high","sphere":"schule"}]
+→ [ACTION:ADD_TASK:{"title":"Für Mathe Klausur lernen","scheduledDate":"2026-01-31","timeEstimate":240,"priorityScore":8,"sphere":"schule"}]
 
 BEISPIEL FALSCH:
 → [ACTION:ADD_TASK:{"title":"Morgenroutine","dueDate":"2026-01-31T09:00:00"}] ← FALSCH!
@@ -975,20 +987,46 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
       // ═══ TASKS ═══
       case 'ADD_TASK':
         if (d.title) {
-          const task = NexusStore.addTask({
-            title: d.title,
-            description: d.description || '',
-            priority: d.priority || 'normal',
-            spheres: d.sphere ? [d.sphere] : ['freizeit'],
-            projectId: d.projectId && d.projectId !== 'null' ? d.projectId : null,
-            ventureId: d.ventureId && d.ventureId !== 'null' ? d.ventureId : null,
-            deadline: d.deadline || d.dueDate || null,
-            scheduledDate: d.scheduledDate || d.dueDate || null,
-            scheduledTime: d.scheduledTime || d.time || null,
-            timeEstimate: d.timeEstimate || null,
-            tags: d.tags || []
-          });
-          console.log('✅ Task created:', task.title);
+          // Check if similar task already exists (prevent duplicates)
+          const normalizedTitle = d.title.toLowerCase().trim();
+          const existingTask = NexusStore.getTasks().find(t => 
+            t.title.toLowerCase().trim() === normalizedTitle && 
+            t.status !== 'completed'
+          );
+          
+          if (existingTask) {
+            // Update existing task instead of creating duplicate
+            const updates = {
+              description: d.description || existingTask.description,
+              priorityScore: d.priorityScore || (d.priority ? this.legacyPriorityToScore(d.priority) : existingTask.priorityScore),
+              spheres: d.sphere ? [d.sphere] : existingTask.spheres,
+              projectId: d.projectId && d.projectId !== 'null' ? d.projectId : existingTask.projectId,
+              ventureId: d.ventureId && d.ventureId !== 'null' ? d.ventureId : existingTask.ventureId,
+              deadline: d.deadline || d.dueDate || existingTask.deadline,
+              scheduledDate: d.scheduledDate || d.dueDate || existingTask.scheduledDate,
+              scheduledTime: d.scheduledTime || d.time || existingTask.scheduledTime,
+              timeEstimate: d.timeEstimate || existingTask.timeEstimate,
+              tags: d.tags || existingTask.tags
+            };
+            NexusStore.updateTask(existingTask.id, updates);
+            console.log('♻️ Task updated (prevented duplicate):', existingTask.title);
+          } else {
+            // Create new task
+            const task = NexusStore.addTask({
+              title: d.title,
+              description: d.description || '',
+              priorityScore: d.priorityScore || (d.priority ? this.legacyPriorityToScore(d.priority) : 5),
+              spheres: d.sphere ? [d.sphere] : ['freizeit'],
+              projectId: d.projectId && d.projectId !== 'null' ? d.projectId : null,
+              ventureId: d.ventureId && d.ventureId !== 'null' ? d.ventureId : null,
+              deadline: d.deadline || d.dueDate || null,
+              scheduledDate: d.scheduledDate || d.dueDate || null,
+              scheduledTime: d.scheduledTime || d.time || null,
+              timeEstimate: d.timeEstimate || null,
+              tags: d.tags || []
+            });
+            console.log('✅ Task created:', task.title);
+          }
           refreshUI();
         }
         break;
@@ -1389,6 +1427,10 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
           });
           console.log('✅ Day marked:', d.title);
           refreshUI();
+          // Also refresh calendar view if active
+          if (typeof TemporalEngine !== 'undefined' && TemporalEngine.render) {
+            TemporalEngine.render();
+          }
         }
         break;
         

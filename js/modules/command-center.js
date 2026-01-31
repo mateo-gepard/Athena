@@ -102,6 +102,12 @@ const CommandCenter = {
     }
   },
   
+  // Convert old priority strings to scores 1-10
+  priorityToScore(priority) {
+    const map = { critical: 9, high: 7, medium: 5, normal: 5, low: 3 };
+    return map[priority] || 5;
+  },
+  
   // Render Focus Block (Highest Priority Task)
   renderFocusBlock() {
     const container = document.getElementById('cc-focus-task');
@@ -111,9 +117,10 @@ const CommandCenter = {
     const today = new Date().toISOString().split('T')[0];
     const todayTasks = NexusStore.getTasksForDate(today).filter(t => t.status !== 'completed');
     
-    const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
     const focusTask = todayTasks.sort((a, b) => {
-      return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+      const scoreA = a.priorityScore || this.priorityToScore(a.priority) || 5;
+      const scoreB = b.priorityScore || this.priorityToScore(b.priority) || 5;
+      return scoreB - scoreA;
     })[0];
     
     if (!focusTask) {
@@ -244,7 +251,9 @@ const CommandCenter = {
   renderTaskCard(task) {
     const isCompleted = task.status === 'completed';
     const sphereColor = task.spheres && task.spheres[0] ? NexusUI.getSphereColor(task.spheres[0]) : 'var(--primary)';
-    const priority = task.priority || 'medium';
+    const priorityScore = task.priorityScore || task.priority || 5;
+    const priorityNum = typeof priorityScore === 'number' ? priorityScore : this.priorityToScore(priorityScore);
+    const priorityClass = priorityNum >= 8 ? 'critical' : priorityNum >= 6 ? 'high' : priorityNum >= 4 ? 'medium' : 'low';
     const timeEstimate = task.timeEstimate ? `${task.timeEstimate}min` : '';
     
     return `
@@ -255,7 +264,7 @@ const CommandCenter = {
         <div class="cc-task-content">
           <div class="cc-task-title">${task.title}</div>
           <div class="cc-task-meta">
-            <span class="badge badge-${priority}">${priority}</span>
+            <span class="badge badge-${priorityClass}">${priorityNum}/10</span>
             ${task.spheres && task.spheres[0] ? `<span class="cc-task-meta-separator">·</span><span>${task.spheres[0]}</span>` : ''}
             ${task.projectId ? `<span class="cc-task-meta-separator">·</span><span>Projekt</span>` : ''}
           </div>

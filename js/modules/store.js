@@ -300,8 +300,10 @@ const NexusStore = {
   getTasksForDate(date) {
     const dateStr = typeof date === 'string' ? date : date.toISOString().split('T')[0];
     return this.state.tasks.filter(t => {
-      if (!t.scheduledDate) return false;
-      return t.scheduledDate.split('T')[0] === dateStr;
+      // Include tasks with scheduledDate OR deadline on this date
+      if (t.scheduledDate && t.scheduledDate.split('T')[0] === dateStr) return true;
+      if (t.deadline && t.deadline.split('T')[0] === dateStr) return true;
+      return false;
     });
   },
   
