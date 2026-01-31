@@ -250,7 +250,8 @@ const CommandCenter = {
   // Render Task Card (new style)
   renderTaskCard(task) {
     const isCompleted = task.status === 'completed';
-    const sphereColor = task.spheres && task.spheres[0] ? NexusUI.getSphereColor(task.spheres[0]) : 'var(--primary)';
+    const sphere = task.spheres && task.spheres[0] ? task.spheres[0] : 'freizeit';
+    const sphereColor = NexusUI.getSphereColor(sphere);
     const priorityScore = task.priorityScore || task.priority || 5;
     const priorityNum = typeof priorityScore === 'number' ? priorityScore : this.priorityToScore(priorityScore);
     const priorityClass = priorityNum >= 8 ? 'critical' : priorityNum >= 6 ? 'high' : priorityNum >= 4 ? 'medium' : 'low';
@@ -265,7 +266,8 @@ const CommandCenter = {
           <div class="cc-task-title">${task.title}</div>
           <div class="cc-task-meta">
             <span class="badge badge-${priorityClass}">${priorityNum}/10</span>
-            ${task.spheres && task.spheres[0] ? `<span class="cc-task-meta-separator">·</span><span>${task.spheres[0]}</span>` : ''}
+            <span class="cc-task-meta-separator">·</span>
+            <span class="badge badge-${sphere}">${sphere}</span>
             ${task.projectId ? `<span class="cc-task-meta-separator">·</span><span>Projekt</span>` : ''}
           </div>
         </div>

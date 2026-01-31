@@ -1117,7 +1117,7 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
             const updates = {
               description: d.description || existingTask.description,
               priorityScore: d.priorityScore || (d.priority ? this.legacyPriorityToScore(d.priority) : existingTask.priorityScore),
-              spheres: d.sphere ? [d.sphere] : existingTask.spheres,
+              spheres: d.spheres || (d.sphere ? [d.sphere] : existingTask.spheres),
               projectId: d.projectId && d.projectId !== 'null' ? d.projectId : existingTask.projectId,
               ventureId: d.ventureId && d.ventureId !== 'null' ? d.ventureId : existingTask.ventureId,
               deadline: d.deadline || d.dueDate || existingTask.deadline,
@@ -1134,7 +1134,7 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
               title: d.title,
               description: d.description || '',
               priorityScore: d.priorityScore || (d.priority ? this.legacyPriorityToScore(d.priority) : 5),
-              spheres: d.sphere ? [d.sphere] : ['freizeit'],
+              spheres: d.spheres || (d.sphere ? [d.sphere] : ['freizeit']),
               projectId: d.projectId && d.projectId !== 'null' ? d.projectId : null,
               ventureId: d.ventureId && d.ventureId !== 'null' ? d.ventureId : null,
               deadline: d.deadline || d.dueDate || null,
@@ -1143,7 +1143,7 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
               timeEstimate: d.timeEstimate || null,
               tags: d.tags || []
             });
-            console.log('✅ Task created:', task.title);
+            console.log('✅ Task created:', task.title, '| Sphere:', task.spheres[0], '| Priority:', task.priorityScore);
           }
           refreshUI();
         }
