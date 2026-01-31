@@ -695,6 +695,7 @@ const NexusStore = {
   },
   
   addVenture(ventureData) {
+    console.log('🏪 Store.addVenture called with:', ventureData);
     const now = new Date().toISOString();
     const venture = {
       id: this.generateId(),
@@ -711,7 +712,7 @@ const NexusStore = {
       pivotOptions: ventureData.pivotOptions || [],
       evaluation: ventureData.evaluation || {},
       progress: 0,
-      effortInvested: 0,
+      effortInvested: ventureData.effortInvested || 0,
       effortRemaining: null,
       team: [],
       linkedProjects: [],
@@ -722,6 +723,8 @@ const NexusStore = {
       completedAt: null,
       deletedAt: null
     };
+    
+    console.log('💾 Final venture object to be saved:', venture);
     
     this.state.ventures.push(venture);
     this.save();
