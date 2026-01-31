@@ -12,8 +12,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 24px 32px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   margin-bottom: 24px;
   gap: 32px;
@@ -100,8 +100,8 @@
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
   border-radius: 12px;
   margin-bottom: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -214,8 +214,8 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .cc-focus-block {
-  background: var(--surface-1);
-  border: 2px solid var(--border);
+  background: var(--color-surface-1);
+  border: 2px solid var(--color-border);
   border-radius: 16px;
   padding: 20px;
   position: relative;
@@ -245,8 +245,8 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .cc-time-block {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   padding: 18px;
   transition: all 0.3s ease;
@@ -356,8 +356,8 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .cc-panel {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
   border-radius: 14px;
   overflow: hidden;
   transition: all 0.3s ease;

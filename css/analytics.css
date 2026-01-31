@@ -53,8 +53,8 @@
 }
 
 .analytics-stat-card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   padding: 20px;
   display: flex;
@@ -174,8 +174,8 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .analytics-card {
-  background: var(--surface-1);
-  border: 1px solid var(--border);
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
   border-radius: 16px;
   overflow: hidden;
   transition: all 0.3s ease;
