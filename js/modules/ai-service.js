@@ -12,7 +12,12 @@ const AtlasAI = {
     temperature: 0.7
   },
   
-  // Conversation history for memory
+  // Chat Session Management
+  CHAT_STORAGE_KEY: 'atlas_chat_sessions',
+  currentSessionId: null,
+  chatSessions: [],
+  
+  // Conversation history for memory (deprecated - now in sessions)
   conversationHistory: [],
   maxHistoryLength: 30,
   
@@ -529,7 +534,175 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
 `;
   },
   
-  // Clear conversation history
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CHAT SESSION MANAGEMENT
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  // Initialize chat sessions
+  initChatSessions() {
+    const stored = localStorage.getItem(this.CHAT_STORAGE_KEY);
+    if (stored) {
+      this.chatSessions = JSON.parse(stored);
+    } else {
+      this.chatSessions = [];
+    }
+    
+    // Clean up unused sessions (no messages and > 1 hour old)
+    this.cleanupUnusedSessions();
+    
+    // Load last session or create new one
+    if (this.chatSessions.length > 0) {
+      this.currentSessionId = this.chatSessions[0].id;
+    } else {
+      this.createNewSession();
+    }
+  },
+  
+  // Create new chat session
+  createNewSession(title = null) {
+    const session = {
+      id: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      title: title || 'Neue Konversation',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: [],
+      isPinned: false
+    };
+    
+    this.chatSessions.unshift(session);
+    this.currentSessionId = session.id;
+    this.saveSessions();
+    
+    return session;
+  },
+  
+  // Get current session
+  getCurrentSession() {
+    return this.chatSessions.find(s => s.id === this.currentSessionId);
+  },
+  
+  // Switch to a different session
+  switchSession(sessionId) {
+    const session = this.chatSessions.find(s => s.id === sessionId);
+    if (session) {
+      this.currentSessionId = sessionId;
+      return session;
+    }
+    return null;
+  },
+  
+  // Delete a session
+  deleteSession(sessionId) {
+    const index = this.chatSessions.findIndex(s => s.id === sessionId);
+    if (index !== -1) {
+      this.chatSessions.splice(index, 1);
+      
+      // If deleted current session, switch to another
+      if (sessionId === this.currentSessionId) {
+        if (this.chatSessions.length > 0) {
+          this.currentSessionId = this.chatSessions[0].id;
+        } else {
+          this.createNewSession();
+        }
+      }
+      
+      this.saveSessions();
+      return true;
+    }
+    return false;
+  },
+  
+  // Add message to current session
+  addMessage(role, content, metadata = {}) {
+    const session = this.getCurrentSession();
+    if (!session) return;
+    
+    const message = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      role, // 'user' or 'assistant'
+      content,
+      timestamp: new Date().toISOString(),
+      metadata // actions executed, entities created, etc.
+    };
+    
+    session.messages.push(message);
+    session.updatedAt = new Date().toISOString();
+    
+    // Auto-generate title from first user message
+    if (session.messages.length === 1 && role === 'user' && session.title === 'Neue Konversation') {
+      session.title = content.substring(0, 50) + (content.length > 50 ? '...' : '');
+    }
+    
+    this.saveSessions();
+    return message;
+  },
+  
+  // Get all messages from current session
+  getCurrentMessages() {
+    const session = this.getCurrentSession();
+    return session ? session.messages : [];
+  },
+  
+  // Pin/unpin session
+  togglePinSession(sessionId) {
+    const session = this.chatSessions.find(s => s.id === sessionId);
+    if (session) {
+      session.isPinned = !session.isPinned;
+      this.sortSessions();
+      this.saveSessions();
+      return session.isPinned;
+    }
+    return false;
+  },
+  
+  // Sort sessions (pinned first, then by updated date)
+  sortSessions() {
+    this.chatSessions.sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      return new Date(b.updatedAt) - new Date(a.updatedAt);
+    });
+  },
+  
+  // Clean up unused sessions (no messages, older than 1 hour, not pinned)
+  cleanupUnusedSessions() {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    
+    this.chatSessions = this.chatSessions.filter(session => {
+      if (session.isPinned) return true;
+      if (session.messages.length > 0) return true;
+      if (session.createdAt > oneHourAgo) return true;
+      return false;
+    });
+    
+    this.saveSessions();
+  },
+  
+  // Save sessions to localStorage
+  saveSessions() {
+    this.sortSessions();
+    localStorage.setItem(this.CHAT_STORAGE_KEY, JSON.stringify(this.chatSessions));
+  },
+  
+  // Get session statistics
+  getSessionStats(sessionId) {
+    const session = this.chatSessions.find(s => s.id === sessionId);
+    if (!session) return null;
+    
+    const userMessages = session.messages.filter(m => m.role === 'user').length;
+    const assistantMessages = session.messages.filter(m => m.role === 'assistant').length;
+    const actionsExecuted = session.messages.filter(m => m.metadata?.actions?.length > 0).length;
+    
+    return {
+      totalMessages: session.messages.length,
+      userMessages,
+      assistantMessages,
+      actionsExecuted,
+      duration: new Date(session.updatedAt) - new Date(session.createdAt)
+    };
+  },
+  
+  // Clear conversation history (deprecated - use sessions)
   clearHistory() {
     this.conversationHistory = [];
     this.pendingAction = null;

@@ -374,31 +374,18 @@ const NexusApp = {
     }));
   },
   
-  // Toggle Atlas panel
+  // Toggle Atlas panel (delegated to AtlasController)
   toggleAtlas() {
-    const panel = document.getElementById('atlas-panel');
-    if (panel) {
-      panel.classList.toggle('active');
-      this.isAtlasOpen = panel.classList.contains('active');
-      
-      // Focus input when opening
-      if (this.isAtlasOpen) {
-        setTimeout(() => {
-          const input = document.getElementById('atlas-input');
-          if (input) input.focus();
-        }, 300);
-        
-        // Refresh icons
-        if (window.lucide) lucide.createIcons();
-      }
+    if (typeof AtlasController !== 'undefined') {
+      AtlasController.toggle();
+      this.isAtlasOpen = AtlasController.isOpen;
     }
   },
   
-  // Close Atlas panel
+  // Close Atlas panel (delegated to AtlasController)
   closeAtlas() {
-    const panel = document.getElementById('atlas-panel');
-    if (panel) {
-      panel.classList.remove('active');
+    if (typeof AtlasController !== 'undefined') {
+      AtlasController.close();
       this.isAtlasOpen = false;
     }
   },

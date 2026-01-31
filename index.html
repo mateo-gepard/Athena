@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/modules.css">
+  <link rel="stylesheet" href="css/atlas.css">
 </head>
 <body>
   <div class="app" id="app">
@@ -440,49 +441,173 @@
     </div>
     
     <!-- ═══════════════════════════════════════════════════════════════════════════
-         ATLAS AI PANEL
+         ATLAS OMNISCIENT - COMMAND INTELLIGENCE CENTER
          ═══════════════════════════════════════════════════════════════════════════ -->
-    <div class="atlas-ai-overlay" id="atlas-panel">
-      <div class="atlas-ai-panel">
-        <div class="atlas-ai-header">
-          <div class="atlas-ai-title">
-            <span class="atlas-ai-icon">🧠</span>
-            <span>ATLAS AI</span>
+    <div class="atlas-command-center" id="atlas-command-center">
+      <div class="atlas-backdrop" id="atlas-backdrop"></div>
+      
+      <div class="atlas-container">
+        <!-- Chat History Sidebar -->
+        <aside class="atlas-sidebar">
+          <div class="atlas-sidebar-header">
+            <button class="atlas-new-chat-btn" id="atlas-new-chat">
+              <i data-lucide="plus"></i>
+              <span>Neuer Chat</span>
+            </button>
           </div>
-          <button class="atlas-ai-close" id="atlas-close">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-        <div class="atlas-ai-body" id="atlas-messages">
-          <div class="atlas-message-item assistant">
-            <div class="atlas-message-avatar">🧠</div>
-            <div class="atlas-message-content">
-              <p>Hallo! Ich bin ATLAS, dein KI-Assistent. Ich kann dir helfen mit:</p>
-              <ul>
-                <li>📋 Tasks erstellen und organisieren</li>
-                <li>📅 Termine planen</li>
-                <li>🎯 Prioritäten setzen</li>
-                <li>💡 Ideen strukturieren</li>
-                <li>🌅 Morning & Evening Briefings</li>
-                <li>📊 Produktivitäts-Insights</li>
-              </ul>
-              <p>Was kann ich für dich tun?</p>
-              
-              <!-- Quick Actions -->
-              <div style="display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap;">
-                <button class="btn btn-sm btn-secondary" id="atlas-morning-briefing">🌅 Morning Briefing</button>
-                <button class="btn btn-sm btn-secondary" id="atlas-evening-summary">🌙 Evening Summary</button>
-                <button class="btn btn-sm btn-secondary" id="atlas-insights">📊 Insights</button>
+          
+          <div class="atlas-sidebar-content">
+            <div class="atlas-chat-list" id="atlas-chat-list">
+              <!-- Chat sessions will be rendered here -->
+            </div>
+          </div>
+          
+          <div class="atlas-sidebar-footer">
+            <button class="atlas-settings-btn" id="atlas-settings-btn">
+              <i data-lucide="settings"></i>
+              <span>Einstellungen</span>
+            </button>
+          </div>
+        </aside>
+        
+        <!-- Main Chat Area -->
+        <main class="atlas-main">
+          <div class="atlas-main-header">
+            <div class="atlas-title-area">
+              <div class="atlas-brain-icon">
+                <i data-lucide="brain-circuit"></i>
+              </div>
+              <div class="atlas-title-info">
+                <h1 class="atlas-title">ATLAS OMNISCIENT</h1>
+                <p class="atlas-subtitle" id="atlas-session-title">Command Intelligence Center</p>
+              </div>
+            </div>
+            <button class="atlas-close-btn" id="atlas-close-btn">
+              <i data-lucide="x"></i>
+            </button>
+          </div>
+          
+          <div class="atlas-messages-container" id="atlas-messages-container">
+            <div class="atlas-messages" id="atlas-messages">
+              <!-- Welcome message -->
+              <div class="atlas-message assistant">
+                <div class="atlas-message-avatar">
+                  <i data-lucide="brain-circuit"></i>
+                </div>
+                <div class="atlas-message-content">
+                  <h3>👋 Willkommen bei ATLAS OMNISCIENT</h3>
+                  <p>Ich bin dein KI-gestütztes Command Intelligence Center mit vollständiger Systemkontrolle.</p>
+                  
+                  <div class="atlas-capabilities-grid">
+                    <div class="atlas-capability-card">
+                      <i data-lucide="calendar-plus"></i>
+                      <span>Tasks & Termine erstellen</span>
+                    </div>
+                    <div class="atlas-capability-card">
+                      <i data-lucide="link"></i>
+                      <span>Entities verknüpfen</span>
+                    </div>
+                    <div class="atlas-capability-card">
+                      <i data-lucide="trending-up"></i>
+                      <span>Analytics & Insights</span>
+                    </div>
+                    <div class="atlas-capability-card">
+                      <i data-lucide="lightbulb"></i>
+                      <span>Proaktive Erinnerungen</span>
+                    </div>
+                  </div>
+                  
+                  <div class="atlas-quick-actions">
+                    <button class="atlas-quick-action" data-quick-action="briefing">
+                      <i data-lucide="sunrise"></i>
+                      Morning Briefing
+                    </button>
+                    <button class="atlas-quick-action" data-quick-action="forgotten">
+                      <i data-lucide="alert-triangle"></i>
+                      Vergessene Tasks
+                    </button>
+                    <button class="atlas-quick-action" data-quick-action="insights">
+                      <i data-lucide="bar-chart"></i>
+                      Insights
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="atlas-ai-footer">
-          <textarea class="atlas-ai-input" id="atlas-input" placeholder="Frag ATLAS etwas... (Shift+Enter für neue Zeile)" rows="1"></textarea>
-          <button class="atlas-ai-send" id="atlas-send">
-            <i data-lucide="send"></i>
-          </button>
-        </div>
+          
+          <div class="atlas-input-area">
+            <div class="atlas-input-wrapper">
+              <textarea 
+                class="atlas-input" 
+                id="atlas-input" 
+                placeholder="Frage ATLAS etwas... (Shift+Enter für neue Zeile)"
+                rows="1"
+              ></textarea>
+              <button class="atlas-send-btn" id="atlas-send-btn">
+                <i data-lucide="send"></i>
+              </button>
+            </div>
+            <div class="atlas-input-hint">
+              <span class="atlas-hint-item">
+                <kbd>Enter</kbd> zum Senden
+              </span>
+              <span class="atlas-hint-item">
+                <kbd>⌘</kbd> + <kbd>K</kbd> zum Öffnen
+              </span>
+            </div>
+          </div>
+        </main>
+        
+        <!-- Context Panel -->
+        <aside class="atlas-context-panel">
+          <div class="atlas-context-header">
+            <h3><i data-lucide="activity"></i> Live System Status</h3>
+          </div>
+          
+          <div class="atlas-context-content" id="atlas-context-content">
+            <!-- System status will be rendered here -->
+            <div class="atlas-stat-card">
+              <div class="atlas-stat-icon">
+                <i data-lucide="list-checks"></i>
+              </div>
+              <div class="atlas-stat-info">
+                <div class="atlas-stat-label">Offene Tasks</div>
+                <div class="atlas-stat-value" id="stat-open-tasks">0</div>
+              </div>
+            </div>
+            
+            <div class="atlas-stat-card">
+              <div class="atlas-stat-icon danger">
+                <i data-lucide="alert-circle"></i>
+              </div>
+              <div class="atlas-stat-info">
+                <div class="atlas-stat-label">Überfällig</div>
+                <div class="atlas-stat-value danger" id="stat-overdue-tasks">0</div>
+              </div>
+            </div>
+            
+            <div class="atlas-stat-card">
+              <div class="atlas-stat-icon">
+                <i data-lucide="repeat"></i>
+              </div>
+              <div class="atlas-stat-info">
+                <div class="atlas-stat-label">Habits</div>
+                <div class="atlas-stat-value" id="stat-habits">0</div>
+              </div>
+            </div>
+            
+            <div class="atlas-stat-card">
+              <div class="atlas-stat-icon warning">
+                <i data-lucide="clock"></i>
+              </div>
+              <div class="atlas-stat-info">
+                <div class="atlas-stat-label">Vernachlässigt</div>
+                <div class="atlas-stat-value warning" id="stat-neglected">0</div>
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
 
@@ -513,6 +638,7 @@
   
   <!-- Scripts (AI) -->
   <script src="js/modules/ai-service.js"></script>
+  <script src="js/modules/atlas-controller.js"></script>
   
   <!-- Scripts (Modules) -->
   <script src="js/modules/command-center.js"></script>

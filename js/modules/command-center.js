@@ -499,10 +499,10 @@ const CommandCenter = {
   // Handle optimize plan button
   handleOptimizePlan() {
     // Open Atlas panel with optimization prompt
-    if (typeof NexusApp !== 'undefined') {
+    if (typeof AtlasController !== 'undefined') {
       // Open Atlas if not already open
-      if (!NexusApp.isAtlasOpen) {
-        NexusApp.toggleAtlas();
+      if (!AtlasController.isOpen) {
+        AtlasController.toggle();
       }
       
       // Pre-fill message field with optimization request
