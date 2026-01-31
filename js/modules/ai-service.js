@@ -1141,6 +1141,7 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
           const evaluation = {};
           if (d.roiScore !== undefined && d.roiScore !== null) {
             evaluation.roiScore = d.roiScore;
+            console.log('📊 Setting roiScore:', d.roiScore);
           }
           if (d.expectedReturn !== undefined && d.expectedReturn !== null) {
             evaluation.expectedReturn = d.expectedReturn;
@@ -1155,9 +1156,10 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
               const match = d.effortInvested.match(/(\d+)/);
               if (match) effortHours = parseInt(match[1]);
             }
+            console.log('⏱️ Parsed effortInvested:', d.effortInvested, '→', effortHours);
           }
           
-          const venture = NexusStore.addVenture({
+          const ventureData = {
             name: d.name,
             description: d.description || '',
             spheres: d.spheres || ['geschaeft'],
@@ -1168,7 +1170,13 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
             barriers: d.barriers || [],
             evaluation: Object.keys(evaluation).length > 0 ? evaluation : {},
             effortInvested: effortHours
-          });
+          };
+          
+          console.log('📦 Venture data being sent to addVenture:', ventureData);
+          
+          const venture = NexusStore.addVenture(ventureData);
+          
+          console.log('✨ Created venture object:', venture);
           
           // Set as current venture in VentureCockpit if module exists
           if (typeof VentureCockpit !== 'undefined') {
