@@ -643,20 +643,38 @@ const NexusStore = {
   
   // Clear all data
   clearAll() {
-    // Remove main data store
+    console.log('🗑️ Clearing ALL NEXUS data...');
+    
+    // Clear localStorage completely (not just nexus keys, to be thorough)
     try {
+      // First, remove known keys explicitly
       localStorage.removeItem(this.STORAGE_KEY);
-      // Remove onboarding flag to show it again
       localStorage.removeItem('nexus_onboarding_complete');
-      // Remove API key and AI settings
       localStorage.removeItem('nexus_atlas_api_key');
       localStorage.removeItem('nexus_atlas_model');
-      // Remove any other nexus keys
-      Object.keys(localStorage).filter(k => k.startsWith('nexus')).forEach(k => {
+      
+      // Then remove any other keys that might be nexus-related
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.toLowerCase().includes('nexus')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => {
+        console.log('  Removing:', k);
         localStorage.removeItem(k);
       });
+      
+      console.log('✅ LocalStorage cleared');
     } catch (e) {
       console.warn('Could not clear localStorage:', e);
+    }
+    
+    // Also clear MemoryStorage if it was used
+    if (MemoryStorage._data) {
+      MemoryStorage._data = {};
+      console.log('✅ MemoryStorage cleared');
     }
     
     // Reset in-memory state completely
@@ -684,8 +702,11 @@ const NexusStore = {
       selectedDate: new Date().toISOString().split('T')[0]
     };
     
-    // Reload page to restart fresh
-    location.reload();
+    console.log('✅ In-memory state reset');
+    console.log('🔄 Reloading page...');
+    
+    // Force a hard reload to clear any cached state
+    location.href = location.href.split('?')[0] + '?cleared=' + Date.now();
   },
   
   // ═══ SETTINGS ═══

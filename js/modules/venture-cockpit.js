@@ -197,13 +197,17 @@ const VentureCockpit = {
   
   // Render roadmap timeline
   renderRoadmap(venture) {
-    // Demo phases
-    const phases = [
-      { name: 'Phase 1: Validation', status: 'completed', progress: 100 },
-      { name: 'Phase 2: Build', status: 'active', progress: 78 },
-      { name: 'Phase 3: Launch', status: 'pending', progress: 0 },
-      { name: 'Phase 4: Scale', status: 'pending', progress: 0 }
-    ];
+    // Get phases from venture or show empty state
+    const phases = venture.phases || [];
+    
+    if (phases.length === 0) {
+      return `
+        <div class="text-center p-6 text-secondary">
+          <p>Keine Phasen definiert.</p>
+          <button class="btn btn-primary btn-sm mt-3">+ Phase hinzufügen</button>
+        </div>
+      `;
+    }
     
     return `
       <div class="flex items-center gap-4 mb-6">
@@ -225,13 +229,16 @@ const VentureCockpit = {
       <div class="atlas-panel">
         <div class="atlas-header">
           <div class="atlas-icon">🏁</div>
-          <span class="atlas-title">Nächster Milestone: MVP Launch</span>
+          <span class="atlas-title">Nächster Milestone</span>
         </div>
         <div class="atlas-body">
-          <div class="flex items-center justify-between">
-            <span class="text-secondary">Fällig: 15.06.2024</span>
-            <span class="badge badge-warning">⚠️ 12 Tage!</span>
-          </div>
+          ${venture.nextMilestone ? `
+            <div class="flex items-center justify-between">
+              <span class="text-secondary">${venture.nextMilestone.title} - Fällig: ${venture.nextMilestone.dueDate || 'TBD'}</span>
+            </div>
+          ` : `
+            <div class="text-secondary text-center">Kein Milestone definiert</div>
+          `}
         </div>
       </div>
     `;
@@ -284,21 +291,8 @@ const VentureCockpit = {
   
   // Render blockers
   renderBlockers(venture) {
-    // Demo blockers
-    const blockers = [
-      {
-        severity: 'high',
-        description: 'Backend-Dev krank',
-        impact: '3 Tasks blockiert',
-        suggestion: '@Max kontaktieren'
-      },
-      {
-        severity: 'medium',
-        description: 'Payment Provider Entscheidung offen',
-        impact: 'Phase 3 kann nicht starten',
-        suggestion: 'Mind Space: "Stripe vs Paddle"'
-      }
-    ];
+    // Get blockers from venture
+    const blockers = venture.blockers || [];
     
     if (blockers.length === 0) {
       return '<div class="text-center text-success p-4">✓ Keine Blocker</div>';

@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
    NEXUS ULTRA - Atlas AI Service
-   OpenAI Integration for Intelligent Assistance
+   OpenAI Integration for Intelligent Assistance with Memory & Actions
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 const AtlasAI = {
@@ -12,8 +12,40 @@ const AtlasAI = {
     temperature: 0.7
   },
   
+  // Conversation history for memory
+  conversationHistory: [],
+  maxHistoryLength: 20,
+  
   // System prompts for different contexts
   systemPrompts: {
+    operator: `Du bist Atlas, der intelligente Operator von NEXUS ULTRA - einem Life Operating System.
+
+DEINE FÄHIGKEITEN:
+Du kannst das System für den Nutzer bedienen. Wenn der Nutzer dich bittet, etwas zu tun, antworte mit speziellen Befehlen die das System ausführt.
+
+VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
+[ACTION:ADD_TASK:{"title":"Task Titel","priority":"normal|high|critical","sphere":"geschaeft|projekte|schule|sport|freizeit","dueDate":"YYYY-MM-DD oder null"}]
+[ACTION:COMPLETE_TASK:{"id":"task-id"}]
+[ACTION:ADD_HABIT:{"name":"Habit Name","frequency":"daily|weekly","sphere":"..."}]
+[ACTION:ADD_PROJECT:{"name":"Projekt Name","description":"..."}]
+[ACTION:NAVIGATE:{"page":"command-center|tasks|habits|projects|calendar|settings"}]
+[ACTION:SHOW_TASKS]
+[ACTION:SHOW_HABITS]
+[ACTION:SHOW_SUMMARY]
+
+KONTEXT-INFOS DIE DU ERHÄLTST:
+- Aktuelle Tasks, Habits, Projekte
+- Heutiges Datum und Uhrzeit
+- Überfällige Aufgaben
+
+RICHTLINIEN:
+- Führe Aktionen aus wenn der Nutzer darum bittet
+- Gib immer eine kurze Bestätigung nach einer Aktion
+- Sei freundlich, professionell und hilfsbereit
+- Antworte IMMER auf Deutsch
+- Erinnere dich an vorherige Nachrichten in dieser Konversation
+- Wenn du eine Aktion ausführst, schreibe den Befehl UND eine natürliche Antwort`,
+
     briefing: `Du bist Atlas, der persönliche AI-Assistent in NEXUS ULTRA - einem Life Operating System.
 Deine Aufgabe ist es, dem Nutzer einen hilfreichen, motivierenden Morgen-Briefing zu geben.
 
@@ -59,6 +91,45 @@ Antworte NUR mit validem JSON im Format:
 }`
   },
   
+  // Build current context for the AI
+  buildContext() {
+    const tasks = NexusStore.getTasks();
+    const openTasks = tasks.filter(t => t.status !== 'completed');
+    const habits = NexusStore.getHabits();
+    const projects = NexusStore.getProjects();
+    const today = new Date().toISOString().split('T')[0];
+    
+    const overdueTasks = openTasks.filter(t => t.dueDate && t.dueDate < today);
+    const todayTasks = openTasks.filter(t => t.dueDate && t.dueDate.startsWith(today));
+    
+    return `
+AKTUELLER KONTEXT:
+Datum: ${new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+Uhrzeit: ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
+
+OFFENE TASKS (${openTasks.length} total):
+${openTasks.slice(0, 10).map(t => `- [${t.id}] "${t.title}" (${t.priority}, ${t.sphere || 'allgemein'}${t.dueDate ? `, fällig: ${t.dueDate}` : ''})`).join('\n') || 'Keine offenen Tasks'}
+${openTasks.length > 10 ? `... und ${openTasks.length - 10} weitere` : ''}
+
+ÜBERFÄLLIG (${overdueTasks.length}):
+${overdueTasks.map(t => `- "${t.title}" seit ${t.dueDate}`).join('\n') || 'Keine überfälligen Tasks'}
+
+HEUTE FÄLLIG (${todayTasks.length}):
+${todayTasks.map(t => `- "${t.title}"`).join('\n') || 'Keine Tasks für heute'}
+
+HABITS (${habits.length}):
+${habits.map(h => `- "${h.name}" (${h.frequency}, Streak: ${h.streak || 0})`).join('\n') || 'Keine Habits'}
+
+PROJEKTE (${projects.length}):
+${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
+`;
+  },
+  
+  // Clear conversation history
+  clearHistory() {
+    this.conversationHistory = [];
+  },
+  
   // Check if API key is configured
   isConfigured() {
     return !!this.getApiKey();
@@ -102,24 +173,148 @@ Antworte NUR mit validem JSON im Format:
     }
   },
   
-  // Simple chat with string input (for Atlas panel)
+  // Simple chat with string input (for Atlas panel) - WITH MEMORY & ACTIONS
   async sendMessage(userMessage, options = {}) {
+    // Build context with current system state
+    const context = this.buildContext();
+    
+    // Add user message to history
+    this.conversationHistory.push({
+      role: 'user',
+      content: userMessage
+    });
+    
+    // Trim history if too long
+    if (this.conversationHistory.length > this.maxHistoryLength) {
+      this.conversationHistory = this.conversationHistory.slice(-this.maxHistoryLength);
+    }
+    
+    // Build messages array with system prompt, context, and history
     const messages = [
       {
         role: 'system',
-        content: `Du bist Atlas, der persönliche AI-Assistent in NEXUS ULTRA - einem Life Operating System.
-Du hilfst dem Nutzer bei der Planung, Organisation und Motivation. 
-Sei freundlich, professionell und antworte auf Deutsch.
-Halte deine Antworten prägnant aber hilfreich.
-Du kannst auf Befehle wie "neuer task", "was steht heute an", "zeige tasks" etc. reagieren.`
+        content: this.systemPrompts.operator + '\n\n' + context
       },
-      {
-        role: 'user',
-        content: userMessage
-      }
+      ...this.conversationHistory
     ];
     
-    return await this.chat(messages, options);
+    const response = await this.chat(messages, options);
+    
+    // Add assistant response to history
+    this.conversationHistory.push({
+      role: 'assistant',
+      content: response
+    });
+    
+    // Parse and execute any actions in the response
+    const { cleanResponse, actions } = this.parseActions(response);
+    
+    // Execute actions
+    for (const action of actions) {
+      await this.executeAction(action);
+    }
+    
+    return cleanResponse;
+  },
+  
+  // Parse action commands from AI response
+  parseActions(response) {
+    const actionRegex = /\[ACTION:([A-Z_]+)(?::(.+?))?\]/g;
+    const actions = [];
+    let cleanResponse = response;
+    
+    let match;
+    while ((match = actionRegex.exec(response)) !== null) {
+      const actionType = match[1];
+      let actionData = null;
+      
+      if (match[2]) {
+        try {
+          actionData = JSON.parse(match[2]);
+        } catch (e) {
+          actionData = match[2];
+        }
+      }
+      
+      actions.push({ type: actionType, data: actionData });
+      cleanResponse = cleanResponse.replace(match[0], '');
+    }
+    
+    return { cleanResponse: cleanResponse.trim(), actions };
+  },
+  
+  // Execute an action command
+  async executeAction(action) {
+    console.log('🤖 Atlas executing action:', action.type, action.data);
+    
+    switch (action.type) {
+      case 'ADD_TASK':
+        if (action.data && action.data.title) {
+          NexusStore.addTask({
+            title: action.data.title,
+            priority: action.data.priority || 'normal',
+            spheres: action.data.sphere ? [action.data.sphere] : ['freizeit'],
+            deadline: action.data.dueDate || null
+          });
+          // Refresh UI
+          if (typeof NexusApp !== 'undefined') {
+            NexusApp.refreshCurrentPage();
+            NexusApp.updateSidebarBadges();
+          }
+        }
+        break;
+        
+      case 'COMPLETE_TASK':
+        if (action.data && action.data.id) {
+          NexusStore.completeTask(action.data.id);
+          if (typeof NexusApp !== 'undefined') {
+            NexusApp.refreshCurrentPage();
+            NexusApp.updateSidebarBadges();
+          }
+        }
+        break;
+        
+      case 'ADD_HABIT':
+        if (action.data && action.data.name) {
+          NexusStore.addHabit({
+            name: action.data.name,
+            frequency: action.data.frequency || 'daily',
+            sphere: action.data.sphere || 'freizeit'
+          });
+          if (typeof NexusApp !== 'undefined') {
+            NexusApp.refreshCurrentPage();
+          }
+        }
+        break;
+        
+      case 'ADD_PROJECT':
+        if (action.data && action.data.name) {
+          NexusStore.addProject({
+            name: action.data.name,
+            description: action.data.description || ''
+          });
+          if (typeof NexusApp !== 'undefined') {
+            NexusApp.refreshCurrentPage();
+          }
+        }
+        break;
+        
+      case 'NAVIGATE':
+        if (action.data && action.data.page && typeof NexusApp !== 'undefined') {
+          NexusApp.navigateTo(action.data.page);
+          NexusApp.closeAtlas();
+        }
+        break;
+        
+      case 'SHOW_TASKS':
+      case 'SHOW_HABITS':
+      case 'SHOW_SUMMARY':
+        // These are informational - response already contains the info
+        break;
+        
+      default:
+        console.warn('Unknown action type:', action.type);
+    }
   },
   
   // Core chat function (expects messages array)

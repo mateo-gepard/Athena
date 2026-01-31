@@ -291,27 +291,25 @@ const TemporalEngine = {
       return new Date(t.dueDate).toDateString() === date.toDateString();
     });
     
-    // Demo time blocks
-    const timeBlocks = [
-      { start: 9, end: 11, title: 'Deep Work', type: 'focus', dayOffset: 0 },
-      { start: 14, end: 15, title: 'Team Sync', type: 'meeting', dayOffset: 1 },
-      { start: 16, end: 17, title: 'Review', type: 'admin', dayOffset: 2 }
-    ];
-    
-    const todayBlocks = timeBlocks.filter(b => b.dayOffset === dayIndex);
+    // Get time blocks from store (events with time)
+    const events = NexusStore.state.events || [];
+    const dayStr = date.toISOString().split('T')[0];
+    const todayBlocks = events.filter(e => e.date === dayStr && e.startTime);
     
     let html = '';
     
-    // Render time blocks
-    if (this.layers.timeBlocks) {
+    // Render time blocks / events
+    if (this.layers.events && todayBlocks.length > 0) {
       todayBlocks.forEach(block => {
-        const top = (block.start - 6) * 60; // 60px per hour, starting at 6am
-        const height = (block.end - block.start) * 60;
+        const startHour = parseInt(block.startTime?.split(':')[0] || 9);
+        const endHour = parseInt(block.endTime?.split(':')[0] || startHour + 1);
+        const top = (startHour - 6) * 60; // 60px per hour, starting at 6am
+        const height = Math.max((endHour - startHour) * 60, 30);
         
         html += `
-          <div class="calendar-event time-block type-${block.type}" 
+          <div class="calendar-event time-block type-${block.type || 'event'}" 
                style="top: ${top}px; height: ${height}px;">
-            <div class="event-time">${block.start}:00 - ${block.end}:00</div>
+            <div class="event-time">${block.startTime || ''} - ${block.endTime || ''}</div>
             <div class="event-title">${block.title}</div>
           </div>
         `;

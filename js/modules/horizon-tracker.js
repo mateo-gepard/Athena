@@ -92,11 +92,14 @@ const HorizonTracker = {
           <span class="atlas-title">Life Vision</span>
         </div>
         <div class="atlas-body">
-          <blockquote class="text-lg italic text-secondary" style="border-left: 3px solid var(--color-accent); padding-left: var(--space-4);">
-            "Ein erfülltes Leben mit Freiheit, Kreativität und bedeutsamen Beziehungen führen, 
-            während ich positive Auswirkungen auf andere habe."
-          </blockquote>
-          <button class="btn btn-ghost btn-sm mt-3">✏️ Vision bearbeiten</button>
+          ${NexusStore.state.user?.lifeVision ? `
+            <blockquote class="text-lg italic text-secondary" style="border-left: 3px solid var(--color-accent); padding-left: var(--space-4);">
+              "${NexusStore.state.user.lifeVision}"
+            </blockquote>
+          ` : `
+            <p class="text-secondary">Noch keine Life Vision definiert. Was ist deine größte Vision für dein Leben?</p>
+          `}
+          <button class="btn btn-ghost btn-sm mt-3" id="edit-life-vision">✏️ Vision bearbeiten</button>
         </div>
       </div>
       
@@ -253,15 +256,8 @@ const HorizonTracker = {
   
   // Render bucket list section
   renderBucketList() {
-    // Demo bucket list items
-    const bucketItems = [
-      { id: 1, title: 'Nordlichter in Island sehen', category: 'travel', completed: false, priority: 'high' },
-      { id: 2, title: 'Marathon laufen', category: 'fitness', completed: false, priority: 'medium' },
-      { id: 3, title: 'Buch schreiben', category: 'creativity', completed: false, priority: 'high' },
-      { id: 4, title: 'Japanisch lernen', category: 'learning', completed: false, priority: 'low' },
-      { id: 5, title: 'Fallschirmsprung', category: 'adventure', completed: true, priority: 'medium' },
-      { id: 6, title: 'Startup gründen', category: 'career', completed: true, priority: 'high' }
-    ];
+    // Get bucket items from store
+    const bucketItems = NexusStore.state.bucketItems || [];
     
     const categories = {
       travel: { icon: '✈️', label: 'Reisen' },
@@ -271,6 +267,23 @@ const HorizonTracker = {
       adventure: { icon: '🏔️', label: 'Abenteuer' },
       career: { icon: '💼', label: 'Karriere' }
     };
+    
+    if (bucketItems.length === 0) {
+      return `
+        <div class="panel">
+          <div class="panel-body">
+            ${NexusUI.renderEmptyState(
+              'star',
+              'Keine Bucket List Items',
+              'Füge hinzu, was du in deinem Leben erleben möchtest!'
+            )}
+            <div class="text-center mt-4">
+              <button class="btn btn-primary" id="add-bucket-item">+ Bucket Item hinzufügen</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
     
     const completed = bucketItems.filter(i => i.completed);
     const pending = bucketItems.filter(i => !i.completed);
@@ -387,53 +400,54 @@ const HorizonTracker = {
   renderYearlyThemes() {
     const currentYear = new Date().getFullYear();
     
-    // Demo themes
-    const themes = [
-      {
-        year: currentYear,
-        theme: 'Das Jahr des Aufbaus',
-        icon: '🏗️',
-        description: 'Fundamente legen für langfristigen Erfolg',
-        focus: ['Business aufbauen', 'Gesundheit priorisieren', 'Beziehungen vertiefen'],
-        progress: 45,
-        status: 'active'
-      },
-      {
-        year: currentYear - 1,
-        theme: 'Das Jahr der Entdeckung',
-        icon: '🔍',
-        description: 'Neue Möglichkeiten erkunden',
-        focus: ['Neue Skills', 'Reisen', 'Networking'],
-        progress: 100,
-        status: 'completed',
-        reflection: 'Viel gelernt über mich selbst und was ich wirklich will.'
-      }
-    ];
+    // Get themes from user settings or show empty state
+    const themes = NexusStore.state.user?.yearlyThemes || [];
+    
+    if (themes.length === 0) {
+      return `
+        <div class="panel">
+          <div class="panel-body">
+            ${NexusUI.renderEmptyState(
+              'calendar',
+              'Keine Jahres-Themen definiert',
+              'Definiere ein Thema für dieses Jahr, um fokussiert zu bleiben!'
+            )}
+            <div class="text-center mt-4">
+              <button class="btn btn-primary" id="add-yearly-theme">+ Jahres-Theme erstellen</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    const currentTheme = themes.find(t => t.year === currentYear) || themes[0];
     
     return `
       <!-- Current Year Theme -->
       <div class="panel mb-6" style="border: 2px solid var(--color-accent);">
         <div class="panel-header" style="background: linear-gradient(135deg, var(--color-accent), var(--color-sphere-projekte)); opacity: 0.9;">
-          <span class="panel-title" style="color: white;">${currentYear} - ${themes[0].theme}</span>
-          <span class="text-2xl">${themes[0].icon}</span>
+          <span class="panel-title" style="color: white;">${currentTheme.year} - ${currentTheme.theme}</span>
+          <span class="text-2xl">${currentTheme.icon || '🎯'}</span>
         </div>
         <div class="panel-body">
-          <p class="text-lg mb-4">${themes[0].description}</p>
+          <p class="text-lg mb-4">${currentTheme.description || ''}</p>
           
-          <div class="grid gap-4 mb-4" style="grid-template-columns: repeat(3, 1fr);">
-            ${themes[0].focus.map(f => `
-              <div class="p-3 rounded-md bg-surface-2 text-center">
-                <div class="text-sm">${f}</div>
-              </div>
-            `).join('')}
-          </div>
+          ${currentTheme.focus && currentTheme.focus.length > 0 ? `
+            <div class="grid gap-4 mb-4" style="grid-template-columns: repeat(${Math.min(currentTheme.focus.length, 3)}, 1fr);">
+              ${currentTheme.focus.map(f => `
+                <div class="p-3 rounded-md bg-surface-2 text-center">
+                  <div class="text-sm">${f}</div>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
           
           <div class="mb-4">
             <div class="flex items-center justify-between mb-2">
               <span class="text-secondary">Jahresfortschritt</span>
-              <span class="mono">${themes[0].progress}%</span>
+              <span class="mono">${currentTheme.progress || 0}%</span>
             </div>
-            ${NexusUI.renderProgress(themes[0].progress)}
+            ${NexusUI.renderProgress(currentTheme.progress || 0)}
           </div>
           
           <div class="flex gap-2">
@@ -450,31 +464,33 @@ const HorizonTracker = {
       </div>
       
       <!-- Past Themes -->
-      <div class="panel">
-        <div class="panel-header">
-          <span class="panel-title">📜 Vergangene Themes</span>
-        </div>
-        <div class="panel-body">
-          ${themes.filter(t => t.status === 'completed').map(t => `
-            <div class="past-theme-item mb-4 p-4 rounded-md bg-surface-1">
-              <div class="flex items-center gap-3 mb-2">
-                <span class="text-2xl">${t.icon}</span>
-                <div>
-                  <span class="font-medium">${t.year} - ${t.theme}</span>
-                  <span class="badge badge-success ml-2">Abgeschlossen</span>
+      ${themes.filter(t => t.status === 'completed').length > 0 ? `
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">📜 Vergangene Themes</span>
+          </div>
+          <div class="panel-body">
+            ${themes.filter(t => t.status === 'completed').map(t => `
+              <div class="past-theme-item mb-4 p-4 rounded-md bg-surface-1">
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="text-2xl">${t.icon || '📅'}</span>
+                  <div>
+                    <span class="font-medium">${t.year} - ${t.theme}</span>
+                    <span class="badge badge-success ml-2">Abgeschlossen</span>
+                  </div>
                 </div>
+                <p class="text-secondary mb-2">${t.description || ''}</p>
+                ${t.reflection ? `
+                  <div class="p-3 rounded-md bg-surface-2 border-l-3" style="border-left: 3px solid var(--color-success);">
+                    <div class="text-xs text-tertiary mb-1">Reflektion:</div>
+                    <p class="text-sm italic">"${t.reflection}"</p>
+                  </div>
+                ` : ''}
               </div>
-              <p class="text-secondary mb-2">${t.description}</p>
-              ${t.reflection ? `
-                <div class="p-3 rounded-md bg-surface-2 border-l-3" style="border-left: 3px solid var(--color-success);">
-                  <div class="text-xs text-tertiary mb-1">Reflektion:</div>
-                  <p class="text-sm italic">"${t.reflection}"</p>
-                </div>
-              ` : ''}
-            </div>
-          `).join('')}
+            `).join('')}
+          </div>
         </div>
-      </div>
+      ` : ''}
       
       <!-- Quick Add Future Theme -->
       <div class="panel mt-6">
