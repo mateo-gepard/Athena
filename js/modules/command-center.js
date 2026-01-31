@@ -315,6 +315,23 @@ const CommandCenter = {
   setupEventListeners() {
     // Delegate event handling for dynamic elements
     document.addEventListener('click', (e) => {
+      // Briefing buttons
+      if (e.target.id === 'optimize-plan-btn') {
+        this.handleOptimizePlan();
+        return;
+      }
+      
+      if (e.target.id === 'briefing-later-btn') {
+        this.handleBriefingLater();
+        return;
+      }
+      
+      // Task Pool 'Alle' button
+      if (e.target.id === 'show-all-tasks-btn') {
+        this.handleShowAllTasks();
+        return;
+      }
+      
       const target = e.target.closest('[data-action]');
       if (!target) return;
       
@@ -413,6 +430,48 @@ const CommandCenter = {
       title: 'Task eingeplant',
       message: 'Wurde für heute eingeplant'
     });
+  },
+  
+  // Handle optimize plan button
+  handleOptimizePlan() {
+    // Open Atlas panel with optimization prompt
+    if (typeof NexusApp !== 'undefined') {
+      NexusApp.openAtlas();
+      
+      // Pre-fill message field with optimization request
+      setTimeout(() => {
+        const input = document.getElementById('atlas-input');
+        if (input) {
+          input.value = 'Optimiere meinen heutigen Plan basierend auf meiner Energie und Prioritäten';
+          input.focus();
+        }
+      }, 100);
+    }
+  },
+  
+  // Handle briefing later button
+  handleBriefingLater() {
+    const briefingEl = document.querySelector('.atlas-briefing');
+    if (briefingEl) {
+      briefingEl.style.display = 'none';
+      NexusUI.showToast('Briefing geschlossen', 'info');
+    }
+  },
+  
+  // Handle show all tasks button
+  handleShowAllTasks() {
+    if (typeof NexusApp !== 'undefined') {
+      // Navigate to tasks page
+      NexusApp.navigateTo('tasks');
+      
+      // Set filter to show overdue + this week
+      setTimeout(() => {
+        if (typeof TasksModule !== 'undefined') {
+          TasksModule.filter = 'pending';
+          TasksModule.render();
+        }
+      }, 100);
+    }
   }
 };
 

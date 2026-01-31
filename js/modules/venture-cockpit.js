@@ -22,11 +22,17 @@ const VentureCockpit = {
     const activeVentures = ventures.filter(v => v.status === 'active');
     
     if (ventures.length === 0) {
-      container.innerHTML = NexusUI.renderEmptyState(
-        'rocket',
-        'Keine Ventures',
-        'Starte dein erstes Venture-Projekt!'
-      );
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center p-8 text-center" style="min-height: 400px;">
+          <div class="text-6xl mb-4">🚀</div>
+          <h2 class="text-xl font-medium mb-2">Keine Ventures</h2>
+          <p class="text-secondary mb-6">Starte dein erstes Venture-Projekt!</p>
+          <button class="btn btn-primary" id="add-venture-btn-empty">
+            ${NexusUI.icon('plus', 16)}
+            Neues Venture erstellen
+          </button>
+        </div>
+      `;
       NexusUI.refreshIcons();
       return;
     }
@@ -68,6 +74,10 @@ const VentureCockpit = {
         </div>
         <div class="flex items-center gap-3">
           <span class="badge badge-success">🟢 AKTIV</span>
+          <button class="btn btn-primary" id="add-venture-btn">
+            ${NexusUI.icon('plus', 16)}
+            Neues Venture
+          </button>
           <button class="btn btn-secondary">
             ${NexusUI.icon('settings', 16)}
             Settings
@@ -372,6 +382,18 @@ const VentureCockpit = {
   setupEventListeners() {
     // Tab switching
     document.addEventListener('click', (e) => {
+      // Add venture buttons
+      if (e.target.closest('#add-venture-btn') || e.target.closest('#add-venture-btn-empty')) {
+        this.showAddVentureModal();
+        return;
+      }
+      
+      // Create venture button in modal
+      if (e.target.id === 'create-venture-btn') {
+        this.createVenture();
+        return;
+      }
+      
       const tab = e.target.closest('.tab');
       if (!tab) return;
       
@@ -381,6 +403,94 @@ const VentureCockpit = {
       container.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
     });
+  },
+  
+  // Show add venture modal
+  showAddVentureModal() {
+    const modalContent = `
+      <div class="p-4">
+        <h3 class="text-xl font-medium mb-4">🚀 Neues Venture erstellen</h3>
+        
+        <div class="grid gap-4">
+          <div>
+            <label class="input-label">Name *</label>
+            <input type="text" class="input" id="new-venture-name" placeholder="z.B. SaaS Startup, E-Commerce Shop">
+          </div>
+          
+          <div>
+            <label class="input-label">Beschreibung</label>
+            <textarea class="input" id="new-venture-description" rows="3" placeholder="Was ist das Ziel dieses Ventures?"></textarea>
+          </div>
+          
+          <div class="grid gap-4" style="grid-template-columns: 1fr 1fr;">
+            <div>
+              <label class="input-label">Best Case Szenario</label>
+              <textarea class="input" id="new-venture-best-case" rows="2" placeholder="Was ist der beste Ausgang?"></textarea>
+            </div>
+            
+            <div>
+              <label class="input-label">Worst Case Szenario</label>
+              <textarea class="input" id="new-venture-worst-case" rows="2" placeholder="Was ist der schlechteste Ausgang?"></textarea>
+            </div>
+          </div>
+          
+          <div>
+            <label class="input-label">Sphären</label>
+            <div class="flex gap-2 flex-wrap">
+              <label class="flex items-center gap-2">
+                <input type="checkbox" value="geschaeft" checked id="venture-sphere-geschaeft">
+                <span>💼 Geschäft</span>
+              </label>
+              <label class="flex items-center gap-2">
+                <input type="checkbox" value="projekte" checked id="venture-sphere-projekte">
+                <span>📁 Projekte</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button class="btn btn-primary flex-1" id="create-venture-btn">
+            ${NexusUI.icon('check', 16)}
+            Venture erstellen
+          </button>
+          <button class="btn btn-secondary" onclick="NexusUI.closeModal()">
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    `;
+    
+    NexusUI.showModal(modalContent);
+  },
+  
+  // Create venture
+  createVenture() {
+    const name = document.getElementById('new-venture-name')?.value;
+    if (!name) {
+      NexusUI.showToast('Name ist erforderlich', 'error');
+      return;
+    }
+    
+    const spheres = [];
+    if (document.getElementById('venture-sphere-geschaeft')?.checked) spheres.push('geschaeft');
+    if (document.getElementById('venture-sphere-projekte')?.checked) spheres.push('projekte');
+    
+    const venture = {
+      name,
+      description: document.getElementById('new-venture-description')?.value || '',
+      bestCase: document.getElementById('new-venture-best-case')?.value || '',
+      worstCase: document.getElementById('new-venture-worst-case')?.value || '',
+      spheres: spheres.length > 0 ? spheres : ['geschaeft', 'projekte'],
+      status: 'active'
+    };
+    
+    const newVenture = NexusStore.addVenture(venture);
+    this.currentVenture = newVenture;
+    
+    NexusUI.closeModal();
+    NexusUI.showToast('Venture erstellt! 🚀', 'success');
+    this.render();
   }
 };
 
