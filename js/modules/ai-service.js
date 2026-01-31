@@ -219,7 +219,8 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
   
   // Parse action commands from AI response
   parseActions(response) {
-    const actionRegex = /\[ACTION:([A-Z_]+)(?::(.+?))?\]/g;
+    // Match action commands - use a more robust regex for JSON
+    const actionRegex = /\[ACTION:([A-Z_]+)(?::(\{[^}]+\}))?\]/g;
     const actions = [];
     let cleanResponse = response;
     
@@ -228,10 +229,14 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
       const actionType = match[1];
       let actionData = null;
       
+      console.log('📋 Parsing action:', actionType, 'Raw data:', match[2]);
+      
       if (match[2]) {
         try {
           actionData = JSON.parse(match[2]);
+          console.log('   ✓ Parsed JSON:', actionData);
         } catch (e) {
+          console.warn('   ⚠️ JSON parse failed, using as string:', e.message);
           actionData = match[2];
         }
       }
@@ -245,7 +250,8 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
   
   // Execute an action command
   async executeAction(action) {
-    console.log('🤖 Atlas executing action:', action.type, action.data);
+    console.log('🤖 Atlas executing action:', action.type);
+    console.log('   Action data:', JSON.stringify(action.data));
     
     switch (action.type) {
       case 'ADD_TASK':
@@ -257,12 +263,14 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
             deadline: action.data.dueDate || null,
             scheduledDate: action.data.dueDate || null // Also set scheduledDate for calendar
           });
-          console.log('✅ Task created:', newTask);
+          console.log('✅ Task created:', newTask.title, '| ID:', newTask.id);
           // Refresh UI
           if (typeof NexusApp !== 'undefined') {
             NexusApp.refreshCurrentPage();
             NexusApp.updateSidebarBadges();
           }
+        } else {
+          console.warn('⚠️ ADD_TASK failed - missing data or title:', action.data);
         }
         break;
         
