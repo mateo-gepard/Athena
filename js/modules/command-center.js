@@ -436,7 +436,10 @@ const CommandCenter = {
   handleOptimizePlan() {
     // Open Atlas panel with optimization prompt
     if (typeof NexusApp !== 'undefined') {
-      NexusApp.openAtlas();
+      // Open Atlas if not already open
+      if (!NexusApp.isAtlasOpen) {
+        NexusApp.toggleAtlas();
+      }
       
       // Pre-fill message field with optimization request
       setTimeout(() => {
@@ -445,7 +448,7 @@ const CommandCenter = {
           input.value = 'Optimiere meinen heutigen Plan basierend auf meiner Energie und Prioritäten';
           input.focus();
         }
-      }, 100);
+      }, 350);
     }
   },
   
