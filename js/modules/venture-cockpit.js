@@ -156,8 +156,8 @@ const VentureCockpit = {
           <div class="grid" style="grid-template-columns: repeat(4, 1fr); gap: var(--space-4);">
             <div class="stat-card">
               <div class="stat-label">📊 ROI Score</div>
-              <div class="stat-value">${venture.roiProjection?.score || '-'}/10</div>
-              <div class="stat-sublabel">Expected: ${venture.roiProjection?.expected || '-'}x</div>
+              <div class="stat-value">${venture.evaluation?.roiScore || venture.roiProjection?.score || '-'}/10</div>
+              <div class="stat-sublabel">Expected: ${venture.evaluation?.expectedReturn || venture.roiProjection?.expected || '-'}</div>
             </div>
             <div class="stat-card">
               <div class="stat-label">⏱️ Effort Invested</div>
