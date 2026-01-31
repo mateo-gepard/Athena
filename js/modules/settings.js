@@ -654,6 +654,9 @@ const SettingsModule = {
     if (result.success) {
       AtlasAI.setApiKey(key);
       NexusUI.showToast('API Key gespeichert & verifiziert!', 'success');
+      
+      // Small delay to ensure localStorage is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
       this.render();
     } else {
       NexusUI.showToast('Verbindung fehlgeschlagen: ' + result.error, 'error');
