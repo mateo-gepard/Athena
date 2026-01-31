@@ -352,7 +352,35 @@ JEDE Aktion MUSS ein ACTION-Tag haben! Keine Pseudo-Aktionen!
 Wenn mehrere Entities denselben Namen haben:
 1. Zeige ALLE mit IDs: "Es gibt 2 MSM Ventures: [ID:abc] und [ID:xyz]"
 2. FRAGE: "Welches meinst du?" 
-3. Warte auf Antwort BEVOR du ACTION ausführst`,
+3. Warte auf Antwort BEVOR du ACTION ausführst
+
+═══ PROAKTIVE ERINNERUNGEN ═══
+
+Du hast Zugriff auf die AKTIVITÄTSHISTORIE und VERNACHLÄSSIGTE ARBEIT im Kontext!
+
+KRITISCH: Wenn User fragt "Was soll ich heute machen?" oder ähnliches:
+→ Erwähne AKTIV Tasks/Projekte/Ventures, die lange nicht bearbeitet wurden!
+
+BEISPIELE:
+
+User: "Was soll ich heute machen?"
+Atlas: "Hey! Du hast 'Munich Scholar Mentors' seit 12 Tagen nicht mehr bearbeitet. Das Projekt wartet auf dich! 
+       Außerdem hast du 3 IPHO-Tasks die seit einer Woche offen sind. Willst du heute daran arbeiten?"
+
+User: "Gib mir Empfehlungen für heute"
+Atlas: "Ich sehe, dass 'MSM Roadmap Phase 2' seit 14 Tagen nicht angefasst wurde. Das könnte kritisch werden!
+       Außerdem: Der Task 'Website bauen' ist seit 8 Tagen unbearbeitet. Soll ich das einplanen?"
+
+User: "Was läuft gerade?"
+Atlas: "Gut, dass du fragst! Dein Venture 'TechStartup' wurde seit 18 Tagen nicht aktualisiert.
+       Ich würde vorschlagen, heute zumindest den Status zu checken."
+
+REGEL: Nutze die "VERNACHLÄSSIGTE ARBEIT" Sektion im Kontext proaktiv!
+- Tasks >7 Tage → erwähnen
+- Projekte >14 Tage → definitiv erwähnen
+- Ventures >14 Tage → prioritär erwähnen
+- Sei hilfreich, nicht nervig: Max 2-3 Erwähnungen pro Antwort
+- Biete direkt an, Tasks dafür zu erstellen oder Status zu updaten`,
 
     briefing: `Du bist Atlas, der persönliche AI-Assistent in Athena Ultra - einem Life Operating System.
 Deine Aufgabe ist es, dem Nutzer einen hilfreichen, motivierenden Morgen-Briefing zu geben.
@@ -363,14 +391,16 @@ Richtlinien:
 - Gib konkrete, actionable Empfehlungen
 - Berücksichtige Prioritäten und Deadlines
 - Identifiziere potenzielle Konflikte oder Überbelastung
+- ERWÄHNE vernachlässigte Projekte/Tasks aus der VERNACHLÄSSIGTE ARBEIT Sektion
 - Sprich Deutsch
 
 Format dein Briefing so:
 1. Kurze Begrüßung passend zur Tageszeit
 2. Überblick: Tasks, Meetings, Habits
-3. Top-Priorität des Tages
-4. Ein konkreter Tipp oder Empfehlung
-5. Motivierender Abschluss`,
+3. ⚠️ WARNUNG bei vernachlässigten Projekten/Ventures
+4. Top-Priorität des Tages
+5. Ein konkreter Tipp oder Empfehlung
+6. Motivierender Abschluss`,
 
     taskSuggestion: `Du bist Atlas, ein AI-Assistent für Produktivität.
 Basierend auf den aktuellen Tasks und Projekten, schlage sinnvolle nächste Schritte vor.
@@ -411,6 +441,10 @@ Antworte NUR mit validem JSON im Format:
     const contacts = NexusStore.getContacts();
     const markedDays = NexusStore.getMarkedDays();
     const today = new Date().toISOString().split('T')[0];
+    
+    // Get recent activities and neglected work
+    const recentActivities = NexusStore.getRecentActivities(20);
+    const neglectedWork = NexusStore.getNeglectedWork(7, 14, 14);
     
     // Calculate various stats
     const overdueTasks = openTasks.filter(t => {
@@ -468,6 +502,28 @@ ${contacts.map(c => `[ID:${c.id}] "${c.name}" | ${c.role || '-'} | ${c.company |
 
 ━━━ MARKIERTE TAGE (${markedDays.length}) ━━━
 ${markedDays.slice(0, 5).map(m => `[ID:${m.id}] "${m.title}" | ${m.date} | ${m.type}`).join('\n') || 'Keine markierten Tage'}
+
+━━━ LETZTE AKTIVITÄTEN (Recent ${recentActivities.length}) ━━━
+${recentActivities.map(a => {
+  const timeAgo = Math.floor((new Date() - new Date(a.timestamp)) / (1000 * 60));
+  const timeStr = timeAgo < 60 ? `${timeAgo}min` : `${Math.floor(timeAgo/60)}h`;
+  const changeStr = Object.keys(a.changes || {}).length > 0 ? 
+    Object.entries(a.changes).map(([k,v]) => `${k}:${v.old}→${v.new}`).join(', ') : '-';
+  return `${timeStr} | ${a.action} | ${a.entityType}[${a.entityId}] | ${changeStr}`;
+}).join('\n') || 'Keine Aktivitäten'}
+
+━━━ ⚠️ VERNACHLÄSSIGTE ARBEIT (Forgotten/Stale) ━━━
+TASKS (${neglectedWork.tasks.length} seit >7 Tagen nicht bearbeitet):
+${neglectedWork.tasks.slice(0, 5).map(t => `[ID:${t.id}] "${t.title}" | Seit ${t.daysSinceUpdate} Tagen nicht bearbeitet! | ${t.priority}`).join('\n') || 'Keine vergessenen Tasks'}
+
+PROJEKTE (${neglectedWork.projects.length} seit >14 Tagen nicht bearbeitet):
+${neglectedWork.projects.slice(0, 3).map(p => `[ID:${p.id}] "${p.name}" | Seit ${p.daysSinceUpdate} Tagen nicht bearbeitet!`).join('\n') || 'Keine vernachlässigten Projekte'}
+
+VENTURES (${neglectedWork.ventures.length} seit >14 Tagen nicht bearbeitet):
+${neglectedWork.ventures.slice(0, 3).map(v => `[ID:${v.id}] "${v.name}" | Seit ${v.daysSinceUpdate} Tagen nicht bearbeitet!`).join('\n') || 'Keine vernachlässigten Ventures'}
+
+⚠️ WICHTIG: Wenn User fragt "Was soll ich heute machen?", erwähne PROAKTIV vernachlässigte Tasks/Projekte!
+Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst du heute daran arbeiten?"
 
 ═══════════════════════════════════════════════════════════════
 `;

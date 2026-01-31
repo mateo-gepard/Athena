@@ -216,6 +216,71 @@ const NexusStore = {
     return Object.keys(changes).length > 0 ? changes : null;
   },
   
+  // ═══ FORGOTTEN/STALE DETECTION ═══
+  
+  // Get tasks that haven't been updated in X days
+  getForgottenTasks(daysThreshold = 7) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+    const cutoffISO = cutoffDate.toISOString();
+    
+    return this.getTasks().filter(task => {
+      // Only consider pending tasks
+      if (task.status !== 'pending') return false;
+      
+      // Check when it was last updated
+      const lastUpdate = task.updatedAt || task.createdAt;
+      
+      return lastUpdate < cutoffISO;
+    }).map(task => ({
+      ...task,
+      daysSinceUpdate: Math.floor((new Date() - new Date(task.updatedAt || task.createdAt)) / (1000 * 60 * 60 * 24))
+    }));
+  },
+  
+  // Get projects with no recent activity
+  getStaleProjects(daysThreshold = 14) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+    const cutoffISO = cutoffDate.toISOString();
+    
+    return this.getProjects().filter(project => {
+      if (project.status === 'completed' || project.status === 'archived') return false;
+      
+      const lastUpdate = project.updatedAt || project.createdAt;
+      return lastUpdate < cutoffISO;
+    }).map(project => ({
+      ...project,
+      daysSinceUpdate: Math.floor((new Date() - new Date(project.updatedAt || project.createdAt)) / (1000 * 60 * 60 * 24))
+    }));
+  },
+  
+  // Get ventures with no recent activity
+  getStaleVentures(daysThreshold = 14) {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysThreshold);
+    const cutoffISO = cutoffDate.toISOString();
+    
+    return this.getVentures().filter(venture => {
+      if (venture.status === 'completed' || venture.status === 'archived') return false;
+      
+      const lastUpdate = venture.updatedAt || venture.createdAt;
+      return lastUpdate < cutoffISO;
+    }).map(venture => ({
+      ...venture,
+      daysSinceUpdate: Math.floor((new Date() - new Date(venture.updatedAt || venture.createdAt)) / (1000 * 60 * 60 * 24))
+    }));
+  },
+  
+  // Get all neglected work (combined)
+  getNeglectedWork(tasksDays = 7, projectsDays = 14, venturesDays = 14) {
+    return {
+      tasks: this.getForgottenTasks(tasksDays),
+      projects: this.getStaleProjects(projectsDays),
+      ventures: this.getStaleVentures(venturesDays)
+    };
+  },
+  
   // ═══ TASKS ═══
   
   getTasks(includeDeleted = false) {

@@ -22,6 +22,7 @@ const Analytics = {
     this.renderCompletionMetrics();
     this.renderBurnoutRisk();
     this.renderSphereBalance();
+    this.renderNeglectedWork();
     NexusUI.refreshIcons();
   },
   
@@ -576,6 +577,152 @@ const Analytics = {
       <svg viewBox="0 0 240 240" class="pie-svg">
         ${slices}
       </svg>
+    `;
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 4. NEGLECTED WORK (VERGESSENE TASKS/PROJEKTE/VENTURES)
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderNeglectedWork() {
+    const container = document.getElementById('neglectedWork');
+    if (!container) return;
+    
+    const neglected = NexusStore.getNeglectedWork(7, 14, 14);
+    const totalNeglected = neglected.tasks.length + neglected.projects.length + neglected.ventures.length;
+    
+    container.innerHTML = `
+      <div class="analytics-section">
+        <div class="section-header">
+          <h2><i data-lucide="alert-triangle"></i> Vernachlässigte Arbeit</h2>
+          <p class="text-tertiary">Tasks, Projekte und Ventures, die lange nicht bearbeitet wurden</p>
+          ${totalNeglected > 0 ? 
+            `<div class="alert alert-warning" style="margin-top: 1rem;">
+              <i data-lucide="alert-circle"></i>
+              <span>Du hast ${totalNeglected} ${totalNeglected === 1 ? 'Element' : 'Elemente'}, die seit längerer Zeit nicht bearbeitet wurden!</span>
+            </div>` : 
+            `<div class="alert alert-success" style="margin-top: 1rem;">
+              <i data-lucide="check-circle"></i>
+              <span>Super! Du hast keine vernachlässigten Tasks oder Projekte. Alles im Griff! 🎉</span>
+            </div>`
+          }
+        </div>
+        
+        <!-- Forgotten Tasks -->
+        <div class="metric-group">
+          <h3 class="metric-group-title">
+            <i data-lucide="list-todo"></i> 
+            Vergessene Tasks (>7 Tage)
+            <span class="badge ${neglected.tasks.length > 0 ? 'badge-danger' : 'badge-success'}">${neglected.tasks.length}</span>
+          </h3>
+          
+          ${neglected.tasks.length === 0 ? 
+            '<p class="text-tertiary" style="padding: 1rem;">Keine vergessenen Tasks! 👍</p>' :
+            `<div class="neglected-list">
+              ${neglected.tasks.map(task => `
+                <div class="neglected-item task-item">
+                  <div class="item-header">
+                    <div>
+                      <div class="item-title">${task.title}</div>
+                      <div class="item-meta">
+                        <span class="priority-badge priority-${task.priority}">${task.priority}</span>
+                        ${task.sphere ? `<span class="sphere-badge">${task.sphere}</span>` : ''}
+                        ${task.projectId ? `<span class="project-badge">Projekt</span>` : ''}
+                      </div>
+                    </div>
+                    <div class="days-badge danger">
+                      <i data-lucide="clock"></i>
+                      ${task.daysSinceUpdate} ${task.daysSinceUpdate === 1 ? 'Tag' : 'Tage'}
+                    </div>
+                  </div>
+                  <div class="item-actions">
+                    <button class="btn-small btn-primary" onclick="NexusRouter.navigate('tasks')">
+                      <i data-lucide="external-link"></i> Ansehen
+                    </button>
+                    <button class="btn-small btn-success" onclick="NexusStore.completeTask('${task.id}'); Analytics.render();">
+                      <i data-lucide="check"></i> Erledigen
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>`
+          }
+        </div>
+        
+        <!-- Stale Projects -->
+        <div class="metric-group" style="margin-top: 2rem;">
+          <h3 class="metric-group-title">
+            <i data-lucide="folder"></i> 
+            Vernachlässigte Projekte (>14 Tage)
+            <span class="badge ${neglected.projects.length > 0 ? 'badge-warning' : 'badge-success'}">${neglected.projects.length}</span>
+          </h3>
+          
+          ${neglected.projects.length === 0 ? 
+            '<p class="text-tertiary" style="padding: 1rem;">Keine vernachlässigten Projekte! 👍</p>' :
+            `<div class="neglected-list">
+              ${neglected.projects.map(project => `
+                <div class="neglected-item project-item">
+                  <div class="item-header">
+                    <div>
+                      <div class="item-title">${project.name}</div>
+                      <div class="item-meta">
+                        <span class="status-badge status-${project.status}">${project.status}</span>
+                        ${project.sphere ? `<span class="sphere-badge">${project.sphere}</span>` : ''}
+                      </div>
+                    </div>
+                    <div class="days-badge warning">
+                      <i data-lucide="clock"></i>
+                      ${project.daysSinceUpdate} ${project.daysSinceUpdate === 1 ? 'Tag' : 'Tage'}
+                    </div>
+                  </div>
+                  <div class="item-actions">
+                    <button class="btn-small btn-primary" onclick="NexusRouter.navigate('projects'); NexusRouter.openProjectDetail('${project.id}');">
+                      <i data-lucide="external-link"></i> Ansehen
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>`
+          }
+        </div>
+        
+        <!-- Stale Ventures -->
+        <div class="metric-group" style="margin-top: 2rem;">
+          <h3 class="metric-group-title">
+            <i data-lucide="rocket"></i> 
+            Vernachlässigte Ventures (>14 Tage)
+            <span class="badge ${neglected.ventures.length > 0 ? 'badge-warning' : 'badge-success'}">${neglected.ventures.length}</span>
+          </h3>
+          
+          ${neglected.ventures.length === 0 ? 
+            '<p class="text-tertiary" style="padding: 1rem;">Keine vernachlässigten Ventures! 👍</p>' :
+            `<div class="neglected-list">
+              ${neglected.ventures.map(venture => `
+                <div class="neglected-item venture-item">
+                  <div class="item-header">
+                    <div>
+                      <div class="item-title">${venture.name}</div>
+                      <div class="item-meta">
+                        <span class="status-badge status-${venture.status}">${venture.status}</span>
+                        ${venture.spheres && venture.spheres.length > 0 ? `<span class="sphere-badge">${venture.spheres[0]}</span>` : ''}
+                      </div>
+                    </div>
+                    <div class="days-badge warning">
+                      <i data-lucide="clock"></i>
+                      ${venture.daysSinceUpdate} ${venture.daysSinceUpdate === 1 ? 'Tag' : 'Tage'}
+                    </div>
+                  </div>
+                  <div class="item-actions">
+                    <button class="btn-small btn-primary" onclick="NexusRouter.navigate('ventures'); setTimeout(() => VentureHub.openVentureDetail('${venture.id}'), 100);">
+                      <i data-lucide="external-link"></i> Ansehen
+                    </button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>`
+          }
+        </div>
+      </div>
     `;
   },
   
