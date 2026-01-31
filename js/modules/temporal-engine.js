@@ -413,15 +413,26 @@ const TemporalEngine = {
     // Render habits (if layer enabled)
     if (this.layers.habits && todayHabits.length > 0) {
       todayHabits.forEach((habit, idx) => {
-        // Render habits as small badges on the side
-        const top = 10 + idx * 32;
         const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
+        
+        // Position based on preferredTime if available, otherwise stack at top
+        let top, height;
+        if (habit.preferredTime) {
+          const [hours, minutes] = habit.preferredTime.split(':').map(Number);
+          top = (hours - 6) * 60 + (minutes || 0);
+          height = 45; // Standard height for habits
+        } else {
+          // Stack habits without time at the top
+          top = 10 + idx * 32;
+          height = 28;
+        }
         
         html += `
           <div class="calendar-event habit ${isCompleted ? 'completed' : ''}" 
-               style="top: ${top}px; left: 4px; width: 120px; height: 28px;"
+               style="top: ${top}px; height: ${height}px; ${habit.preferredTime ? 'left: 8px; right: 8px; width: auto;' : 'left: 4px; width: 120px;'}"
                data-habit-id="${habit.id}">
             <div class="event-title text-xs">
+              ${habit.preferredTime ? `<span class="event-time">${habit.preferredTime}</span>` : ''}
               ${habit.icon || '🔄'} ${habit.name}
               ${isCompleted ? '<span class="text-success ml-1">✓</span>' : ''}
             </div>
