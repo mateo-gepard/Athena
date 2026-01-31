@@ -47,7 +47,7 @@ const TemporalEngine = {
             <button class="tab ${this.currentView === 'month' ? 'active' : ''}" data-view="month">Monat</button>
           </div>
           
-          <button class="btn btn-primary">
+          <button class="btn btn-primary" id="te-new-event">
             ${NexusUI.icon('plus', 16)}
             Neuer Event
           </button>
@@ -529,9 +529,109 @@ const TemporalEngine = {
     this.render();
   },
   
+  // Show new event modal
+  showNewEventModal() {
+    const date = this.currentDate.toISOString().split('T')[0];
+    
+    const content = `
+      <div class="p-4">
+        <h3 class="text-xl font-medium mb-4">📅 Neuer Termin/Event</h3>
+        
+        <div class="grid gap-4">
+          <div>
+            <label class="input-label">Titel *</label>
+            <input type="text" class="input" id="new-event-title" placeholder="z.B. Meeting, Arzttermin, Geburtstag">
+          </div>
+          
+          <div class="grid gap-4" style="grid-template-columns: 1fr 1fr;">
+            <div>
+              <label class="input-label">Datum</label>
+              <input type="date" class="input" id="new-event-date" value="${date}">
+            </div>
+            <div>
+              <label class="input-label">Uhrzeit</label>
+              <input type="time" class="input" id="new-event-time" value="10:00">
+            </div>
+          </div>
+          
+          <div>
+            <label class="input-label">Dauer (Minuten)</label>
+            <input type="number" class="input" id="new-event-duration" value="60" min="15" step="15">
+          </div>
+          
+          <div>
+            <label class="input-label">Typ</label>
+            <select class="input" id="new-event-type">
+              <option value="event">Event/Termin</option>
+              <option value="task">Task</option>
+              <option value="meeting">Meeting</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="input-label">Sphäre</label>
+            <select class="input" id="new-event-sphere">
+              <option value="freizeit">🎮 Freizeit</option>
+              <option value="geschaeft">💼 Geschäft</option>
+              <option value="schule">🎓 Schule</option>
+              <option value="sport">⚽ Sport</option>
+              <option value="projekte">📁 Projekte</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button class="btn btn-primary flex-1" onclick="TemporalEngine.createEvent()">
+            ${NexusUI.icon('check', 16)}
+            Erstellen
+          </button>
+          <button class="btn btn-secondary" onclick="NexusUI.closeModal()">
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    `;
+    
+    NexusUI.showModal(content);
+  },
+  
+  // Create event/task from modal
+  createEvent() {
+    const title = document.getElementById('new-event-title')?.value;
+    if (!title) {
+      NexusUI.showToast('Titel ist erforderlich', 'error');
+      return;
+    }
+    
+    const date = document.getElementById('new-event-date')?.value;
+    const time = document.getElementById('new-event-time')?.value;
+    const duration = parseInt(document.getElementById('new-event-duration')?.value || 60);
+    const sphere = document.getElementById('new-event-sphere')?.value || 'freizeit';
+    
+    // Create as task with scheduled date and time
+    NexusStore.addTask({
+      title,
+      scheduledDate: date,
+      scheduledTime: time,
+      timeEstimate: duration,
+      spheres: [sphere],
+      priority: 'normal'
+    });
+    
+    NexusUI.closeModal();
+    NexusUI.showToast('Event erstellt! 📅', 'success');
+    this.render();
+  },
+  
   // Setup event listeners
   setupEventListeners() {
     document.addEventListener('click', (e) => {
+      // New event button
+      if (e.target.closest('#te-new-event')) {
+        this.showNewEventModal();
+        return;
+      }
+      
       // Navigation
       if (e.target.closest('#te-prev')) {
         this.navigate(-1);

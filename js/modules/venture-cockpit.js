@@ -78,7 +78,7 @@ const VentureCockpit = {
             ${NexusUI.icon('plus', 16)}
             Neues Venture
           </button>
-          <button class="btn btn-secondary">
+          <button class="btn btn-secondary" id="venture-settings-btn">
             ${NexusUI.icon('settings', 16)}
             Settings
           </button>
@@ -159,7 +159,7 @@ const VentureCockpit = {
           <div class="panel">
             <div class="panel-header">
               <span class="panel-title">Current Tasks</span>
-              <button class="btn btn-sm">+ Task</button>
+              <button class="btn btn-sm" id="add-venture-task-btn">+ Task</button>
             </div>
             <div class="panel-body">
               ${this.renderVentureTasks(tasks)}
@@ -214,7 +214,7 @@ const VentureCockpit = {
       return `
         <div class="text-center p-6 text-secondary">
           <p>Keine Phasen definiert.</p>
-          <button class="btn btn-primary btn-sm mt-3">+ Phase hinzufügen</button>
+          <button class="btn btn-primary btn-sm mt-3" id="add-venture-phase-btn">+ Phase hinzufügen</button>
         </div>
       `;
     }
@@ -292,7 +292,7 @@ const VentureCockpit = {
     html += `
       <div class="text-secondary text-sm mt-4">
         🟢 BACKLOG: ${normalTasks.length} Tasks
-        <button class="btn-ghost">Alle anzeigen →</button>
+        <button class="btn-ghost" id="show-venture-backlog-btn">Alle anzeigen →</button>
       </div>
     `;
     
@@ -331,7 +331,7 @@ const VentureCockpit = {
       return `
         <div class="text-center text-tertiary p-4">
           Keine Kontakte verknüpft
-          <button class="btn btn-sm mt-2">+ Kontakt hinzufügen</button>
+          <button class="btn btn-sm mt-2" id="add-venture-contact-btn">+ Kontakt hinzufügen</button>
         </div>
       `;
     }
@@ -346,7 +346,7 @@ const VentureCockpit = {
           </div>
         </div>
       `).join('')}
-      <button class="btn-ghost text-sm mt-2">+ Kontakt hinzufügen</button>
+      <button class="btn-ghost text-sm mt-2" id="add-venture-contact-btn-2">+ Kontakt hinzufügen</button>
     `;
   },
   
@@ -358,7 +358,7 @@ const VentureCockpit = {
       return `
         <div class="text-center text-tertiary p-4">
           Keine Notizen verknüpft
-          <button class="btn btn-sm mt-2">+ Neue Notiz</button>
+          <button class="btn btn-sm mt-2" id="add-venture-note-btn">+ Neue Notiz</button>
         </div>
       `;
     }
@@ -374,7 +374,7 @@ const VentureCockpit = {
       <div class="text-xs text-tertiary mt-2">
         📎 ${notes.length} Notizen │ ${notes.filter(n => n.type === 'idea').length} Ideen
       </div>
-      <button class="btn-ghost text-sm mt-2">Canvas öffnen →</button>
+      <button class="btn-ghost text-sm mt-2" id="open-venture-canvas-btn">Canvas öffnen →</button>
     `;
   },
   
@@ -391,6 +391,48 @@ const VentureCockpit = {
       // Create venture button in modal
       if (e.target.id === 'create-venture-btn') {
         this.createVenture();
+        return;
+      }
+      
+      // Venture settings
+      if (e.target.closest('#venture-settings-btn')) {
+        this.showVentureSettings();
+        return;
+      }
+      
+      // Add task to venture
+      if (e.target.closest('#add-venture-task-btn')) {
+        this.showAddTaskModal();
+        return;
+      }
+      
+      // Add phase
+      if (e.target.closest('#add-venture-phase-btn')) {
+        this.showAddPhaseModal();
+        return;
+      }
+      
+      // Show backlog
+      if (e.target.closest('#show-venture-backlog-btn')) {
+        this.showBacklog();
+        return;
+      }
+      
+      // Add contact
+      if (e.target.closest('#add-venture-contact-btn') || e.target.closest('#add-venture-contact-btn-2')) {
+        this.showAddContactModal();
+        return;
+      }
+      
+      // Add note
+      if (e.target.closest('#add-venture-note-btn')) {
+        this.showAddNoteModal();
+        return;
+      }
+      
+      // Open canvas
+      if (e.target.closest('#open-venture-canvas-btn')) {
+        this.openCanvas();
         return;
       }
       
@@ -491,6 +533,98 @@ const VentureCockpit = {
     NexusUI.closeModal();
     NexusUI.showToast('Venture erstellt! 🚀', 'success');
     this.render();
+  },
+  
+  // Show venture settings
+  showVentureSettings() {
+    NexusUI.showToast('Venture Settings - Coming Soon', 'info');
+  },
+  
+  // Show add task modal for venture
+  showAddTaskModal() {
+    if (!this.currentVenture) return;
+    
+    // Find or create project for this venture
+    const projects = NexusStore.getProjects();
+    let project = projects.find(p => 
+      p.name.toLowerCase().includes(this.currentVenture.name.toLowerCase().split(' ')[0])
+    );
+    
+    if (!project) {
+      // Create a project for this venture
+      project = NexusStore.addProject({
+        name: this.currentVenture.name,
+        description: this.currentVenture.description,
+        icon: '🚀'
+      });
+    }
+    
+    // Navigate to tasks and open add task modal with project pre-selected
+    if (typeof NexusApp !== 'undefined') {
+      NexusApp.navigateTo('tasks');
+      setTimeout(() => {
+        if (typeof TasksModule !== 'undefined') {
+          TasksModule.showAddTaskModal();
+          // Pre-select the project
+          setTimeout(() => {
+            const projectSelect = document.getElementById('new-task-project');
+            if (projectSelect) {
+              projectSelect.value = project.id;
+            }
+          }, 100);
+        }
+      }, 100);
+    }
+  },
+  
+  // Show add phase modal
+  showAddPhaseModal() {
+    NexusUI.showToast('Roadmap Phasen - Coming Soon', 'info');
+  },
+  
+  // Show venture backlog
+  showBacklog() {
+    if (!this.currentVenture) return;
+    
+    // Navigate to tasks filtered by venture project
+    const projects = NexusStore.getProjects();
+    const project = projects.find(p => 
+      p.name.toLowerCase().includes(this.currentVenture.name.toLowerCase().split(' ')[0])
+    );
+    
+    if (typeof NexusApp !== 'undefined') {
+      NexusApp.navigateTo('tasks');
+      if (project && typeof TasksModule !== 'undefined') {
+        setTimeout(() => {
+          TasksModule.filter = 'pending';
+          TasksModule.render();
+        }, 100);
+      }
+    }
+  },
+  
+  // Show add contact modal
+  showAddContactModal() {
+    if (typeof NexusApp !== 'undefined') {
+      NexusApp.navigateTo('contacts');
+      setTimeout(() => {
+        if (typeof ContactsModule !== 'undefined') {
+          ContactsModule.showAddContactModal();
+        }
+      }, 100);
+    }
+  },
+  
+  // Show add note modal
+  showAddNoteModal() {
+    NexusUI.showToast('Venture Notizen - Coming Soon', 'info');
+  },
+  
+  // Open mind canvas
+  openCanvas() {
+    if (typeof NexusApp !== 'undefined') {
+      NexusApp.navigateTo('mind-canvas');
+    }
   }
 };
 

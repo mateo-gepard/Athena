@@ -315,7 +315,7 @@ const HorizonTracker = {
           <div class="panel mb-6">
             <div class="panel-header">
               <span class="panel-title">○ Noch zu erleben</span>
-              <button class="btn btn-sm">+ Hinzufügen</button>
+              <button class="btn btn-sm" id="add-bucket-item-btn">+ Hinzufügen</button>
             </div>
             <div class="panel-body">
               <div class="content-stack gap-3">
@@ -388,7 +388,7 @@ const HorizonTracker = {
             <div class="panel-body text-center p-6">
               <div class="text-4xl mb-3">${categories[pending[0]?.category]?.icon || '✨'}</div>
               <div class="font-medium mb-2">${pending[0]?.title || 'Keine Items'}</div>
-              <button class="btn btn-ghost btn-sm">🔄 Neu würfeln</button>
+              <button class="btn btn-ghost btn-sm" id="shuffle-bucket-btn">🔄 Neu würfeln</button>
             </div>
           </div>
         </div>
@@ -659,6 +659,156 @@ const HorizonTracker = {
     NexusUI.closeModal();
     this.render();
     NexusUI.showToast('Fortschritt aktualisiert', 'success');
+  },
+  
+  // Show add bucket item modal
+  showAddBucketItemModal() {
+    const categories = {
+      travel: { icon: '🌍', label: 'Reisen' },
+      adventure: { icon: '⛰️', label: 'Abenteuer' },
+      learning: { icon: '📚', label: 'Lernen' },
+      achievement: { icon: '🏆', label: 'Erfolge' },
+      experience: { icon: '✨', label: 'Erfahrungen' },
+      giving: { icon: '🤝', label: 'Geben' }
+    };
+    
+    const content = `
+      <div class="p-4">
+        <h3 class="text-xl font-medium mb-4">✨ Neues Bucket List Item</h3>
+        
+        <div class="grid gap-4">
+          <div>
+            <label class="input-label">Was möchtest du erleben? *</label>
+            <input type="text" class="input" id="new-bucket-title" placeholder="z.B. Nordlichter sehen, Marathon laufen">
+          </div>
+          
+          <div>
+            <label class="input-label">Kategorie</label>
+            <select class="input" id="new-bucket-category">
+              ${Object.entries(categories).map(([key, cat]) => `
+                <option value="${key}">${cat.icon} ${cat.label}</option>
+              `).join('')}
+            </select>
+          </div>
+          
+          <div>
+            <label class="input-label">Priorität</label>
+            <select class="input" id="new-bucket-priority">
+              <option value="normal">Normal</option>
+              <option value="high">Hoch</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button class="btn btn-primary flex-1" onclick="HorizonTracker.createBucketItem()">
+            ${NexusUI.icon('check', 16)}
+            Hinzufügen
+          </button>
+          <button class="btn btn-secondary" onclick="NexusUI.closeModal()">
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    `;
+    
+    NexusUI.showModal(content);
+  },
+  
+  // Create bucket item
+  createBucketItem() {
+    const title = document.getElementById('new-bucket-title')?.value;
+    if (!title) {
+      NexusUI.showToast('Titel ist erforderlich', 'error');
+      return;
+    }
+    
+    const item = {
+      title,
+      category: document.getElementById('new-bucket-category')?.value || 'experience',
+      priority: document.getElementById('new-bucket-priority')?.value || 'normal',
+      completed: false
+    };
+    
+    // Add to user settings
+    if (!NexusStore.state.user.bucketList) {
+      NexusStore.state.user.bucketList = [];
+    }
+    NexusStore.state.user.bucketList.push({
+      id: NexusStore.generateId(),
+      ...item,
+      createdAt: new Date().toISOString()
+    });
+    NexusStore.saveState();
+    
+    NexusUI.closeModal();
+    NexusUI.showToast('Bucket Item hinzugefügt! ✨', 'success');
+    this.render();
+  },
+  
+  // Shuffle bucket list to show random item
+  shuffleBucketList() {
+    const bucketItems = NexusStore.state.user?.bucketList || [];
+    const pending = bucketItems.filter(i => !i.completed);
+    
+    if (pending.length === 0) {
+      NexusUI.showToast('Keine offenen Items zum Würfeln', 'info');
+      return;
+    }
+    
+    // Just re-render to show a different random item (already happens with pending[0])
+    this.render();
+    NexusUI.showToast('Neue Inspiration! 🎲', 'success');
+  },
+  
+  // Setup event listeners
+  setupEventListeners() {
+    document.addEventListener('click', (e) => {
+      // Add bucket item buttons
+      if (e.target.id === 'add-bucket-item' || e.target.id === 'add-bucket-item-btn') {
+        this.showAddBucketItemModal();
+        return;
+      }
+      
+      // Shuffle bucket list
+      if (e.target.id === 'shuffle-bucket-btn') {
+        this.shuffleBucketList();
+        return;
+      }
+      
+      // Add yearly theme
+      if (e.target.id === 'add-yearly-theme') {
+        NexusUI.showToast('Jahres-Themen - Coming Soon', 'info');
+        return;
+      }
+      
+      // Add goal button
+      if (e.target.id === 'ht-new-goal') {
+        this.showAddGoalModal();
+        return;
+      }
+      
+      // Edit life vision
+      if (e.target.id === 'edit-life-vision') {
+        this.editLifeVision();
+        return;
+      }
+      
+      // Add goal for specific horizon
+      const addGoalBtn = e.target.closest('[data-add-goal]');
+      if (addGoalBtn) {
+        const horizon = addGoalBtn.dataset.addGoal;
+        this.showAddGoalModal(horizon);
+        return;
+      }
+      
+      // View goal details
+      const goalCard = e.target.closest('[data-goal-id]');
+      if (goalCard && !e.target.closest('[data-action]')) {
+        this.showGoalDetails(goalCard.dataset.goalId);
+        return;
+      }
+    });
   }
 };
 
