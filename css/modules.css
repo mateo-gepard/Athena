@@ -2490,6 +2490,10 @@
   border-radius: var(--radius-lg);
   max-width: 85%;
   line-height: 1.5;
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .atlas-message-item.user .atlas-message-content {
