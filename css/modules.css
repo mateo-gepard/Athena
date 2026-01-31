@@ -2314,7 +2314,10 @@
   visibility: visible;
 }
 
-.modal {
+.modal-overlay .modal {
+  position: relative;
+  top: auto;
+  left: auto;
   background: var(--color-surface-1);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
@@ -2325,11 +2328,15 @@
   display: flex;
   flex-direction: column;
   transform: scale(0.95);
-  transition: transform var(--transition-base);
+  opacity: 0;
+  visibility: hidden;
+  transition: all var(--transition-base);
 }
 
 .modal-overlay.active .modal {
   transform: scale(1);
+  opacity: 1;
+  visibility: visible;
 }
 
 .modal.large {
