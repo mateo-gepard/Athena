@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/modules.css">
+  <link rel="stylesheet" href="css/command-center.css">
   <link rel="stylesheet" href="css/analytics.css">
   <link rel="stylesheet" href="css/atlas.css">
 </head>
@@ -165,142 +166,209 @@
         <!-- Command Center View -->
         <div id="page-command-center" class="page-view active">
           
-          <!-- Atlas Morning Briefing -->
-          <div class="atlas-panel mb-6">
-            <div class="atlas-header">
-              <div class="atlas-icon">🧠</div>
-              <span class="atlas-title">ATLAS Morning Briefing</span>
-            </div>
-            <div class="atlas-body">
-              <div class="atlas-message" id="atlasBriefing">
-                <i data-lucide="sunrise"></i> Guten Morgen! Hier ist dein Tag:
-                <br><br>
-                Du hast <strong>7 Tasks</strong> geplant (ca. 5.5h) und <strong>2 Meetings</strong>. 
-                Deine 3 Habits sind fällig. Dein Energy Forecast zeigt Peak am Vormittag.
-                <br><br>
-                <i data-lucide="lightbulb"></i> "Dein Investor Pitch ist morgen. Ich empfehle 2h Focus heute Vormittag, wenn deine Energie am höchsten ist."
+          <!-- Mission Control Header -->
+          <div class="cc-mission-header">
+            <div class="cc-mission-left">
+              <div class="cc-mission-greeting">
+                <div class="cc-greeting-icon">👋</div>
+                <div>
+                  <div class="cc-greeting-text" id="cc-greeting">Guten Morgen, Mateo!</div>
+                  <div class="cc-greeting-subtext" id="cc-date-time">Freitag, 31. Januar 2026 · 09:47</div>
+                </div>
               </div>
-              <div class="atlas-actions">
-                <button class="btn btn-primary btn-sm" id="optimize-plan-btn">Plan optimieren</button>
-                <button class="btn btn-secondary btn-sm" id="briefing-later-btn">Später</button>
+            </div>
+            <div class="cc-mission-stats">
+              <div class="cc-stat" id="cc-stat-completion">
+                <div class="cc-stat-value">0%</div>
+                <div class="cc-stat-label">Heute erledigt</div>
+              </div>
+              <div class="cc-stat-separator"></div>
+              <div class="cc-stat" id="cc-stat-tasks">
+                <div class="cc-stat-value">0</div>
+                <div class="cc-stat-label">Offene Tasks</div>
+              </div>
+              <div class="cc-stat-separator"></div>
+              <div class="cc-stat" id="cc-stat-habits">
+                <div class="cc-stat-value">0/0</div>
+                <div class="cc-stat-label">Habits</div>
+              </div>
+              <div class="cc-stat-separator"></div>
+              <div class="cc-stat" id="cc-stat-focus">
+                <div class="cc-stat-value">0h</div>
+                <div class="cc-stat-label">Focus Time</div>
               </div>
             </div>
           </div>
-          
-          <!-- Two Column Layout -->
-          <div class="layout-two-col">
-            <!-- Main Content -->
-            <div class="layout-two-col-main">
-              
-              <!-- Morning Block -->
-              <div class="time-block">
-                <div class="time-block-header">
-                  <span class="time-block-icon"><i data-lucide="sunrise"></i></span>
-                  <span class="time-block-title">Morning Block</span>
-                  <span class="time-block-time">06:00 - 12:00</span>
-                </div>
-                <div class="time-block-items" id="morningTasks">
-                  <!-- Tasks will be rendered here -->
-                </div>
-              </div>
-              
-              <!-- Afternoon Block -->
-              <div class="time-block">
-                <div class="time-block-header">
-                  <span class="time-block-icon">☀️</span>
-                  <span class="time-block-title">Afternoon Block</span>
-                  <span class="time-block-time">12:00 - 18:00</span>
-                </div>
-                <div class="time-block-items" id="afternoonTasks">
-                  <!-- Tasks will be rendered here -->
-                </div>
-              </div>
-              
-              <!-- Evening Block -->
-              <div class="time-block">
-                <div class="time-block-header">
-                  <span class="time-block-icon">🌙</span>
-                  <span class="time-block-title">Evening Block</span>
-                  <span class="time-block-time">18:00 - 22:00</span>
-                </div>
-                <div class="time-block-items" id="eveningTasks">
-                  <!-- Tasks will be rendered here -->
-                </div>
-              </div>
-              
+
+          <!-- Atlas AI Briefing (Compact) -->
+          <div class="cc-atlas-briefing" id="cc-atlas-briefing">
+            <div class="cc-briefing-icon">
+              <i data-lucide="sparkles"></i>
             </div>
+            <div class="cc-briefing-content" id="atlasBriefing">
+              <div class="cc-briefing-loading">
+                <i data-lucide="loader"></i>
+                Atlas analysiert deinen Tag...
+              </div>
+            </div>
+            <button class="cc-briefing-action" id="optimize-plan-btn">
+              <i data-lucide="wand-2"></i>
+              Optimieren
+            </button>
+          </div>
+
+          <!-- Main Grid -->
+          <div class="cc-grid">
             
-            <!-- Sidebar -->
-            <div class="layout-two-col-aside">
-              <!-- Quick Stats -->
-              <div class="panel mb-6">
-                <div class="panel-header">
-                  <span class="panel-title">Quick Stats</span>
-                </div>
-                <div class="panel-body">
-                  <div class="stats-grid">
-                    <div class="stat-card">
-                      <div class="stat-label">Geplante Zeit</div>
-                      <div class="stat-value">5.5h</div>
-                    </div>
-                    <div class="stat-card">
-                      <div class="stat-label">Verfügbar</div>
-                      <div class="stat-value">8h</div>
-                    </div>
-                    <div class="stat-card">
-                      <div class="stat-label">Habits</div>
-                      <div class="stat-value">3</div>
-                    </div>
-                    <div class="stat-card">
-                      <div class="stat-label">Meetings</div>
-                      <div class="stat-value">2</div>
-                    </div>
+            <!-- Left Column: Timeline -->
+            <div class="cc-timeline">
+              
+              <!-- Focus Block (Most Important) -->
+              <div class="cc-focus-block">
+                <div class="cc-section-header">
+                  <div class="cc-section-title">
+                    <i data-lucide="target"></i>
+                    <span>Deine Top-Priorität</span>
                   </div>
+                  <div class="cc-section-badge" id="cc-focus-time">0h</div>
+                </div>
+                <div class="cc-focus-content" id="cc-focus-task">
+                  <!-- Most important task will be rendered here -->
                 </div>
               </div>
-              
-              <!-- Task Pool -->
-              <div class="panel mb-6">
-                <div class="panel-header">
-                  <span class="panel-title">Task Pool</span>
-                  <button class="btn-ghost text-secondary" id="show-all-tasks-btn">Alle →</button>
+
+              <!-- Morning Block -->
+              <div class="cc-time-block">
+                <div class="cc-section-header">
+                  <div class="cc-section-title">
+                    <div class="cc-time-icon cc-time-morning">
+                      <i data-lucide="sunrise"></i>
+                    </div>
+                    <span>Morning</span>
+                    <span class="cc-time-range">06:00 - 12:00</span>
+                  </div>
+                  <div class="cc-section-count" id="cc-morning-count">0</div>
                 </div>
-                <div class="panel-body">
-                  <!-- Overdue -->
-                  <div class="section">
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="badge badge-critical" id="overdue-count-badge">Überfällig (0)</span>
-                    </div>
-                    <div class="content-stack gap-2" id="overdueTasks">
-                      <!-- Overdue tasks will be rendered here -->
-                    </div>
-                  </div>
-                  
-                  <!-- This Week -->
-                  <div class="section">
-                    <div class="flex items-center gap-2 mb-3">
-                      <span class="badge badge-warning" id="week-count-badge">Diese Woche (0)</span>
-                    </div>
-                    <div class="content-stack gap-2" id="weekTasks">
-                      <!-- Week tasks will be rendered here -->
-                    </div>
-                  </div>
+                <div class="cc-timeline-items" id="morningTasks">
+                  <!-- Morning tasks will be rendered here -->
                 </div>
               </div>
-              
-              <!-- Habits Today -->
-              <div class="panel">
-                <div class="panel-header">
-                  <span class="panel-title">Habits Heute</span>
+
+              <!-- Afternoon Block -->
+              <div class="cc-time-block">
+                <div class="cc-section-header">
+                  <div class="cc-section-title">
+                    <div class="cc-time-icon cc-time-afternoon">
+                      <i data-lucide="sun"></i>
+                    </div>
+                    <span>Afternoon</span>
+                    <span class="cc-time-range">12:00 - 18:00</span>
+                  </div>
+                  <div class="cc-section-count" id="cc-afternoon-count">0</div>
                 </div>
-                <div class="panel-body">
-                  <div class="content-stack gap-3" id="todayHabits">
+                <div class="cc-timeline-items" id="afternoonTasks">
+                  <!-- Afternoon tasks will be rendered here -->
+                </div>
+              </div>
+
+              <!-- Evening Block -->
+              <div class="cc-time-block">
+                <div class="cc-section-header">
+                  <div class="cc-section-title">
+                    <div class="cc-time-icon cc-time-evening">
+                      <i data-lucide="moon"></i>
+                    </div>
+                    <span>Evening</span>
+                    <span class="cc-time-range">18:00 - 22:00</span>
+                  </div>
+                  <div class="cc-section-count" id="cc-evening-count">0</div>
+                </div>
+                <div class="cc-timeline-items" id="eveningTasks">
+                  <!-- Evening tasks will be rendered here -->
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right Column: Sidebar Panels -->
+            <div class="cc-sidebar">
+              
+              <!-- Daily Habits -->
+              <div class="cc-panel">
+                <div class="cc-panel-header">
+                  <div class="cc-panel-title">
+                    <i data-lucide="repeat"></i>
+                    <span>Daily Habits</span>
+                  </div>
+                  <div class="cc-panel-badge" id="cc-habits-badge">0/0</div>
+                </div>
+                <div class="cc-panel-body">
+                  <div class="cc-habits-list" id="todayHabits">
                     <!-- Habits will be rendered here -->
                   </div>
                 </div>
               </div>
-              
+
+              <!-- Alerts & Reminders -->
+              <div class="cc-panel cc-panel-alerts">
+                <div class="cc-panel-header">
+                  <div class="cc-panel-title">
+                    <i data-lucide="bell"></i>
+                    <span>Benötigt Aufmerksamkeit</span>
+                  </div>
+                  <div class="cc-panel-badge cc-badge-warning" id="cc-alerts-badge">0</div>
+                </div>
+                <div class="cc-panel-body">
+                  <div class="cc-alerts-list" id="cc-alerts">
+                    <!-- Overdue tasks and alerts will be rendered here -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Add Panel -->
+              <div class="cc-panel cc-panel-quick">
+                <div class="cc-panel-header">
+                  <div class="cc-panel-title">
+                    <i data-lucide="zap"></i>
+                    <span>Quick Actions</span>
+                  </div>
+                </div>
+                <div class="cc-panel-body">
+                  <div class="cc-quick-actions">
+                    <button class="cc-quick-btn" id="cc-quick-task">
+                      <i data-lucide="plus"></i>
+                      <span>Task hinzufügen</span>
+                    </button>
+                    <button class="cc-quick-btn" id="cc-quick-break">
+                      <i data-lucide="coffee"></i>
+                      <span>Pause einplanen</span>
+                    </button>
+                    <button class="cc-quick-btn" id="cc-quick-reschedule">
+                      <i data-lucide="calendar"></i>
+                      <span>Tag umplanen</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Upcoming (This Week) -->
+              <div class="cc-panel">
+                <div class="cc-panel-header">
+                  <div class="cc-panel-title">
+                    <i data-lucide="calendar-days"></i>
+                    <span>Diese Woche</span>
+                  </div>
+                  <div class="cc-panel-badge" id="cc-week-badge">0</div>
+                </div>
+                <div class="cc-panel-body">
+                  <div class="cc-upcoming-list" id="weekTasks">
+                    <!-- Upcoming tasks will be rendered here -->
+                  </div>
+                </div>
+              </div>
+
             </div>
+
           </div>
           
         </div>

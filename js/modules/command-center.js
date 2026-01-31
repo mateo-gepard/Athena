@@ -20,12 +20,106 @@ const CommandCenter = {
   
   // Render all sections
   render() {
+    this.renderGreeting();
+    this.renderHeaderStats();
     this.renderMorningBriefing();
+    this.renderFocusBlock();
     this.renderTimeBlocks();
-    this.renderTaskPool();
     this.renderHabits();
-    this.renderQuickStats();
+    this.renderAlerts();
+    this.renderUpcoming();
     NexusUI.refreshIcons();
+  },
+  
+  // Render Greeting
+  renderGreeting() {
+    const greetingEl = document.getElementById('cc-greeting');
+    const dateTimeEl = document.getElementById('cc-date-time');
+    if (!greetingEl || !dateTimeEl) return;
+    
+    const now = new Date();
+    const hour = now.getHours();
+    const greeting = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
+    
+    greetingEl.textContent = `${greeting}, Mateo!`;
+    
+    const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+    const months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    
+    const dayName = days[now.getDay()];
+    const day = now.getDate();
+    const month = months[now.getMonth()];
+    const year = now.getFullYear();
+    const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    
+    dateTimeEl.textContent = `${dayName}, ${day}. ${month} ${year} · ${time}`;
+  },
+  
+  // Render Header Stats
+  renderHeaderStats() {
+    const today = new Date().toISOString().split('T')[0];
+    const todayTasks = NexusStore.getTasksForDate(today);
+    const completedToday = todayTasks.filter(t => t.status === 'completed');
+    const openTasks = todayTasks.filter(t => t.status !== 'completed');
+    const habits = NexusStore.getHabits();
+    const completedHabits = habits.filter(h => NexusStore.isHabitCompletedToday(h.id));
+    const totalMinutes = todayTasks.reduce((sum, t) => sum + (t.timeEstimate || 0), 0);
+    
+    const completionRate = todayTasks.length > 0 ? Math.round((completedToday.length / todayTasks.length) * 100) : 0;
+    
+    const statCompletion = document.getElementById('cc-stat-completion');
+    if (statCompletion) {
+      statCompletion.querySelector('.cc-stat-value').textContent = `${completionRate}%`;
+    }
+    
+    const statTasks = document.getElementById('cc-stat-tasks');
+    if (statTasks) {
+      statTasks.querySelector('.cc-stat-value').textContent = openTasks.length;
+    }
+    
+    const statHabits = document.getElementById('cc-stat-habits');
+    if (statHabits) {
+      statHabits.querySelector('.cc-stat-value').textContent = `${completedHabits.length}/${habits.length}`;
+    }
+    
+    const statFocus = document.getElementById('cc-stat-focus');
+    if (statFocus) {
+      const hours = (totalMinutes / 60).toFixed(1);
+      statFocus.querySelector('.cc-stat-value').textContent = `${hours}h`;
+    }
+  },
+  
+  // Render Focus Block (Highest Priority Task)
+  renderFocusBlock() {
+    const container = document.getElementById('cc-focus-task');
+    const timeEl = document.getElementById('cc-focus-time');
+    if (!container) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const todayTasks = NexusStore.getTasksForDate(today).filter(t => t.status !== 'completed');
+    
+    const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
+    const focusTask = todayTasks.sort((a, b) => {
+      return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+    })[0];
+    
+    if (!focusTask) {
+      container.innerHTML = `
+        <div class="cc-focus-empty">
+          <i data-lucide="check-circle"></i>
+          <div>Keine Tasks für heute geplant</div>
+        </div>
+      `;
+      if (timeEl) timeEl.textContent = '0h';
+      NexusUI.refreshIcons();
+      return;
+    }
+    
+    container.innerHTML = this.renderTaskCard(focusTask);
+    if (timeEl) {
+      const time = focusTask.timeEstimate ? `${(focusTask.timeEstimate / 60).toFixed(1)}h` : '0h';
+      timeEl.textContent = time;
+    }
   },
   
   // Render Atlas Morning Briefing (AI-generated with caching)
@@ -169,9 +263,16 @@ const CommandCenter = {
     const container = document.getElementById(containerId);
     if (!container) return;
     
+    // Update count
+    const blockName = containerId.replace('Tasks', '');
+    const countEl = document.getElementById(`cc-${blockName}-count`);
+    if (countEl) {
+      countEl.textContent = tasks.length;
+    }
+    
     if (tasks.length === 0) {
       container.innerHTML = `
-        <div class="text-tertiary text-center p-4">
+        <div class="cc-timeline-empty">
           Keine Tasks in diesem Block
         </div>
       `;
@@ -212,10 +313,209 @@ const CommandCenter = {
     
     container.innerHTML = allItems.map(item => {
       if (item.type === 'task') {
-        return NexusUI.renderTaskCard(item.data);
+        return this.renderTaskCard(item.data);
       } else {
-        return this.renderHabitInTimeline(item.data);
+        return this.renderHabitCard(item.data);
       }
+    }).join('');
+    
+    NexusUI.refreshIcons();
+  },
+  
+  // Render Task Card (new style)
+  renderTaskCard(task) {
+    const isCompleted = task.status === 'completed';
+    const sphereColor = task.spheres && task.spheres[0] ? NexusUI.getSphereColor(task.spheres[0]) : 'var(--primary)';
+    const priority = task.priority || 'medium';
+    const timeEstimate = task.timeEstimate ? `${task.timeEstimate}min` : '';
+    
+    return `
+      <div class="cc-task-card ${isCompleted ? 'completed' : ''}" 
+           style="--sphere-color: ${sphereColor}"
+           data-task-id="${task.id}">
+        <div class="cc-task-checkbox ${isCompleted ? 'checked' : ''}" data-action="toggle-task"></div>
+        <div class="cc-task-content">
+          <div class="cc-task-title">${task.title}</div>
+          <div class="cc-task-meta">
+            <span class="badge badge-${priority}">${priority}</span>
+            ${task.spheres && task.spheres[0] ? `<span class="cc-task-meta-separator">·</span><span>${task.spheres[0]}</span>` : ''}
+            ${task.projectId ? `<span class="cc-task-meta-separator">·</span><span>Projekt</span>` : ''}
+          </div>
+        </div>
+        ${timeEstimate ? `
+          <div class="cc-task-time">
+            <i data-lucide="clock"></i>
+            <span>${timeEstimate}</span>
+          </div>
+        ` : ''}
+        ${task.scheduledTime ? `
+          <div class="cc-task-time">
+            <i data-lucide="calendar"></i>
+            <span>${task.scheduledTime}</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  },
+  
+  // Render Habit Card (new style)
+  renderHabitCard(habit) {
+    const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
+    
+    return `
+      <div class="cc-task-card ${isCompleted ? 'completed' : ''}" 
+           data-habit-id="${habit.id}">
+        <div class="cc-task-checkbox ${isCompleted ? 'checked' : ''}" data-action="toggle-habit"></div>
+        <div class="cc-task-content">
+          <div class="cc-task-title">
+            <span style="margin-right: 8px">${habit.icon}</span>
+            ${habit.name}
+          </div>
+          <div class="cc-task-meta">
+            <span class="badge">HABIT</span>
+            <span class="cc-task-meta-separator">·</span>
+            <span>Streak: ${habit.streak} ${habit.streak > 0 ? '🔥' : ''}</span>
+          </div>
+        </div>
+        ${habit.preferredTime ? `
+          <div class="cc-task-time">
+            <i data-lucide="clock"></i>
+            <span>${habit.preferredTime}</span>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  },
+  
+  
+  // Render Habits (Sidebar Panel)
+  renderHabits() {
+    const container = document.getElementById('todayHabits');
+    const badgeEl = document.getElementById('cc-habits-badge');
+    if (!container) return;
+    
+    const habits = NexusStore.getHabits();
+    const completedHabits = habits.filter(h => NexusStore.isHabitCompletedToday(h.id));
+    
+    if (badgeEl) {
+      badgeEl.textContent = `${completedHabits.length}/${habits.length}`;
+    }
+    
+    if (habits.length === 0) {
+      container.innerHTML = `
+        <div class="cc-habits-empty">
+          Keine Habits definiert
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = habits.map(habit => {
+      const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
+      return `
+        <div class="cc-habit-item ${isCompleted ? 'completed' : ''}" data-habit-id="${habit.id}">
+          <div class="cc-habit-checkbox ${isCompleted ? 'checked' : ''}" data-action="toggle-habit"></div>
+          <div class="cc-habit-icon">${habit.icon}</div>
+          <div class="cc-habit-content">
+            <div class="cc-habit-name">${habit.name}</div>
+            <div class="cc-habit-streak">Streak: ${habit.streak} Tage ${habit.streak > 0 ? '🔥' : ''}</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    NexusUI.refreshIcons();
+  },
+  
+  // Render Alerts (Overdue Tasks)
+  renderAlerts() {
+    const container = document.getElementById('cc-alerts');
+    const badgeEl = document.getElementById('cc-alerts-badge');
+    if (!container) return;
+    
+    const overdueTasks = NexusStore.getOverdueTasks();
+    
+    if (badgeEl) {
+      badgeEl.textContent = overdueTasks.length;
+    }
+    
+    if (overdueTasks.length === 0) {
+      container.innerHTML = `
+        <div class="cc-alerts-empty">
+          <i data-lucide="check-circle"></i>
+          <div>Alles erledigt!</div>
+          <div style="font-size: 11px; margin-top: 4px; opacity: 0.7;">Keine überfälligen Tasks</div>
+        </div>
+      `;
+      NexusUI.refreshIcons();
+      return;
+    }
+    
+    container.innerHTML = overdueTasks.slice(0, 5).map(task => {
+      const daysOverdue = Math.floor((new Date() - new Date(task.deadline)) / (1000 * 60 * 60 * 24));
+      return `
+        <div class="cc-alert-item" data-task-id="${task.id}">
+          <div class="cc-alert-icon">
+            <i data-lucide="alert-triangle"></i>
+          </div>
+          <div class="cc-alert-content">
+            <div class="cc-alert-title">${task.title}</div>
+            <div class="cc-alert-meta">${daysOverdue} ${daysOverdue === 1 ? 'Tag' : 'Tage'} überfällig</div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+    NexusUI.refreshIcons();
+  },
+  
+  // Render Upcoming (This Week)
+  renderUpcoming() {
+    const container = document.getElementById('weekTasks');
+    const badgeEl = document.getElementById('cc-week-badge');
+    if (!container) return;
+    
+    const today = new Date();
+    const weekEnd = new Date(today);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+    
+    const todayStr = today.toISOString().split('T')[0];
+    const weekEndStr = weekEnd.toISOString().split('T')[0];
+    
+    const weekTasks = NexusStore.getTasks().filter(t => {
+      if (t.status === 'completed') return false;
+      if (t.scheduledDate === todayStr) return false;
+      if (!t.deadline) return false;
+      return t.deadline >= todayStr && t.deadline <= weekEndStr;
+    });
+    
+    if (badgeEl) {
+      badgeEl.textContent = weekTasks.length;
+    }
+    
+    if (weekTasks.length === 0) {
+      container.innerHTML = `
+        <div class="cc-upcoming-empty">
+          Keine Tasks diese Woche fällig
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = weekTasks.slice(0, 8).map(task => {
+      const deadline = new Date(task.deadline);
+      const dayName = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][deadline.getDay()];
+      const dateStr = `${dayName} ${deadline.getDate()}.${deadline.getMonth() + 1}`;
+      
+      return `
+        <div class="cc-upcoming-item" data-task-id="${task.id}">
+          <div class="cc-upcoming-dot"></div>
+          <div class="cc-upcoming-content">
+            <div class="cc-upcoming-title">${task.title}</div>
+            <div class="cc-upcoming-date">${dateStr}</div>
+          </div>
+        </div>
+      `;
     }).join('');
     
     NexusUI.refreshIcons();
@@ -379,20 +679,25 @@ const CommandCenter = {
   setupEventListeners() {
     // Delegate event handling for dynamic elements
     document.addEventListener('click', (e) => {
-      // Briefing buttons
-      if (e.target.id === 'optimize-plan-btn') {
-        this.handleOptimizePlan();
+      // Atlas Briefing Action Button
+      if (e.target.id === 'cc-briefing-action') {
+        this.handleBriefingAction();
         return;
       }
       
-      if (e.target.id === 'briefing-later-btn') {
-        this.handleBriefingLater();
+      // Quick Action Buttons
+      if (e.target.id === 'cc-quick-task') {
+        this.handleQuickTask();
         return;
       }
       
-      // Task Pool 'Alle' button
-      if (e.target.id === 'show-all-tasks-btn') {
-        this.handleShowAllTasks();
+      if (e.target.id === 'cc-quick-break') {
+        this.handleQuickBreak();
+        return;
+      }
+      
+      if (e.target.id === 'cc-quick-reschedule') {
+        this.handleQuickReschedule();
         return;
       }
       
@@ -419,6 +724,55 @@ const CommandCenter = {
           break;
       }
     });
+  },
+  
+  // Handle Atlas Briefing Action
+  handleBriefingAction() {
+    // TODO: Open Atlas AI to optimize plan
+    console.log('Opening Atlas to optimize plan...');
+    // Could trigger: NexusUI.showPanel('atlas');
+  },
+  
+  // Handle Quick Task (Add new task)
+  handleQuickTask() {
+    // TODO: Open quick task creation modal
+    console.log('Quick task creation...');
+    // Could trigger: NexusUI.showPanel('tasks'); or show quick-add modal
+  },
+  
+  // Handle Quick Break (Schedule 15min break)
+  handleQuickBreak() {
+    const now = new Date();
+    const breakTask = {
+      id: Date.now(),
+      title: '☕ Pause',
+      spheres: ['wellness'],
+      scheduledDate: now.toISOString().split('T')[0],
+      scheduledTime: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+      timeEstimate: 15,
+      priority: 'low',
+      status: 'pending'
+    };
+    
+    NexusStore.saveTask(breakTask);
+    this.render();
+    
+    // Show success feedback
+    console.log('15min Pause eingeplant');
+  },
+  
+  // Handle Quick Reschedule (Move overdue to today)
+  handleQuickReschedule() {
+    const overdueTasks = NexusStore.getOverdueTasks();
+    const today = new Date().toISOString().split('T')[0];
+    
+    overdueTasks.forEach(task => {
+      task.scheduledDate = today;
+      NexusStore.saveTask(task);
+    });
+    
+    this.render();
+    console.log(`${overdueTasks.length} überfällige Tasks auf heute verschoben`);
   },
   
   // Handle toggle task completion
