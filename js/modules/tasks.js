@@ -221,14 +221,8 @@ const TasksModule = {
   
   // Render sphere filters
   renderSphereFilters() {
-    const spheres = [
-      { id: 'geschaeft', icon: '💼', label: 'Geschäft' },
-      { id: 'projekte', icon: '🚀', label: 'Projekte' },
-      { id: 'schule', icon: '📚', label: 'Schule' },
-      { id: 'sport', icon: '💪', label: 'Sport' },
-      { id: 'freizeit', icon: '🎮', label: 'Freizeit' }
-    ];
-    
+    const spheres = NexusStore.state.spheres || [];
+
     return `
       <button class="btn btn-sm ${!this.sphereFilter ? 'btn-primary' : 'btn-ghost'}" 
               data-sphere-filter="">
@@ -246,23 +240,18 @@ const TasksModule = {
   // Render sphere stats
   renderSphereStats() {
     const tasks = NexusStore.getTasks().filter(t => t.status !== 'completed');
-    const spheres = [
-      { id: 'geschaeft', icon: '💼', label: 'Geschäft', color: 'var(--color-sphere-geschaeft)' },
-      { id: 'projekte', icon: '🚀', label: 'Projekte', color: 'var(--color-sphere-projekte)' },
-      { id: 'schule', icon: '📚', label: 'Schule', color: 'var(--color-sphere-schule)' },
-      { id: 'sport', icon: '💪', label: 'Sport', color: 'var(--color-sphere-sport)' },
-      { id: 'freizeit', icon: '🎮', label: 'Freizeit', color: 'var(--color-sphere-freizeit)' }
-    ];
-    
+    const spheres = NexusStore.state.spheres || [];
+
     return spheres.map(s => {
-      const count = tasks.filter(t => t.sphere === s.id).length;
+      const count = tasks.filter(t => t.spheres && t.spheres.includes(s.id)).length;
       const percentage = tasks.length > 0 ? Math.round((count / tasks.length) * 100) : 0;
-      
+      const color = s.color || NexusUI.getSphereColor(s.id) || `var(--color-sphere-${s.id})`;
+
       return `
         <div class="flex items-center gap-3 mb-3 cursor-pointer hover:bg-surface-2 p-2 rounded-md"
              data-sphere-filter="${s.id}">
-          <div class="w-3 h-3 rounded-full" style="background: ${s.color}"></div>
-          <span class="flex-1">${s.label}</span>
+          <div class="w-3 h-3 rounded-full" style="background: ${color}"></div>
+          <span class="flex-1">${s.name || s.label || s.id}</span>
           <span class="mono text-sm">${count}</span>
         </div>
       `;
