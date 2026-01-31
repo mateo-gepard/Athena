@@ -286,9 +286,12 @@ const TemporalEngine = {
   
   // Render events for a specific day
   renderDayEvents(date, dayIndex) {
+    const dateStr = date.toISOString().split('T')[0];
     const tasks = NexusStore.getTasks().filter(t => {
-      if (!t.dueDate) return false;
-      return new Date(t.dueDate).toDateString() === date.toDateString();
+      // Check both scheduledDate and deadline
+      const taskDate = t.scheduledDate || t.deadline;
+      if (!taskDate) return false;
+      return taskDate.split('T')[0] === dateStr;
     });
     
     // Get time blocks from store (events with time)
@@ -333,9 +336,11 @@ const TemporalEngine = {
   
   // Render month day events (dots only)
   renderMonthDayEvents(date) {
+    const dateStr = date.toISOString().split('T')[0];
     const tasks = NexusStore.getTasks().filter(t => {
-      if (!t.dueDate) return false;
-      return new Date(t.dueDate).toDateString() === date.toDateString();
+      const taskDate = t.scheduledDate || t.deadline;
+      if (!taskDate) return false;
+      return taskDate.split('T')[0] === dateStr;
     });
     
     if (tasks.length === 0) return '';
@@ -439,23 +444,30 @@ const TemporalEngine = {
   // Render upcoming events
   renderUpcoming() {
     const tasks = NexusStore.getTasks()
-      .filter(t => t.status !== 'completed' && t.dueDate)
-      .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate))
+      .filter(t => t.status !== 'completed' && (t.scheduledDate || t.deadline))
+      .sort((a, b) => {
+        const dateA = a.scheduledDate || a.deadline;
+        const dateB = b.scheduledDate || b.deadline;
+        return new Date(dateA) - new Date(dateB);
+      })
       .slice(0, 5);
     
     if (tasks.length === 0) {
       return '<div class="text-center text-tertiary p-4">Keine anstehenden Termine</div>';
     }
     
-    return tasks.map(t => `
+    return tasks.map(t => {
+      const taskDate = t.scheduledDate || t.deadline;
+      return `
       <div class="flex items-center gap-3 p-2 rounded-md hover:bg-surface-2 cursor-pointer mb-2">
-        <div class="w-3 h-3 rounded-full" style="background: var(--color-sphere-${t.sphere || 'geschaeft'})"></div>
+        <div class="w-3 h-3 rounded-full" style="background: var(--color-sphere-${t.spheres?.[0] || 'geschaeft'})"></div>
         <div class="flex-1 min-w-0">
           <div class="text-sm truncate">${t.title}</div>
-          <div class="text-xs text-tertiary">${NexusUI.formatDate(new Date(t.dueDate))}</div>
+          <div class="text-xs text-tertiary">${NexusUI.formatDate(new Date(taskDate))}</div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   },
   
   // Navigate calendar

@@ -250,12 +250,14 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
     switch (action.type) {
       case 'ADD_TASK':
         if (action.data && action.data.title) {
-          NexusStore.addTask({
+          const newTask = NexusStore.addTask({
             title: action.data.title,
             priority: action.data.priority || 'normal',
             spheres: action.data.sphere ? [action.data.sphere] : ['freizeit'],
-            deadline: action.data.dueDate || null
+            deadline: action.data.dueDate || null,
+            scheduledDate: action.data.dueDate || null // Also set scheduledDate for calendar
           });
+          console.log('✅ Task created:', newTask);
           // Refresh UI
           if (typeof NexusApp !== 'undefined') {
             NexusApp.refreshCurrentPage();
