@@ -712,7 +712,7 @@ const HorizonTracker = {
       </div>
     `;
     
-    NexusUI.showModal(content);
+    NexusUI.openModal('🎯 Neuer Bucket List Eintrag', content);
   },
   
   // Create bucket item
@@ -743,6 +743,101 @@ const HorizonTracker = {
     
     NexusUI.closeModal();
     NexusUI.showToast('Bucket Item hinzugefügt! ✨', 'success');
+    this.render();
+  },
+  
+  // Show add goal modal
+  showAddGoalModal(horizon = '1-year') {
+    const content = `
+      <div class="p-4">
+        <div class="grid gap-4">
+          <div>
+            <label class="input-label">Ziel-Titel *</label>
+            <input type="text" class="input" id="new-goal-title" placeholder="z.B. Marathon laufen">
+          </div>
+          
+          <div>
+            <label class="input-label">Beschreibung</label>
+            <textarea class="input" id="new-goal-description" rows="2" placeholder="Optional"></textarea>
+          </div>
+          
+          <div class="grid gap-4" style="grid-template-columns: 1fr 1fr;">
+            <div>
+              <label class="input-label">Horizont</label>
+              <select class="input" id="new-goal-horizon">
+                <option value="1-year" ${horizon === '1-year' ? 'selected' : ''}>1 Jahr</option>
+                <option value="3-years" ${horizon === '3-years' ? 'selected' : ''}>3 Jahre</option>
+                <option value="5-years" ${horizon === '5-years' ? 'selected' : ''}>5 Jahre</option>
+                <option value="10-years" ${horizon === '10-years' ? 'selected' : ''}>10 Jahre</option>
+                <option value="lifetime" ${horizon === 'lifetime' ? 'selected' : ''}>Lebenszeit</option>
+              </select>
+            </div>
+            <div>
+              <label class="input-label">Sphäre</label>
+              <select class="input" id="new-goal-sphere">
+                <option value="geschaeft">💼 Geschäft</option>
+                <option value="projekte">🚀 Projekte</option>
+                <option value="schule">📚 Schule</option>
+                <option value="sport">💪 Sport</option>
+                <option value="freizeit">🎮 Freizeit</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label class="input-label">Priorität</label>
+            <select class="input" id="new-goal-priority">
+              <option value="normal">Normal</option>
+              <option value="high">Hoch</option>
+              <option value="critical">Kritisch</option>
+            </select>
+          </div>
+        </div>
+        
+        <div class="flex gap-3 mt-6">
+          <button class="btn btn-primary flex-1" onclick="HorizonTracker.createGoal()">
+            ${NexusUI.icon('check', 16)}
+            Ziel erstellen
+          </button>
+          <button class="btn btn-secondary" onclick="NexusUI.closeModal()">
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    `;
+    
+    NexusUI.openModal('🎯 Neues Ziel', content);
+  },
+  
+  // Create goal
+  createGoal() {
+    const title = document.getElementById('new-goal-title')?.value;
+    if (!title) {
+      NexusUI.showToast('Titel ist erforderlich', 'error');
+      return;
+    }
+    
+    const goal = {
+      id: NexusStore.generateId(),
+      title,
+      description: document.getElementById('new-goal-description')?.value || '',
+      horizon: document.getElementById('new-goal-horizon')?.value || '1-year',
+      sphere: document.getElementById('new-goal-sphere')?.value || 'freizeit',
+      priority: document.getElementById('new-goal-priority')?.value || 'normal',
+      progress: 0,
+      milestones: [],
+      createdAt: new Date().toISOString()
+    };
+    
+    // Add to state
+    if (!NexusStore.state.goals) {
+      NexusStore.state.goals = [];
+    }
+    NexusStore.state.goals.push(goal);
+    NexusStore.saveState();
+    
+    NexusUI.closeModal();
+    NexusUI.showToast('Ziel erstellt! 🎯', 'success');
     this.render();
   },
   

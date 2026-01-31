@@ -583,8 +583,6 @@ const TemporalEngine = {
     
     const content = `
       <div class="p-4">
-        <h3 class="text-xl font-medium mb-4">📅 Neuer Termin/Event</h3>
-        
         <div class="grid gap-4">
           <div>
             <label class="input-label">Titel *</label>
@@ -640,7 +638,7 @@ const TemporalEngine = {
       </div>
     `;
     
-    NexusUI.showModal(content);
+    NexusUI.openModal('📅 Neuer Termin', content);
   },
   
   // Create event/task from modal

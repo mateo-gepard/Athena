@@ -503,7 +503,7 @@ const VentureCockpit = {
       </div>
     `;
     
-    NexusUI.showModal(modalContent);
+    NexusUI.openModal('🚀 Neues Venture', modalContent);
   },
   
   // Create venture
