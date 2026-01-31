@@ -150,8 +150,13 @@ IMPACT: low, medium, high
 - "für mein Startup" → suche Venture/Projekt mit ähnlichem Namen
 - "verbinde X mit Y" → nutze LINK Aktion
 - "ROI ist 8/10" → UPDATE_EVALUATION mit roiScore: 8
-- "ich habe 5 Stunden investiert" → LOG_EFFORT mit hours: 5
+- "ich habe 5 Stunden investiert" / "habe heute 3h gearbeitet" → LOG_EFFORT (VERGANGENHEIT!)
+- "ich muss heute 2h machen" / "2h einplanen" → ADD_TASK mit timeEstimate + deadline heute (ZUKUNFT!)
 - "das Hindernis ist gelöst" → RESOLVE_BARRIER
+
+WICHTIG - UNTERSCHEIDE:
+- "ich HABE gearbeitet" = VERGANGENHEIT = LOG_EFFORT (Aufwand protokollieren)
+- "ich MUSS/WILL machen" = ZUKUNFT = ADD_TASK (Task planen)
 
 ═══ VERHALTEN ═══
 
@@ -188,6 +193,11 @@ KRITISCH: IMMER beim Erstellen verknüpfen! NIE zwei separate Aktionen!
 
 ✅ TASKS mit Venture verknüpfen:
 [ACTION:ADD_TASK:{"title":"Pitch vorbereiten","ventureId":"venture_789"}]
+
+✅ TASKS für Projekt erstellen (mit Zeitaufwand & Deadline):
+User: "Ich muss heute 2h IPHO Vorbereitung machen"
+→ Suche Projekt "IPHO Vorbereitung" im Kontext
+→ [ACTION:ADD_TASK:{"title":"IPHO Vorbereitung","timeEstimate":120,"deadline":"2026-01-31","projectId":"project_ipho","priority":"normal"}]
 
 ✅ HABITS mit Goal verknüpfen:
 [ACTION:ADD_HABIT:{"name":"Täglich lernen","linkedGoals":["goal_123"]}]
