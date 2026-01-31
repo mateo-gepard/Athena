@@ -362,8 +362,8 @@ const VentureCockpit = {
   
   // Render roadmap timeline
   renderRoadmap(venture) {
-    // Get phases from venture or show empty state
-    const phases = venture.phases || [];
+    // Get phases from venture.roadmap or show empty state
+    const phases = venture.roadmap || [];
     
     if (phases.length === 0) {
       return `
