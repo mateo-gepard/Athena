@@ -188,7 +188,7 @@ const HabitsModule = {
           <div class="flex-1 min-w-0">
             <div class="habit-name font-medium ${isCompleted ? 'text-tertiary' : ''}">${habit.name}</div>
             <div class="flex items-center gap-3 text-xs text-tertiary mt-1">
-              <span>${this.getFrequencyLabel(habit.frequency)}</span>
+              <span>${this.getFrequencyLabel(habit.frequency, habit.scheduledDays)}</span>
               ${habit.streak > 0 ? `<span class="text-warning">🔥 ${habit.streak} Tage</span>` : ''}
             </div>
           </div>
@@ -313,7 +313,7 @@ const HabitsModule = {
                       <div class="font-medium text-lg">${habit.name}</div>
                       <div class="text-secondary text-sm mb-2">${habit.description || 'Keine Beschreibung'}</div>
                       <div class="flex items-center gap-4 text-sm">
-                        <span>${this.getFrequencyLabel(habit.frequency)}</span>
+                        <span>${this.getFrequencyLabel(habit.frequency, habit.scheduledDays)}</span>
                         ${habit.sphere ? `<span class="badge" style="background: var(--color-sphere-${habit.sphere})">${habit.sphere}</span>` : ''}
                       </div>
                     </div>
@@ -360,7 +360,13 @@ const HabitsModule = {
   },
   
   // Get frequency label
-  getFrequencyLabel(frequency) {
+  getFrequencyLabel(frequency, scheduledDays = null) {
+    if (frequency === 'weekly' && scheduledDays && scheduledDays.length > 0) {
+      const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+      const days = scheduledDays.map(d => dayNames[d]).join(', ');
+      return `📆 Wöchentlich (${days})`;
+    }
+    
     const labels = {
       daily: '📅 Täglich',
       weekly: '📆 Wöchentlich',
@@ -464,6 +470,32 @@ const HabitsModule = {
             </select>
           </div>
         </div>
+        <div class="mb-4" id="weekly-days-container" style="display: none; margin-top: 16px;">
+          <label class="input-label">Wochentage auswählen</label>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+              <input type="checkbox" class="weekday-check" value="1"> Mo
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+              <input type="checkbox" class="weekday-check" value="2"> Di
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+              <input type="checkbox" class="weekday-check" value="3"> Mi
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+              <input type="checkbox" class="weekday-check" value="4"> Do
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+              <input type="checkbox" class="weekday-check" value="5"> Fr
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+              <input type="checkbox" class="weekday-check" value="6"> Sa
+            </label>
+            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+              <input type="checkbox" class="weekday-check" value="0"> So
+            </label>
+          </div>
+        </div>
         <div class="flex gap-2 justify-end mt-6">
           <button class="btn btn-secondary" onclick="NexusUI.closeModal()">Abbrechen</button>
           <button class="btn btn-primary" onclick="HabitsModule.createHabit()">Erstellen</button>
@@ -472,6 +504,17 @@ const HabitsModule = {
     `;
     
     NexusUI.openModal('Neuer Habit', content);
+    
+    // Add event listener for frequency change
+    setTimeout(() => {
+      const frequencySelect = document.getElementById('new-habit-frequency');
+      const weeklyDaysContainer = document.getElementById('weekly-days-container');
+      if (frequencySelect && weeklyDaysContainer) {
+        frequencySelect.addEventListener('change', (e) => {
+          weeklyDaysContainer.style.display = e.target.value === 'weekly' ? 'block' : 'none';
+        });
+      }
+    }, 100);
   },
   
   // Create habit
@@ -482,11 +525,25 @@ const HabitsModule = {
       return;
     }
     
+    const frequency = document.getElementById('new-habit-frequency')?.value || 'daily';
+    
+    // Get selected weekdays for weekly habits
+    let scheduledDays = null;
+    if (frequency === 'weekly') {
+      const checkedBoxes = document.querySelectorAll('.weekday-check:checked');
+      scheduledDays = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+      if (scheduledDays.length === 0) {
+        NexusUI.showToast('Bitte mindestens einen Wochentag auswählen', 'error');
+        return;
+      }
+    }
+    
     const habit = {
       name,
       icon: document.getElementById('new-habit-icon')?.value || '🔄',
       description: document.getElementById('new-habit-description')?.value || '',
-      frequency: document.getElementById('new-habit-frequency')?.value || 'daily',
+      frequency,
+      scheduledDays,
       sphere: document.getElementById('new-habit-sphere')?.value || null,
       streak: 0,
       completionLog: []

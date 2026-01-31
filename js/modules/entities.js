@@ -96,8 +96,7 @@ const EntityFactory = {
       type: EntityTypes.HABIT,
       name: data.name || data.title || '',
       icon: data.icon || '⚡',
-      interval: data.interval || HabitInterval.DAILY,
-      preferredTime: data.preferredTime || null,
+      interval: data.interval || HabitInterval.DAILY,      scheduledDays: data.scheduledDays || null, // For weekly habits: [0-6] where 0=Sunday, 1=Monday, etc.      preferredTime: data.preferredTime || null,
       flexibility: data.flexibility || 30, // ± minutes
       streak: data.streak || 0,
       bestStreak: data.bestStreak || 0,

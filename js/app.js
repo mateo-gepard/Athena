@@ -162,6 +162,24 @@ const NexusApp = {
         this.sendAtlasMessage();
         return;
       }
+      
+      // Atlas Morning Briefing
+      if (e.target.closest('#atlas-morning-briefing')) {
+        this.showAtlasMorningBriefing();
+        return;
+      }
+      
+      // Atlas Evening Summary
+      if (e.target.closest('#atlas-evening-summary')) {
+        this.showAtlasEveningSummary();
+        return;
+      }
+      
+      // Atlas Insights
+      if (e.target.closest('#atlas-insights')) {
+        this.showAtlasInsights();
+        return;
+      }
     });
     
     // Atlas input enter key
@@ -523,6 +541,147 @@ const NexusApp = {
     const input = document.getElementById('capture-input');
     if (input) {
       input.placeholder = 'Suchen...';
+    }
+  },
+  
+  // Show Atlas Morning Briefing
+  async showAtlasMorningBriefing() {
+    const messagesEl = document.getElementById('atlas-messages');
+    if (!messagesEl) return;
+    
+    // Add loading message
+    const loadingMsg = `
+      <div class="atlas-message-item assistant">
+        <div class="atlas-message-avatar">🧠</div>
+        <div class="atlas-message-content">
+          <div class="loading">🌅 Erstelle dein Morning Briefing...</div>
+        </div>
+      </div>
+    `;
+    messagesEl.insertAdjacentHTML('beforeend', loadingMsg);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    
+    try {
+      const briefing = await AtlasAI.generateMorningBriefing();
+      
+      // Remove loading, add briefing
+      messagesEl.lastElementChild.remove();
+      const briefingMsg = `
+        <div class="atlas-message-item assistant">
+          <div class="atlas-message-avatar">🧠</div>
+          <div class="atlas-message-content">
+            ${briefing}
+          </div>
+        </div>
+      `;
+      messagesEl.insertAdjacentHTML('beforeend', briefingMsg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    } catch (error) {
+      messagesEl.lastElementChild.remove();
+      const errorMsg = `
+        <div class="atlas-message-item assistant">
+          <div class="atlas-message-avatar">🧠</div>
+          <div class="atlas-message-content">
+            ⚠️ Briefing konnte nicht erstellt werden. Bitte hinterlege einen API-Key in den Einstellungen.
+          </div>
+        </div>
+      `;
+      messagesEl.insertAdjacentHTML('beforeend', errorMsg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+  },
+  
+  // Show Atlas Evening Summary
+  async showAtlasEveningSummary() {
+    const messagesEl = document.getElementById('atlas-messages');
+    if (!messagesEl) return;
+    
+    // Add loading message
+    const loadingMsg = `
+      <div class="atlas-message-item assistant">
+        <div class="atlas-message-avatar">🧠</div>
+        <div class="atlas-message-content">
+          <div class="loading">🌙 Erstelle deine Evening Summary...</div>
+        </div>
+      </div>
+    `;
+    messagesEl.insertAdjacentHTML('beforeend', loadingMsg);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    
+    try {
+      const summary = await AtlasAI.generateEveningSummary();
+      
+      // Remove loading, add summary
+      messagesEl.lastElementChild.remove();
+      const summaryMsg = `
+        <div class="atlas-message-item assistant">
+          <div class="atlas-message-avatar">🧠</div>
+          <div class="atlas-message-content">
+            ${summary}
+          </div>
+        </div>
+      `;
+      messagesEl.insertAdjacentHTML('beforeend', summaryMsg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    } catch (error) {
+      messagesEl.lastElementChild.remove();
+      const errorMsg = `
+        <div class="atlas-message-item assistant">
+          <div class="atlas-message-avatar">🧠</div>
+          <div class="atlas-message-content">
+            ⚠️ Summary konnte nicht erstellt werden. Bitte hinterlege einen API-Key in den Einstellungen.
+          </div>
+        </div>
+      `;
+      messagesEl.insertAdjacentHTML('beforeend', errorMsg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+  },
+  
+  // Show Atlas Insights
+  async showAtlasInsights() {
+    const messagesEl = document.getElementById('atlas-messages');
+    if (!messagesEl) return;
+    
+    // Add loading message
+    const loadingMsg = `
+      <div class="atlas-message-item assistant">
+        <div class="atlas-message-avatar">🧠</div>
+        <div class="atlas-message-content">
+          <div class="loading">📊 Analysiere deine Produktivitätsmuster...</div>
+        </div>
+      </div>
+    `;
+    messagesEl.insertAdjacentHTML('beforeend', loadingMsg);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    
+    try {
+      const insights = await AtlasAI.generateInsights();
+      
+      // Remove loading, add insights
+      messagesEl.lastElementChild.remove();
+      const insightsMsg = `
+        <div class="atlas-message-item assistant">
+          <div class="atlas-message-avatar">🧠</div>
+          <div class="atlas-message-content">
+            ${insights}
+          </div>
+        </div>
+      `;
+      messagesEl.insertAdjacentHTML('beforeend', insightsMsg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    } catch (error) {
+      messagesEl.lastElementChild.remove();
+      const errorMsg = `
+        <div class="atlas-message-item assistant">
+          <div class="atlas-message-avatar">🧠</div>
+          <div class="atlas-message-content">
+            ⚠️ Insights konnten nicht erstellt werden. Bitte hinterlege einen API-Key in den Einstellungen.
+          </div>
+        </div>
+      `;
+      messagesEl.insertAdjacentHTML('beforeend', errorMsg);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
     }
   }
 };

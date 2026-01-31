@@ -28,12 +28,16 @@ VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
 [ACTION:ADD_TASK:{"title":"Task Titel","description":"Beschreibung oder null","priority":"low|normal|high|critical","sphere":"geschaeft|projekte|schule|sport|freizeit","projectId":"projekt-id oder null","dueDate":"YYYY-MM-DD oder null","time":"HH:MM oder null","timeEstimate":60,"tags":["tag1","tag2"]}]
 
 [ACTION:COMPLETE_TASK:{"id":"task-id"}]
-[ACTION:ADD_HABIT:{"name":"Habit Name","frequency":"daily|weekly","sphere":"..."}]
+[ACTION:ADD_HABIT:{"name":"Habit Name","frequency":"daily|weekly","scheduledDays":[1,2,3],"sphere":"..."}]
 [ACTION:ADD_PROJECT:{"name":"Projekt Name","description":"..."}]
 [ACTION:NAVIGATE:{"page":"command-center|tasks|habits|projects|calendar|settings"}]
 [ACTION:SHOW_TASKS]
 [ACTION:SHOW_HABITS]
 [ACTION:SHOW_SUMMARY]
+
+HABIT PARAMETER:
+- scheduledDays: Nur für weekly habits - Array von Wochentagen [0-6] (0=Sonntag, 1=Montag, ..., 6=Samstag)
+  Beispiele: "jeden Dienstag" → scheduledDays:[2], "Mo/Mi/Fr" → scheduledDays:[1,3,5]
 
 TASK PARAMETER ERKLÄRUNG:
 - title: Pflichtfeld - Titel der Task
@@ -116,33 +120,82 @@ Antworte NUR mit validem JSON im Format:
   buildContext() {
     const tasks = NexusStore.getTasks();
     const openTasks = tasks.filter(t => t.status !== 'completed');
+    const completedToday = tasks.filter(t => {
+      const today = new Date().toISOString().split('T')[0];
+      return t.completedAt && t.completedAt.startsWith(today);
+    });
     const habits = NexusStore.getHabits();
     const projects = NexusStore.getProjects();
+    const ventures = NexusStore.getVentures();
+    const goals = NexusStore.state.goals || [];
     const today = new Date().toISOString().split('T')[0];
     
-    const overdueTasks = openTasks.filter(t => t.dueDate && t.dueDate < today);
-    const todayTasks = openTasks.filter(t => t.dueDate && t.dueDate.startsWith(today));
+    const overdueTasks = openTasks.filter(t => {
+      const dueDate = t.scheduledDate || t.deadline;
+      return dueDate && dueDate < today;
+    });
+    const todayTasks = openTasks.filter(t => {
+      const dueDate = t.scheduledDate || t.deadline;
+      return dueDate && dueDate.startsWith(today);
+    });
+    const thisWeekTasks = openTasks.filter(t => {
+      const dueDate = t.scheduledDate || t.deadline;
+      if (!dueDate) return false;
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() + 7);
+      return dueDate <= weekEnd.toISOString().split('T')[0];
+    });
+    
+    // Calculate total time for today
+    const totalMinutes = todayTasks.reduce((sum, t) => sum + (t.timeEstimate || 0), 0);
+    const totalHours = (totalMinutes / 60).toFixed(1);
+    
+    // Habit status
+    const completedHabits = habits.filter(h => NexusStore.isHabitCompletedToday(h.id));
+    const highestStreak = habits.reduce((max, h) => h.streak > max.streak ? h : max, { streak: 0 });
     
     return `
 AKTUELLER KONTEXT:
 Datum: ${new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
 Uhrzeit: ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}
 
-OFFENE TASKS (${openTasks.length} total):
-${openTasks.slice(0, 10).map(t => `- [${t.id}] "${t.title}" (${t.priority}, ${t.sphere || 'allgemein'}${t.dueDate ? `, fällig: ${t.dueDate}` : ''})`).join('\n') || 'Keine offenen Tasks'}
-${openTasks.length > 10 ? `... und ${openTasks.length - 10} weitere` : ''}
+TASKS ÜBERBLICK:
+- Gesamt offen: ${openTasks.length}
+- Heute fällig: ${todayTasks.length} (ca. ${totalHours}h geplant)
+- Überfällig: ${overdueTasks.length}
+- Diese Woche: ${thisWeekTasks.length}
+- Heute erledigt: ${completedToday.length}
 
-ÜBERFÄLLIG (${overdueTasks.length}):
-${overdueTasks.map(t => `- "${t.title}" seit ${t.dueDate}`).join('\n') || 'Keine überfälligen Tasks'}
+ÜBERFÄLLIGE TASKS (${overdueTasks.length}):
+${overdueTasks.slice(0, 5).map(t => `- [${t.priority.toUpperCase()}] "${t.title}" (seit ${t.scheduledDate || t.deadline})`).join('\n') || 'Keine überfälligen Tasks'}
+${overdueTasks.length > 5 ? `... und ${overdueTasks.length - 5} weitere` : ''}
 
 HEUTE FÄLLIG (${todayTasks.length}):
-${todayTasks.map(t => `- "${t.title}"`).join('\n') || 'Keine Tasks für heute'}
+${todayTasks.map(t => `- [${t.priority.toUpperCase()}] "${t.title}"${t.scheduledTime ? ` um ${t.scheduledTime}` : ''}${t.timeEstimate ? ` (~${t.timeEstimate}min)` : ''}`).join('\n') || 'Keine Tasks für heute'}
+
+DIESE WOCHE (Top 10):
+${thisWeekTasks.slice(0, 10).map(t => `- "${t.title}" (${t.priority}, ${t.scheduledDate || t.deadline})`).join('\n') || 'Keine Tasks diese Woche'}
+
+HEUTE ERLEDIGT (${completedToday.length}):
+${completedToday.slice(0, 5).map(t => `- "${t.title}"`).join('\n') || 'Noch nichts erledigt'}
 
 HABITS (${habits.length}):
-${habits.map(h => `- "${h.name}" (${h.frequency}, Streak: ${h.streak || 0})`).join('\n') || 'Keine Habits'}
+${habits.map(h => `- ${h.icon || '🔄'} "${h.name}" (${h.frequency}, Streak: ${h.streak || 0} Tage)${NexusStore.isHabitCompletedToday(h.id) ? ' ✓ Heute erledigt' : ''}`).join('\n') || 'Keine Habits'}
+${habits.length > 0 ? `\nHöchster Streak: ${highestStreak.name} mit ${highestStreak.streak} Tagen!` : ''}
+${habits.length > 0 ? `\nHeute erledigt: ${completedHabits.length}/${habits.length}` : ''}
 
 PROJEKTE (${projects.length}):
-${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
+${projects.slice(0, 8).map(p => {
+  const projectTasks = tasks.filter(t => t.projectId === p.id);
+  const completedProjectTasks = projectTasks.filter(t => t.status === 'completed').length;
+  return `- "${p.name}" (${completedProjectTasks}/${projectTasks.length} Tasks erledigt)`;
+}).join('\n') || 'Keine Projekte'}
+
+VENTURES (${ventures.length}):
+${ventures.map(v => `- 🚀 "${v.name}" - ${v.description}`).join('\n') || 'Keine Ventures'}
+
+ZIELE (${goals.length}):
+${goals.slice(0, 5).map(g => `- 🎯 "${g.title}" (${g.progress || 0}%)`).join('\n') || 'Keine Ziele definiert'}
 `;
   },
   
@@ -372,6 +425,7 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
           NexusStore.addHabit({
             name: action.data.name,
             frequency: action.data.frequency || 'daily',
+            scheduledDays: action.data.scheduledDays || null,
             sphere: action.data.sphere || 'freizeit'
           });
           if (typeof NexusApp !== 'undefined') {
@@ -622,6 +676,139 @@ ${context ? `\nKontext:\n${context}` : ''}`;
     ];
     
     return await this.chat(messages);
+  },
+  
+  // Generate Morning Briefing
+  async generateMorningBriefing() {
+    const context = this.buildContext();
+    
+    const prompt = `${context}
+
+Erstelle ein motivierendes, prägnantes Morgen-Briefing für den heutigen Tag. 
+
+ANFORDERUNGEN:
+- Persönlich und motivierend
+- Zeige die 3-5 wichtigsten Tasks von heute
+- Erwähne überfällige Tasks falls vorhanden (aber ermutigend!)
+- Gib einen kurzen Fokus-Tipp für den Tag
+- Würdige erledigte Habits vom Vortag
+- Max. 200 Wörter
+- Benutze Emojis sparsam aber passend
+- Schließe mit einer motivierenden Frage oder Aufgabe ab
+
+FORMAT (HTML):
+<div class="ai-briefing">
+  <h4>[Persönliche Begrüßung mit Tageszeit]</h4>
+  <p>[Überblick]</p>
+  <div class="priority-tasks">
+    <strong>Heute wichtig:</strong>
+    <ul>
+      <li>[Task 1]</li>
+      <li>[Task 2]</li>
+      ...
+    </ul>
+  </div>
+  <p class="focus-tip">[Fokus-Tipp]</p>
+  <p class="motivation">[Motivierende Frage]</p>
+</div>`;
+    
+    const messages = [
+      { role: 'system', content: 'Du bist Atlas, der persönliche AI-Coach in NEXUS ULTRA. Erstelle motivierende, präzise Morgen-Briefings.' },
+      { role: 'user', content: prompt }
+    ];
+    
+    return await this.chat(messages, { maxTokens: 500, temperature: 0.8 });
+  },
+  
+  // Generate Evening Summary
+  async generateEveningSummary() {
+    const context = this.buildContext();
+    
+    const prompt = `${context}
+
+Erstelle eine reflektive, wertschätzende Abend-Zusammenfassung des heutigen Tages.
+
+ANFORDERUNGEN:
+- Würdige erledigte Tasks (auch wenn wenige)
+- Zeige Habit-Erfolge
+- Kurzer Ausblick auf morgen
+- Ermutigend bei unerledigten Tasks
+- Max. 150 Wörter
+- Benutze Emojis sparsam
+- Schließe mit einer positiven Note
+
+FORMAT (HTML):
+<div class="ai-summary">
+  <h4>[Abend-Begrüßung]</h4>
+  <p>[Tages-Rückblick]</p>
+  <div class="accomplishments">
+    <strong>Heute geschafft:</strong>
+    <ul>
+      <li>[Erledigt 1]</li>
+      ...
+    </ul>
+  </div>
+  <p class="tomorrow">[Ausblick morgen]</p>
+  <p class="goodnight">[Positive Abschluss-Note]</p>
+</div>`;
+    
+    const messages = [
+      { role: 'system', content: 'Du bist Atlas, der persönliche AI-Coach in NEXUS ULTRA. Erstelle wertschätzende, reflektive Abend-Zusammenfassungen.' },
+      { role: 'user', content: prompt }
+    ];
+    
+    return await this.chat(messages, { maxTokens: 400, temperature: 0.8 });
+  },
+  
+  // Generate Atlas Insights
+  async generateInsights(timeframe = 'week') {
+    const context = this.buildContext();
+    
+    const prompt = `${context}
+
+Analysiere die Produktivitätsmuster und erstelle umsetzbare Insights.
+
+ANFORDERUNGEN:
+- Erkenne Muster in Task-Erledigung
+- Identifiziere Bottlenecks oder überfällige Bereiche
+- Gib 2-3 konkrete Optimierungsvorschläge
+- Erkenne Habit-Streaks und motiviere
+- Beachte Projekt-Fortschritte
+- Max. 250 Wörter
+- Sei spezifisch, nicht generisch
+- Benutze Daten aus dem Kontext
+
+FORMAT (HTML):
+<div class="ai-insights">
+  <h4>📊 Atlas Insights</h4>
+  
+  <div class="insight-section">
+    <h5>🎯 Produktivitätsmuster</h5>
+    <p>[Muster-Analyse]</p>
+  </div>
+  
+  <div class="insight-section">
+    <h5>💡 Optimierungsvorschläge</h5>
+    <ul>
+      <li>[Vorschlag 1]</li>
+      <li>[Vorschlag 2]</li>
+    </ul>
+  </div>
+  
+  <div class="insight-section">
+    <h5>🔥 Streaks & Erfolge</h5>
+    <p>[Habit-Erfolge]</p>
+  </div>
+  
+  <p class="action-item">[Nächster konkreter Schritt]</p>
+</div>`;
+    
+    const messages = [
+      { role: 'system', content: 'Du bist Atlas, der datengetriebene AI-Analyst in NEXUS ULTRA. Erstelle präzise, umsetzbare Insights basierend auf echten Nutzer-Daten.' },
+      { role: 'user', content: prompt }
+    ];
+    
+    return await this.chat(messages, { maxTokens: 600, temperature: 0.7 });
   }
 };
 

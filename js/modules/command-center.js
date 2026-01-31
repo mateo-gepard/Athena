@@ -28,8 +28,47 @@ const CommandCenter = {
     NexusUI.refreshIcons();
   },
   
-  // Render Atlas Morning Briefing
-  renderMorningBriefing() {
+  // Render Atlas Morning Briefing (AI-generated with caching)
+  async renderMorningBriefing() {
+    const briefingEl = document.getElementById('atlasBriefing');
+    if (!briefingEl) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const cacheKey = `briefing_${today}`;
+    
+    // Check if we have a cached briefing for today
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      briefingEl.innerHTML = cached;
+      return;
+    }
+    
+    // Show loading state
+    briefingEl.innerHTML = '<div class="loading">🤖 Atlas erstellt dein Morning Briefing...</div>';
+    
+    // Check if API key is configured
+    if (!AtlasAI.hasApiKey()) {
+      this.renderManualBriefing();
+      return;
+    }
+    
+    try {
+      // Generate AI briefing
+      const briefingHTML = await AtlasAI.generateMorningBriefing();
+      
+      // Cache it for the day
+      localStorage.setItem(cacheKey, briefingHTML);
+      
+      // Display it
+      briefingEl.innerHTML = briefingHTML;
+    } catch (error) {
+      console.error('Failed to generate AI briefing:', error);
+      this.renderManualBriefing();
+    }
+  },
+  
+  // Fallback: Manual briefing when no API key
+  renderManualBriefing() {
     const briefingEl = document.getElementById('atlasBriefing');
     if (!briefingEl) return;
     
@@ -454,7 +493,7 @@ const CommandCenter = {
   
   // Handle briefing later button
   handleBriefingLater() {
-    const briefingEl = document.querySelector('.atlas-briefing');
+    const briefingEl = document.querySelector('.atlas-panel');
     if (briefingEl) {
       briefingEl.style.display = 'none';
       NexusUI.showToast('Briefing geschlossen', 'info');
