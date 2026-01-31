@@ -374,7 +374,7 @@ const CommandCenter = {
           <div class="cc-task-meta">
             <span class="badge">HABIT</span>
             <span class="cc-task-meta-separator">·</span>
-            <span>Streak: ${habit.streak} ${habit.streak > 0 ? '🔥' : ''}</span>
+            <span>Streak: ${habit.streak} <i data-lucide="flame" style="width:14px;height:14px;display:inline-block;vertical-align:middle"></i></span>
           </div>
         </div>
         ${habit.preferredTime ? `
@@ -418,7 +418,7 @@ const CommandCenter = {
           <div class="cc-habit-icon">${habit.icon}</div>
           <div class="cc-habit-content">
             <div class="cc-habit-name">${habit.name}</div>
-            <div class="cc-habit-streak">Streak: ${habit.streak} Tage ${habit.streak > 0 ? '🔥' : ''}</div>
+            <div class="cc-habit-streak">Streak: ${habit.streak} Tage ${habit.streak > 0 ? '<i data-lucide="flame" style="width:14px;height:14px;display:inline-block;vertical-align:middle"></i>' : ''}</div>
           </div>
         </div>
       `;
@@ -745,7 +745,7 @@ const CommandCenter = {
     const now = new Date();
     const breakTask = {
       id: Date.now(),
-      title: '☕ Pause',
+      title: 'Pause',
       spheres: ['wellness'],
       scheduledDate: now.toISOString().split('T')[0],
       scheduledTime: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
