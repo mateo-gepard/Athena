@@ -60,9 +60,32 @@ Wenn Task zu bestimmter Zeit stattfindet → IMMER scheduledDate + scheduledTime
 - scheduledTime: "14:00" (Zeit im HH:MM Format 24h)
 - deadline: "2026-01-31" (NUR wenn tatsächliche Deadline, nicht für geplante Zeit!)
 
+WICHTIG - SPHERE ABLEITEN:
+- Klausur/Test/Lernen/Hausaufgaben → sphere: "schule"
+- Business/Startup/Kunden → sphere: "geschaeft"
+- Training/Sport → sphere: "sport"
+- Projekt/Code/Website → sphere: "projekte"
+- Rest → sphere: "freizeit"
+
+WICHTIG - PRIORITY ABLEITEN:
+- Deadline in <3 Tagen → priority: "high"
+- Deadline in <24h → priority: "critical"
+- User sagt "dringend" → priority: "high"
+- User sagt "wichtig" → priority: "high"
+
+WICHTIG - TIMEESTIMATE ABLEITEN:
+- Klausur-Vorbereitung kurzfristig (<3 Tage) → timeEstimate: 240 (4h)
+- Normale Lerneinheit → timeEstimate: 120 (2h)
+- Workout/Sport → timeEstimate: 60 (1h)
+- User sagt "schnell" → timeEstimate: 30
+- User gibt keine Zeit an → schätze sinnvoll basierend auf Task-Typ
+
 BEISPIEL RICHTIG:
 User: "Morgenroutine um 9:00 Uhr"
-→ [ACTION:ADD_TASK:{"title":"Morgenroutine","scheduledDate":"2026-01-31","scheduledTime":"09:00","timeEstimate":60}]
+→ [ACTION:ADD_TASK:{"title":"Morgenroutine","scheduledDate":"2026-01-31","scheduledTime":"09:00","timeEstimate":60,"sphere":"freizeit"}]
+
+User: "ich muss heute für mathe klausur lernen"
+→ [ACTION:ADD_TASK:{"title":"Für Mathe Klausur lernen","scheduledDate":"2026-01-31","timeEstimate":240,"priority":"high","sphere":"schule"}]
 
 BEISPIEL FALSCH:
 → [ACTION:ADD_TASK:{"title":"Morgenroutine","dueDate":"2026-01-31T09:00:00"}] ← FALSCH!
@@ -140,6 +163,16 @@ Beispiel: Notiz mit Venture verknüpfen → linkedEntities:[{"type":"venture","i
 
 ━━━ EVENTS (Kalender-Termine) ━━━
 [ACTION:ADD_EVENT:{"title":"*","dateTime":"*","duration":60,"location":null,"attendees":[],"recurrence":null}]
+
+WICHTIG - EVENT FORMAT:
+- dateTime: "2026-02-03T08:00:00" (ISO-Format mit Uhrzeit!)
+- duration: in Minuten (z.B. 60 = 1h, 120 = 2h, 180 = 3h)
+- Für Prüfungen/Klausuren → duration: 120 (oder länger wenn angegeben)
+
+BEISPIEL:
+User: "ich schreibe mathe klausur am montag um 8 uhr"
+→ [ACTION:ADD_EVENT:{"title":"Mathe Klausur","dateTime":"2026-02-03T08:00:00","duration":120}]
+
 [ACTION:UPDATE_EVENT:{"id":"*","updates":{...}}]
 [ACTION:DELETE_EVENT:{"id":"*"}]
 
@@ -199,12 +232,26 @@ IMPACT: low, medium, high
 - "das Hindernis ist gelöst" → RESOLVE_BARRIER
 
 INTELLIGENTE ABLEITUNGEN (zwischen den Zeilen):
-- "IPHO Vorbereitung" → sphere: "schule" (akademisch)
+- "IPHO Vorbereitung" / "Mathe Klausur" / "Physik Test" / "für Klausur lernen" → sphere: "schule" (akademisch)
 - "MSM" → sphere: "geschaeft" (Business Venture)
-- "Training" / "Workout" → sphere: "sport"
-- "Film schauen" → sphere: "freizeit"
-- "Website bauen" → sphere: "projekte"
+- "Training" / "Workout" / "Joggen" / "Fitnessstudio" → sphere: "sport"
+- "Film schauen" / "Freunde treffen" → sphere: "freizeit"
+- "Website bauen" / "Code schreiben" → sphere: "projekte"
 → Nutze Kontext & Thema um sphere zu erraten!
+
+KRITISCH - PRÜFUNGEN & EVENTS:
+Wenn User sagt "ich schreibe/habe [Prüfung/Klausur/Test] am [Datum]":
+1. ✅ ERSTELLE EVENT: [ACTION:ADD_EVENT:{"title":"Mathe Klausur","dateTime":"2026-02-03T08:00:00","duration":120}]
+2. ✅ ERSTELLE VORBEREITUNGS-TASK für HEUTE/ZEITNAH:
+   [ACTION:ADD_TASK:{"title":"Für Mathe Klausur lernen","scheduledDate":"2026-01-31","timeEstimate":240,"priority":"high","sphere":"schule"}]
+   
+BEISPIEL:
+User: "ich muss heute für mathe klausur lernen... ich schreibe am montag um 8 uhr"
+→ Verstehe: Klausur ist am Montag, User will HEUTE vorbereiten
+→ [ACTION:ADD_EVENT:{"title":"Mathe Klausur","dateTime":"2026-02-03T08:00:00","duration":120}]
+→ [ACTION:ADD_TASK:{"title":"Für Mathe Klausur lernen","scheduledDate":"2026-01-31","timeEstimate":240,"priority":"high","sphere":"schule"}]
+
+NIEMALS den Vorbereitungs-Task auf denselben Termin wie die Prüfung legen!
 
 WICHTIG - UNTERSCHEIDE:
 - "ich HABE gearbeitet" = VERGANGENHEIT = LOG_EFFORT (Aufwand protokollieren)
