@@ -641,6 +641,7 @@ const SettingsModule = {
   async saveApiKey() {
     const input = document.getElementById('api-key-input');
     const key = input?.value?.trim();
+    console.log('🔐 saveApiKey() called with key:', key ? '***' + key.slice(-4) : 'null');
     
     if (!key || !key.startsWith('sk-')) {
       NexusUI.showToast('Ungültiger API Key', 'error');
@@ -649,16 +650,23 @@ const SettingsModule = {
     
     // Test the connection BEFORE saving
     NexusUI.showToast('Teste Verbindung...', 'info');
+    console.log('🧪 Testing connection...');
     const result = await AtlasAI.testConnection(key);
+    console.log('🧪 Test result:', result);
     
     if (result.success) {
+      console.log('✅ Test successful, saving key...');
       AtlasAI.setApiKey(key);
       NexusUI.showToast('API Key gespeichert & verifiziert!', 'success');
       
       // Small delay to ensure localStorage is updated
       await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('🔄 Re-rendering settings page...');
+      console.log('🔍 Before render - AtlasAI.isConfigured():', AtlasAI.isConfigured());
       this.render();
+      console.log('🔍 After render - AtlasAI.isConfigured():', AtlasAI.isConfigured());
     } else {
+      console.log('❌ Test failed:', result.error);
       NexusUI.showToast('Verbindung fehlgeschlagen: ' + result.error, 'error');
     }
   },

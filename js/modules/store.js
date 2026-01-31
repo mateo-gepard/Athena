@@ -1229,9 +1229,14 @@ const NexusStore = {
   // ═══ SETTINGS ═══
   
   getSettings() {
+    const apiKey = storage.getItem('nexus_atlas_api_key') || '';
+    console.log('⚙️ NexusStore.getSettings():', { 
+      apiKey: apiKey ? '***' + apiKey.slice(-4) : 'empty',
+      rawValue: storage.getItem('nexus_atlas_api_key')
+    });
     return {
       user: this.state.user,
-      apiKey: storage.getItem('nexus_atlas_api_key') || '',
+      apiKey: apiKey,
       aiModel: storage.getItem('nexus_atlas_model') || 'gpt-4o-mini'
     };
   },

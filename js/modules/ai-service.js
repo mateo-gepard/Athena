@@ -711,7 +711,9 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
   
   // Check if API key is configured
   isConfigured() {
-    return !!this.getApiKey();
+    const hasKey = !!this.getApiKey();
+    console.log('✅ AtlasAI.isConfigured():', hasKey);
+    return hasKey;
   },
   
   // Check if API key exists (alias)
@@ -722,12 +724,16 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
   // Get API key from settings
   getApiKey() {
     const settings = NexusStore.getSettings();
-    return settings.apiKey || null;
+    const apiKey = settings.apiKey || null;
+    console.log('🔑 AtlasAI.getApiKey():', { apiKey: apiKey ? '***' + apiKey.slice(-4) : 'null', settings });
+    return apiKey;
   },
   
   // Save API key
   setApiKey(key) {
+    console.log('💾 AtlasAI.setApiKey():', { key: key ? '***' + key.slice(-4) : 'null' });
     NexusStore.updateSettings('apiKey', key);
+    console.log('💾 After updateSettings, stored value:', localStorage.getItem('nexus_atlas_api_key') ? '***' + localStorage.getItem('nexus_atlas_api_key').slice(-4) : 'null');
   },
   
   // Remove API key
