@@ -442,14 +442,14 @@
 
 .atlas-capability-card:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(102, 126, 234, 0.3);
+  border-color: rgba(255, 255, 255, 0.15);
   color: var(--text-primary);
 }
 
 .atlas-capability-card svg {
   width: 18px;
   height: 18px;
-  color: #667eea;
+  color: var(--text-secondary);
 }
 
 /* Quick Actions */
