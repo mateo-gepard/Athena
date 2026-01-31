@@ -30,6 +30,7 @@ VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
 [ACTION:COMPLETE_TASK:{"id":"task-id"}]
 [ACTION:ADD_HABIT:{"name":"Habit Name","frequency":"daily|weekly","scheduledDays":[1,2,3],"preferredTime":"HH:MM oder null","sphere":"..."}]
 [ACTION:ADD_PROJECT:{"name":"Projekt Name","description":"..."}]
+[ACTION:MARK_DAY:{"date":"YYYY-MM-DD","endDate":"YYYY-MM-DD oder null","title":"Titel","type":"holiday|vacation|visit|birthday|event|school_break","recurring":"yearly oder null"}]
 [ACTION:NAVIGATE:{"page":"command-center|tasks|habits|projects|calendar|settings"}]
 [ACTION:SHOW_TASKS]
 [ACTION:SHOW_HABITS]
@@ -39,6 +40,13 @@ HABIT PARAMETER:
 - scheduledDays: Nur für weekly habits - Array von Wochentagen [0-6] (0=Sonntag, 1=Montag, ..., 6=Samstag)
   Beispiele: "jeden Dienstag" → scheduledDays:[2], "Mo/Mi/Fr" → scheduledDays:[1,3,5]
 - preferredTime: Uhrzeit im Format HH:MM (z.B. "17:00") oder null wenn nicht angegeben
+
+MARK_DAY PARAMETER:
+- date: Startdatum im Format YYYY-MM-DD
+- endDate: Optional - Enddatum für mehrtägige Events (z.B. Urlaub vom 1. bis 15.)
+- title: Name des markierten Tages (z.B. "Weihnachten", "Sommerurlaub", "Oma Besuch")
+- type: holiday (Feiertag), vacation (Urlaub), visit (Besuch), birthday (Geburtstag), event, school_break (Schulferien)
+- recurring: "yearly" für jährlich wiederkehrende Events (Geburtstage, Feiertage), null für einmalige
 
 TASK PARAMETER ERKLÄRUNG:
 - title: Pflichtfeld - Titel der Task
@@ -443,6 +451,22 @@ ${goals.slice(0, 5).map(g => `- 🎯 "${g.title}" (${g.progress || 0}%)`).join('
           NexusStore.addProject({
             name: action.data.name,
             description: action.data.description || ''
+          });
+          if (typeof NexusApp !== 'undefined') {
+            NexusApp.refreshCurrentPage();
+          }
+        }
+        break;
+        
+      case 'MARK_DAY':
+        if (action.data && action.data.date && action.data.title) {
+          NexusStore.addMarkedDay({
+            date: action.data.date,
+            endDate: action.data.endDate || null,
+            title: action.data.title,
+            type: action.data.type || 'event',
+            recurring: action.data.recurring || null,
+            notes: action.data.notes || ''
           });
           if (typeof NexusApp !== 'undefined') {
             NexusApp.refreshCurrentPage();

@@ -162,12 +162,17 @@ const TemporalEngine = {
         <!-- Header with day names -->
         <div class="week-header">
           <div class="time-gutter"></div>
-          ${days.map((d, i) => `
-            <div class="day-header ${d.toDateString() === today ? 'today' : ''}">
+          ${days.map((d, i) => {
+            const markedDays = this.getMarkedDaysForDate(d);
+            const hasMarked = markedDays.length > 0;
+            const markedStyle = hasMarked ? `--marked-color: ${markedDays[0].color}` : '';
+            return `
+            <div class="day-header ${d.toDateString() === today ? 'today' : ''} ${hasMarked ? 'has-marked-day' : ''}" style="${markedStyle}">
               <div class="day-name">${dayNames[i]}</div>
               <div class="day-number">${d.getDate()}</div>
+              ${hasMarked ? `<span class="marked-day-icon" title="${markedDays[0].title}">${markedDays[0].icon}</span>` : ''}
             </div>
-          `).join('')}
+          `}).join('')}
         </div>
         
         <!-- Time grid -->
@@ -178,8 +183,13 @@ const TemporalEngine = {
             `).join('')}
           </div>
           
-          ${days.map((d, dayIndex) => `
-            <div class="day-column ${d.toDateString() === today ? 'today' : ''}">
+          ${days.map((d, dayIndex) => {
+            const markedDays = this.getMarkedDaysForDate(d);
+            const hasMarked = markedDays.length > 0;
+            const markedStyle = hasMarked ? `--marked-color: ${markedDays[0].color}` : '';
+            return `
+            <div class="day-column ${d.toDateString() === today ? 'today' : ''} ${hasMarked ? 'has-marked-day' : ''}" style="${markedStyle}">
+              ${hasMarked ? `<div class="marked-day-badge">${markedDays[0].icon} ${markedDays[0].title}</div>` : ''}
               ${hours.map(h => `
                 <div class="hour-cell" data-day="${dayIndex}" data-hour="${h}"></div>
               `).join('')}
@@ -187,7 +197,7 @@ const TemporalEngine = {
               <!-- Events for this day -->
               ${this.renderDayEvents(d, dayIndex)}
             </div>
-          `).join('')}
+          `}).join('')}
         </div>
         
         <!-- Now indicator -->
@@ -270,13 +280,20 @@ const TemporalEngine = {
         <div class="month-grid">
           ${weeks.map(week => `
             <div class="month-week">
-              ${week.map(day => `
-                <div class="month-day ${day.isOtherMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''}" 
-                     data-date="${day.date.toISOString().split('T')[0]}">
+              ${week.map(day => {
+                const dateStr = day.date.toISOString().split('T')[0];
+                const markedDays = this.getMarkedDaysForDate(day.date);
+                const markedClass = markedDays.length > 0 ? 'has-marked-day' : '';
+                const markedStyle = markedDays.length > 0 ? `--marked-color: ${markedDays[0].color}` : '';
+                return `
+                <div class="month-day ${day.isOtherMonth ? 'other-month' : ''} ${day.isToday ? 'today' : ''} ${markedClass}" 
+                     data-date="${dateStr}"
+                     style="${markedStyle}">
+                  ${markedDays.length > 0 ? `<div class="marked-day-indicator" title="${markedDays.map(m => m.title).join(', ')}">${markedDays[0].icon}</div>` : ''}
                   <div class="month-day-number">${day.date.getDate()}</div>
                   ${this.renderMonthDayEvents(day.date)}
                 </div>
-              `).join('')}
+              `}).join('')}
             </div>
           `).join('')}
         </div>
@@ -297,6 +314,31 @@ const TemporalEngine = {
     }
     
     return true;
+  },
+  
+  // Get marked days for a specific date (including multi-day ranges and recurring)
+  getMarkedDaysForDate(date) {
+    const dateStr = date.toISOString().split('T')[0];
+    const allMarkedDays = NexusStore.getMarkedDays();
+    
+    return allMarkedDays.filter(m => {
+      // Check exact date match
+      if (m.date === dateStr) return true;
+      
+      // Check if date is within a range (e.g., Urlaub)
+      if (m.endDate && dateStr >= m.date && dateStr <= m.endDate) return true;
+      
+      // Check yearly recurring (e.g., Geburtstage, Feiertage)
+      if (m.recurring === 'yearly') {
+        const markedMonth = m.date.substring(5, 7);
+        const markedDay = m.date.substring(8, 10);
+        const checkMonth = dateStr.substring(5, 7);
+        const checkDay = dateStr.substring(8, 10);
+        if (markedMonth === checkMonth && markedDay === checkDay) return true;
+      }
+      
+      return false;
+    });
   },
   
   // Render events for a specific day
@@ -412,14 +454,27 @@ const TemporalEngine = {
       return taskDate.split('T')[0] === dateStr;
     });
     
-    if (tasks.length === 0) return '';
+    // Get habits for this day
+    const dayOfWeek = date.getDay();
+    const habits = NexusStore.getHabits().filter(h => {
+      if (!this.layers.habits) return false;
+      if (!this.isPositiveHabit(h)) return false;
+      if (h.frequency === 'daily') return true;
+      if (h.frequency === 'weekly' && h.scheduledDays?.includes(dayOfWeek)) return true;
+      return false;
+    });
+    
+    if (tasks.length === 0 && habits.length === 0) return '';
     
     return `
       <div class="month-day-events">
-        ${tasks.slice(0, 3).map(t => `
+        ${tasks.slice(0, 2).map(t => `
           <div class="event-dot" style="background: var(--color-sphere-${t.sphere || 'geschaeft'})"></div>
         `).join('')}
-        ${tasks.length > 3 ? `<span class="text-xs text-tertiary">+${tasks.length - 3}</span>` : ''}
+        ${habits.slice(0, 1).map(h => `
+          <div class="event-dot habit-dot" style="background: var(--color-sphere-${h.sphere || 'sport'})" title="${h.name}"></div>
+        `).join('')}
+        ${(tasks.length + habits.length) > 3 ? `<span class="text-xs text-tertiary">+${tasks.length + habits.length - 3}</span>` : ''}
       </div>
     `;
   },

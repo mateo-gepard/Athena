@@ -61,6 +61,7 @@ const NexusStore = {
     notes: [],
     events: [],
     contacts: [],
+    markedDays: [], // Feiertage, Urlaub, Ferien, Besuche etc.
     
     // Snapshots
     snapshots: [],
@@ -535,6 +536,90 @@ const NexusStore = {
       this.save();
       this.notify('contact:deleted', contact);
       return contact;
+    }
+    return null;
+  },
+  
+  // ═══ MARKED DAYS (Feiertage, Urlaub, Besuche, etc.) ═══
+  
+  getMarkedDays() {
+    return this.state.markedDays || [];
+  },
+  
+  getMarkedDaysForDate(dateStr) {
+    return this.getMarkedDays().filter(d => d.date === dateStr);
+  },
+  
+  getMarkedDaysInRange(startDate, endDate) {
+    return this.getMarkedDays().filter(d => d.date >= startDate && d.date <= endDate);
+  },
+  
+  addMarkedDay(markedDayData) {
+    const markedDay = {
+      id: this.generateId(),
+      date: markedDayData.date, // YYYY-MM-DD
+      endDate: markedDayData.endDate || null, // For multi-day events like Urlaub
+      title: markedDayData.title,
+      type: markedDayData.type || 'event', // holiday, vacation, visit, birthday, event
+      color: markedDayData.color || this.getMarkedDayColor(markedDayData.type),
+      icon: markedDayData.icon || this.getMarkedDayIcon(markedDayData.type),
+      recurring: markedDayData.recurring || null, // yearly, monthly, null
+      notes: markedDayData.notes || '',
+      createdAt: new Date().toISOString()
+    };
+    
+    if (!this.state.markedDays) this.state.markedDays = [];
+    this.state.markedDays.push(markedDay);
+    this.save();
+    this.notify('markedDay:added', markedDay);
+    return markedDay;
+  },
+  
+  getMarkedDayColor(type) {
+    const colors = {
+      holiday: '#FF6B6B',     // Feiertag - Rot
+      vacation: '#4ECDC4',    // Urlaub - Türkis
+      visit: '#95E1D3',       // Besuch - Hellgrün
+      birthday: '#F38181',    // Geburtstag - Rosa
+      event: '#7C6A94',       // Event - Lila
+      school_break: '#FFE66D' // Schulferien - Gelb
+    };
+    return colors[type] || colors.event;
+  },
+  
+  getMarkedDayIcon(type) {
+    const icons = {
+      holiday: '🎉',
+      vacation: '🏖️',
+      visit: '👥',
+      birthday: '🎂',
+      event: '📅',
+      school_break: '🎒'
+    };
+    return icons[type] || icons.event;
+  },
+  
+  updateMarkedDay(id, updates) {
+    const index = this.state.markedDays.findIndex(d => d.id === id);
+    if (index !== -1) {
+      this.state.markedDays[index] = {
+        ...this.state.markedDays[index],
+        ...updates
+      };
+      this.save();
+      this.notify('markedDay:updated', this.state.markedDays[index]);
+      return this.state.markedDays[index];
+    }
+    return null;
+  },
+  
+  deleteMarkedDay(id) {
+    const index = this.state.markedDays.findIndex(d => d.id === id);
+    if (index !== -1) {
+      const markedDay = this.state.markedDays.splice(index, 1)[0];
+      this.save();
+      this.notify('markedDay:deleted', markedDay);
+      return markedDay;
     }
     return null;
   },

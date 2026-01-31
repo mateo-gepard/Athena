@@ -2635,3 +2635,59 @@
   background: var(--color-success) !important;
   color: white;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MARKED DAYS (Feiertage, Urlaub, Besuche)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.month-day.has-marked-day {
+  background: color-mix(in srgb, var(--marked-color, #7C6A94) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--marked-color, #7C6A94) 40%, transparent);
+}
+
+.month-day.has-marked-day:hover {
+  background: color-mix(in srgb, var(--marked-color, #7C6A94) 25%, transparent);
+}
+
+.marked-day-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+/* Week view marked days */
+.day-column.has-marked-day {
+  background: color-mix(in srgb, var(--marked-color, #7C6A94) 8%, transparent);
+}
+
+.day-header.has-marked-day {
+  position: relative;
+}
+
+.day-header.has-marked-day::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--marked-color, #7C6A94);
+}
+
+/* Marked day badge in week view */
+.marked-day-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 2px 4px;
+  background: var(--marked-color, #7C6A94);
+  color: white;
+  font-size: 9px;
+  text-align: center;
+  font-weight: 500;
+  z-index: 5;
+}
