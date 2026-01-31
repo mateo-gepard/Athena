@@ -1135,6 +1135,12 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
             bestCase: d.bestCase || '',
             worstCase: d.worstCase || ''
           });
+          
+          // Set as current venture in VentureCockpit if module exists
+          if (typeof VentureCockpit !== 'undefined') {
+            VentureCockpit.currentVenture = venture;
+          }
+          
           console.log('✅ Venture created:', venture.name);
           refreshUI();
         }

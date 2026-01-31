@@ -53,6 +53,7 @@ const VentureCockpit = {
   
   // Render full venture dashboard
   renderVentureDashboard(venture) {
+    const ventures = NexusStore.getVentures();
     const project = NexusStore.getProjects().find(p => 
       p.name.toLowerCase().includes(venture.name.toLowerCase().split(' ')[0])
     );
@@ -69,7 +70,15 @@ const VentureCockpit = {
             <span style="font-size: 24px">🚀</span>
           </div>
           <div>
-            <h2 class="text-xl font-medium">${venture.name}</h2>
+            ${ventures.length > 1 ? `
+              <select class="input" id="venture-selector" style="font-size: 18px; font-weight: 500; padding: 4px 8px; margin-bottom: 4px;">
+                ${ventures.map(v => `
+                  <option value="${v.id}" ${v.id === venture.id ? 'selected' : ''}>${v.name}</option>
+                `).join('')}
+              </select>
+            ` : `
+              <h2 class="text-xl font-medium">${venture.name}</h2>
+            `}
             <p class="text-secondary text-sm">${venture.description}</p>
           </div>
         </div>
@@ -537,6 +546,18 @@ const VentureCockpit = {
   
   // Setup event listeners
   setupEventListeners() {
+    // Venture selector change
+    document.addEventListener('change', (e) => {
+      if (e.target.id === 'venture-selector') {
+        const ventureId = e.target.value;
+        const venture = NexusStore.getVentureById(ventureId);
+        if (venture) {
+          this.currentVenture = venture;
+          this.render();
+        }
+      }
+    });
+    
     // Tab switching
     document.addEventListener('click', (e) => {
       // Handle tab clicks
