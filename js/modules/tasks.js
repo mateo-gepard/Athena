@@ -267,7 +267,11 @@ const TasksModule = {
   
   // Render single task item
   renderTaskItem(task) {
-    const isOverdue = task.dueDate && task.dueDate < new Date().toISOString().split('T')[0] && task.status !== 'completed';
+    const isOverdue = task.deadline && task.deadline < new Date().toISOString().split('T')[0] && task.status !== 'completed';
+    const sphere = task.spheres && task.spheres[0] ? task.spheres[0] : null;
+    const sphereColor = sphere ? NexusUI.getSphereColor(sphere) : null;
+    const priorityScore = task.priorityScore || 5;
+    const priorityClass = priorityScore >= 8 ? 'critical' : priorityScore >= 6 ? 'high' : priorityScore >= 4 ? 'medium' : 'low';
     
     return `
       <div class="task-item ${task.status === 'completed' ? 'completed' : ''}" data-task-id="${task.id}">
@@ -277,8 +281,8 @@ const TasksModule = {
             ${task.status === 'completed' ? '✓' : ''}
           </button>
           
-          ${task.sphere ? `
-            <div class="sphere-indicator" style="background: var(--color-sphere-${task.sphere})"></div>
+          ${sphere ? `
+            <div class="sphere-indicator" style="background: ${sphereColor}"></div>
           ` : ''}
           
           <div class="flex-1 min-w-0">
@@ -286,21 +290,18 @@ const TasksModule = {
               ${task.title}
             </div>
             <div class="flex items-center gap-3 text-xs text-tertiary mt-1">
+              ${sphere ? `<span class="badge badge-${sphere}">${sphere}</span>` : ''}
               ${task.projectId ? `<span>📁 ${this.getProjectName(task.projectId)}</span>` : ''}
-              ${task.dueDate ? `
+              ${task.deadline ? `
                 <span class="${isOverdue ? 'text-critical' : ''}">
-                  📅 ${NexusUI.formatDate(new Date(task.dueDate))}
+                  📅 ${NexusUI.formatDate(new Date(task.deadline))}
                 </span>
               ` : ''}
-              ${task.estimatedTime ? `<span>⏱️ ${task.estimatedTime}min</span>` : ''}
+              ${task.timeEstimate ? `<span>⏱️ ${task.timeEstimate}min</span>` : ''}
             </div>
           </div>
           
-          ${task.priority && task.priority !== 'normal' ? `
-            <span class="badge badge-${task.priority === 'critical' ? 'critical' : task.priority === 'high' ? 'warning' : ''}">
-              ${task.priority === 'critical' ? '!!!' : task.priority === 'high' ? '!!' : '!'}
-            </span>
-          ` : ''}
+          <span class="badge badge-${priorityClass}">${priorityScore}/10</span>
           
           <div class="task-actions flex items-center gap-1">
             <button class="btn-icon-sm" data-action="edit" title="Bearbeiten">
