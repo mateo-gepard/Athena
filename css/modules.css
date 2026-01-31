@@ -483,6 +483,23 @@
 /* Week View */
 .week-view {
   position: relative;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Day View */
+.day-view {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  position: relative;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .week-header {
@@ -548,7 +565,8 @@
 }
 
 .day-column.today {
-  background: rgba(74, 124, 148, 0.03);
+  background: var(--surface-1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .hour-cell {
@@ -582,55 +600,56 @@
 }
 
 .calendar-event.time-block {
-  background: var(--color-surface-3);
-  border-left: 3px solid var(--color-accent);
+  background: var(--surface-2);
+  border-left: 3px solid var(--border);
 }
 
 .calendar-event.time-block.type-focus {
-  border-left-color: var(--color-sphere-geschaeft);
-  background: rgba(74, 124, 148, 0.15);
+  border-left-color: var(--text-secondary);
+  background: var(--surface-2);
 }
 
 .calendar-event.time-block.type-meeting {
-  border-left-color: var(--color-sphere-projekte);
-  background: rgba(124, 106, 148, 0.15);
+  border-left-color: var(--text-secondary);
+  background: var(--surface-2);
 }
 
 .calendar-event.time-block.type-admin {
-  border-left-color: var(--color-sphere-freizeit);
-  background: rgba(107, 104, 98, 0.15);
+  border-left-color: var(--text-secondary);
+  background: var(--surface-2);
 }
 
 /* Task priority colors in calendar */
 .calendar-event.time-block.type-task {
-  border-left-color: var(--color-sphere-geschaeft);
-  background: rgba(74, 124, 148, 0.15);
+  border-left-color: var(--text-secondary);
+  background: var(--surface-2);
 }
 
 .calendar-event.time-block.type-high {
-  border-left-color: var(--color-warning);
-  background: rgba(196, 160, 92, 0.15);
+  border-left-color: rgba(255, 255, 255, 0.3);
+  background: var(--surface-2);
 }
 
 .calendar-event.time-block.type-critical {
-  border-left-color: var(--color-critical);
-  background: rgba(196, 92, 92, 0.2);
+  border-left-color: rgba(255, 255, 255, 0.4);
+  background: var(--surface-2);
 }
 
 .calendar-event.deadline {
-  background: rgba(200, 80, 80, 0.2);
-  border-left: 3px solid var(--color-critical);
+  background: var(--surface-2);
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
 }
 
 .calendar-event.habit {
-  background: rgba(74, 148, 106, 0.2);
-  border-left: 3px solid var(--color-sphere-sport);
+  background: var(--surface-2);
+  border-left: 3px solid var(--text-secondary);
   border-radius: var(--radius-md);
 }
 
 .calendar-event.habit.completed {
-  opacity: 0.6;
-  background: rgba(74, 148, 106, 0.1);
+  opacity: 1;
+  background: var(--surface-1);
+  border-left-color: rgba(255, 255, 255, 0.15);
 }
 
 .event-time {
@@ -796,6 +815,68 @@
 }
 
 /* Layer Toggle */
+.layer-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.layer-filter-item:hover {
+  background: var(--surface-2);
+}
+
+.layer-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  appearance: none;
+  background: var(--surface-0);
+  transition: all 0.2s ease;
+}
+
+.layer-checkbox:checked {
+  background: var(--surface-3);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.layer-checkbox:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.layer-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.layer-label i {
+  width: 16px;
+  height: 16px;
+}
+
+.layer-checkbox:checked + .layer-label {
+  color: var(--text-primary);
+}
+
+/* Alte Layer Toggle entfernen */
 .layer-toggle .toggle {
   width: 32px;
   height: 18px;

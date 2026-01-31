@@ -520,21 +520,23 @@ const TemporalEngine = {
   // Render layer controls
   renderLayerControls() {
     const layerConfig = [
-      { id: 'events', icon: 'calendar', label: 'Events', color: 'var(--color-sphere-projekte)' },
-      { id: 'deadlines', icon: 'clock', label: 'Deadlines', color: 'var(--color-critical)' },
-      { id: 'milestones', icon: 'flag', label: 'Milestones', color: 'var(--color-sphere-geschaeft)' },
-      { id: 'habits', icon: 'repeat', label: 'Habits', color: 'var(--color-sphere-sport)' },
-      { id: 'timeBlocks', icon: 'layout', label: 'Time Blocks', color: 'var(--color-accent)' }
+      { id: 'events', icon: 'calendar', label: 'Events' },
+      { id: 'deadlines', icon: 'clock', label: 'Deadlines' },
+      { id: 'milestones', icon: 'flag', label: 'Milestones' },
+      { id: 'habits', icon: 'repeat', label: 'Habits' },
+      { id: 'timeBlocks', icon: 'layout', label: 'Time Blocks' }
     ];
     
     return layerConfig.map(layer => `
-      <div class="flex items-center gap-3 p-2 rounded-md hover:bg-surface-2 cursor-pointer layer-toggle" 
-           data-layer="${layer.id}">
-        <div class="toggle ${this.layers[layer.id] ? 'active' : ''}">
-          <div class="toggle-slider"></div>
-        </div>
-        <div class="w-3 h-3 rounded-full" style="background: ${layer.color}"></div>
-        <span class="text-sm">${layer.label}</span>
+      <div class="layer-filter-item" data-layer="${layer.id}">
+        <input type="checkbox" 
+               class="layer-checkbox" 
+               id="layer-${layer.id}" 
+               ${this.layers[layer.id] ? 'checked' : ''}>
+        <label for="layer-${layer.id}" class="layer-label">
+          <i data-lucide="${layer.icon}"></i>
+          <span>${layer.label}</span>
+        </label>
       </div>
     `).join('');
   },
