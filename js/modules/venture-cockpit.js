@@ -285,6 +285,11 @@ const VentureCockpit = {
   
   // Render Evaluation Tab
   renderEvaluationTab(venture) {
+    console.log('🎨 Rendering Evaluation Tab for venture:', venture);
+    console.log('   📊 venture.evaluation:', venture.evaluation);
+    console.log('   📊 venture.evaluation?.roiScore:', venture.evaluation?.roiScore);
+    console.log('   ⏱️ venture.effortInvested:', venture.effortInvested);
+    
     return `
       <div class="panel">
         <div class="panel-header">
