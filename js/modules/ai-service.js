@@ -28,7 +28,7 @@ VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
 [ACTION:ADD_TASK:{"title":"Task Titel","description":"Beschreibung oder null","priority":"low|normal|high|critical","sphere":"geschaeft|projekte|schule|sport|freizeit","projectId":"projekt-id oder null","dueDate":"YYYY-MM-DD oder null","time":"HH:MM oder null","timeEstimate":60,"tags":["tag1","tag2"]}]
 
 [ACTION:COMPLETE_TASK:{"id":"task-id"}]
-[ACTION:ADD_HABIT:{"name":"Habit Name","frequency":"daily|weekly","scheduledDays":[1,2,3],"sphere":"..."}]
+[ACTION:ADD_HABIT:{"name":"Habit Name","frequency":"daily|weekly","scheduledDays":[1,2,3],"preferredTime":"HH:MM oder null","sphere":"..."}]
 [ACTION:ADD_PROJECT:{"name":"Projekt Name","description":"..."}]
 [ACTION:NAVIGATE:{"page":"command-center|tasks|habits|projects|calendar|settings"}]
 [ACTION:SHOW_TASKS]
@@ -38,6 +38,7 @@ VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
 HABIT PARAMETER:
 - scheduledDays: Nur für weekly habits - Array von Wochentagen [0-6] (0=Sonntag, 1=Montag, ..., 6=Samstag)
   Beispiele: "jeden Dienstag" → scheduledDays:[2], "Mo/Mi/Fr" → scheduledDays:[1,3,5]
+- preferredTime: Uhrzeit im Format HH:MM (z.B. "17:00") oder null wenn nicht angegeben
 
 TASK PARAMETER ERKLÄRUNG:
 - title: Pflichtfeld - Titel der Task
@@ -428,6 +429,7 @@ ${goals.slice(0, 5).map(g => `- 🎯 "${g.title}" (${g.progress || 0}%)`).join('
             name: action.data.name,
             frequency: action.data.frequency || 'daily',
             scheduledDays: action.data.scheduledDays || null,
+            preferredTime: action.data.preferredTime || null,
             sphere: action.data.sphere || 'freizeit'
           });
           if (typeof NexusApp !== 'undefined') {

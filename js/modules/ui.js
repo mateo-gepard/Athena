@@ -252,6 +252,7 @@ const NexusUI = {
     }
     
     overlay.classList.add('active');
+    modal.classList.add('open');
     
     // Focus first input if present
     setTimeout(() => {
@@ -264,8 +265,12 @@ const NexusUI = {
   
   closeModal() {
     const overlay = document.getElementById('modal-overlay');
+    const modal = document.getElementById('modal');
     if (overlay) {
       overlay.classList.remove('active');
+    }
+    if (modal) {
+      modal.classList.remove('open');
     }
   },
   
