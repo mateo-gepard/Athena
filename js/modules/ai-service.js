@@ -24,7 +24,9 @@ DEINE FÄHIGKEITEN:
 Du kannst das System für den Nutzer bedienen. Wenn der Nutzer dich bittet, etwas zu tun, antworte mit speziellen Befehlen die das System ausführt.
 
 VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
-[ACTION:ADD_TASK:{"title":"Task Titel","priority":"normal|high|critical","sphere":"geschaeft|projekte|schule|sport|freizeit","dueDate":"YYYY-MM-DD oder null","time":"HH:MM oder null"}]
+
+[ACTION:ADD_TASK:{"title":"Task Titel","description":"Beschreibung oder null","priority":"low|normal|high|critical","sphere":"geschaeft|projekte|schule|sport|freizeit","projectId":"projekt-id oder null","dueDate":"YYYY-MM-DD oder null","time":"HH:MM oder null","timeEstimate":60,"tags":["tag1","tag2"]}]
+
 [ACTION:COMPLETE_TASK:{"id":"task-id"}]
 [ACTION:ADD_HABIT:{"name":"Habit Name","frequency":"daily|weekly","sphere":"..."}]
 [ACTION:ADD_PROJECT:{"name":"Projekt Name","description":"..."}]
@@ -33,13 +35,26 @@ VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
 [ACTION:SHOW_HABITS]
 [ACTION:SHOW_SUMMARY]
 
-WICHTIG FÜR ZEITEN:
-- Wenn der Nutzer eine Uhrzeit nennt (z.B. "um 14 Uhr", "um 9:30"), setze das "time" Feld im Format "HH:MM"
-- "morgen um 10" = dueDate: morgen, time: "10:00"
-- "heute nachmittag" = dueDate: heute, time: "14:00"
+TASK PARAMETER ERKLÄRUNG:
+- title: Pflichtfeld - Titel der Task
+- description: Optional - Detaillierte Beschreibung
+- priority: low, normal, high, critical (Standard: normal)
+- sphere: Lebensbereich (geschaeft, projekte, schule, sport, freizeit)
+- projectId: Wenn Task zu einem Projekt gehört, nutze die Projekt-ID aus dem Kontext
+- dueDate: Fälligkeitsdatum im Format YYYY-MM-DD
+- time: Uhrzeit im Format HH:MM (z.B. "14:00")
+- timeEstimate: Geschätzte Dauer in Minuten (z.B. 30, 60, 120)
+- tags: Array von Tags zur Kategorisierung
+
+ZEIT-INTERPRETATION:
+- "um 14 Uhr" → time: "14:00"
+- "morgen früh" → dueDate: morgen, time: "09:00"
+- "heute nachmittag" → dueDate: heute, time: "14:00"
+- "in 2 Stunden" → berechne die Zeit
+- "dauert etwa 1 Stunde" → timeEstimate: 60
 
 KONTEXT-INFOS DIE DU ERHÄLTST:
-- Aktuelle Tasks, Habits, Projekte
+- Aktuelle Tasks, Habits, Projekte (mit IDs)
 - Heutiges Datum und Uhrzeit
 - Überfällige Aufgaben
 
@@ -49,7 +64,8 @@ RICHTLINIEN:
 - Sei freundlich, professionell und hilfsbereit
 - Antworte IMMER auf Deutsch
 - Erinnere dich an vorherige Nachrichten in dieser Konversation
-- Wenn du eine Aktion ausführst, schreibe den Befehl UND eine natürliche Antwort`,
+- Wenn du eine Aktion ausführst, schreibe den Befehl UND eine natürliche Antwort
+- Setze nur die Parameter die der Nutzer erwähnt, andere können null sein`,
 
     briefing: `Du bist Atlas, der persönliche AI-Assistent in NEXUS ULTRA - einem Life Operating System.
 Deine Aufgabe ist es, dem Nutzer einen hilfreichen, motivierenden Morgen-Briefing zu geben.
@@ -224,30 +240,83 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
   
   // Parse action commands from AI response
   parseActions(response) {
-    // Match action commands - use a more robust regex for JSON
-    const actionRegex = /\[ACTION:([A-Z_]+)(?::(\{[^}]+\}))?\]/g;
+    // Match action commands - handle nested JSON with arrays
     const actions = [];
     let cleanResponse = response;
     
+    // Find all [ACTION:TYPE: patterns and extract the JSON that follows
+    const actionStartRegex = /\[ACTION:([A-Z_]+)(?::)?/g;
     let match;
-    while ((match = actionRegex.exec(response)) !== null) {
+    
+    while ((match = actionStartRegex.exec(response)) !== null) {
       const actionType = match[1];
+      const startIndex = match.index;
       let actionData = null;
+      let fullMatch = match[0];
       
-      console.log('📋 Parsing action:', actionType, 'Raw data:', match[2]);
+      // Check if there's a colon and JSON data after the action type
+      const afterMatch = response.slice(match.index + match[0].length);
       
-      if (match[2]) {
-        try {
-          actionData = JSON.parse(match[2]);
-          console.log('   ✓ Parsed JSON:', actionData);
-        } catch (e) {
-          console.warn('   ⚠️ JSON parse failed, using as string:', e.message);
-          actionData = match[2];
+      if (afterMatch.startsWith('{')) {
+        // Find the matching closing brace, accounting for nested braces and arrays
+        let braceCount = 0;
+        let bracketCount = 0;
+        let inString = false;
+        let escapeNext = false;
+        let endIndex = -1;
+        
+        for (let i = 0; i < afterMatch.length; i++) {
+          const char = afterMatch[i];
+          
+          if (escapeNext) {
+            escapeNext = false;
+            continue;
+          }
+          
+          if (char === '\\') {
+            escapeNext = true;
+            continue;
+          }
+          
+          if (char === '"' && !escapeNext) {
+            inString = !inString;
+            continue;
+          }
+          
+          if (!inString) {
+            if (char === '{') braceCount++;
+            if (char === '}') braceCount--;
+            if (char === '[') bracketCount++;
+            if (char === ']' && bracketCount > 0) bracketCount--;
+            
+            if (braceCount === 0 && bracketCount === 0) {
+              endIndex = i + 1;
+              break;
+            }
+          }
         }
+        
+        if (endIndex > 0) {
+          const jsonStr = afterMatch.slice(0, endIndex);
+          fullMatch = `[ACTION:${actionType}:${jsonStr}]`;
+          
+          console.log('📋 Parsing action:', actionType, 'Raw JSON:', jsonStr);
+          
+          try {
+            actionData = JSON.parse(jsonStr);
+            console.log('   ✓ Parsed JSON:', actionData);
+          } catch (e) {
+            console.warn('   ⚠️ JSON parse failed:', e.message);
+          }
+        }
+      } else {
+        // No JSON data, just the action type
+        fullMatch = `[ACTION:${actionType}]`;
+        console.log('📋 Parsing action (no data):', actionType);
       }
       
       actions.push({ type: actionType, data: actionData });
-      cleanResponse = cleanResponse.replace(match[0], '');
+      cleanResponse = cleanResponse.replace(fullMatch, '');
     }
     
     return { cleanResponse: cleanResponse.trim(), actions };
@@ -263,13 +332,21 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
         if (action.data && action.data.title) {
           const newTask = NexusStore.addTask({
             title: action.data.title,
+            description: action.data.description || '',
             priority: action.data.priority || 'normal',
             spheres: action.data.sphere ? [action.data.sphere] : ['freizeit'],
+            projectId: action.data.projectId || null,
             deadline: action.data.dueDate || null,
             scheduledDate: action.data.dueDate || null,
-            scheduledTime: action.data.time || null // Add time support
+            scheduledTime: action.data.time || null,
+            timeEstimate: action.data.timeEstimate || null,
+            tags: action.data.tags || [],
+            checklist: action.data.checklist || [],
+            dependencies: action.data.dependencies || [],
+            linkedNotes: action.data.linkedNotes || [],
+            linkedContacts: action.data.linkedContacts || []
           });
-          console.log('✅ Task created:', newTask.title, '| ID:', newTask.id, '| Time:', newTask.scheduledTime);
+          console.log('✅ Task created:', newTask.title, '| ID:', newTask.id, '| Time:', newTask.scheduledTime, '| Estimate:', newTask.timeEstimate);
           // Refresh UI
           if (typeof NexusApp !== 'undefined') {
             NexusApp.refreshCurrentPage();
