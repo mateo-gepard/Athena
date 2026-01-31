@@ -937,8 +937,19 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
       case 'COMPLETE_TASK':
         if (d.id) {
           NexusStore.completeTask(d.id);
-          console.log('✅ Task completed:', d.id);
+          console.log('✅ Task completed by id:', d.id);
           refreshUI();
+        } else if (d.title || d.name) {
+          const title = (d.title || d.name).toString().toLowerCase();
+          const tasks = NexusStore.getTasks();
+          const match = tasks.find(t => (t.title || '').toLowerCase() === title);
+          if (match) {
+            NexusStore.completeTask(match.id);
+            console.log('✅ Task completed by title match:', match.id, match.title);
+            refreshUI();
+          } else {
+            console.warn('⚠️ COMPLETE_TASK: no task found for title:', d.title || d.name);
+          }
         }
         break;
         
@@ -981,6 +992,24 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
           NexusStore.deleteHabit(d.id);
           console.log('✅ Habit deleted:', d.id);
           refreshUI();
+        }
+        break;
+      case 'COMPLETE_HABIT':
+        if (d.id) {
+          NexusStore.completeHabit(d.id);
+          console.log('✅ Habit completed by id:', d.id);
+          refreshUI();
+        } else if (d.name) {
+          const name = d.name.toString().toLowerCase();
+          const habits = NexusStore.getHabits();
+          const match = habits.find(h => (h.name || '').toLowerCase() === name);
+          if (match) {
+            NexusStore.completeHabit(match.id);
+            console.log('✅ Habit completed by name match:', match.id, match.name);
+            refreshUI();
+          } else {
+            console.warn('⚠️ COMPLETE_HABIT: no habit found for name:', d.name);
+          }
         }
         break;
       
