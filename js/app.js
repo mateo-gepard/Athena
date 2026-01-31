@@ -185,8 +185,19 @@ const NexusApp = {
     // Atlas input enter key
     document.addEventListener('keydown', (e) => {
       if (e.target.id === 'atlas-input' && e.key === 'Enter') {
-        e.preventDefault();
-        this.sendAtlasMessage();
+        if (!e.shiftKey) {
+          e.preventDefault();
+          this.sendAtlasMessage();
+        }
+        // Shift+Enter erlaubt neue Zeile (default behavior)
+      }
+    });
+    
+    // Auto-resize textarea
+    document.addEventListener('input', (e) => {
+      if (e.target.id === 'atlas-input') {
+        e.target.style.height = 'auto';
+        e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
       }
     });
     
@@ -411,8 +422,10 @@ const NexusApp = {
     `;
     messagesContainer.appendChild(userMsg);
     
-    // Clear input
+    // Clear input and reset height
     input.value = '';
+    input.style.height = 'auto';
+    input.rows = 1;
     
     // Scroll to bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;

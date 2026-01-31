@@ -2522,6 +2522,12 @@
   border-radius: var(--radius-lg);
   color: var(--color-text-primary);
   font-size: var(--text-base);
+  resize: none;
+  min-height: 44px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: inherit;
+  line-height: 1.5;
 }
 
 .atlas-ai-input:focus {
