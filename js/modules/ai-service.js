@@ -335,7 +335,7 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
             description: action.data.description || '',
             priority: action.data.priority || 'normal',
             spheres: action.data.sphere ? [action.data.sphere] : ['freizeit'],
-            projectId: action.data.projectId || null,
+            projectId: action.data.projectId && action.data.projectId !== 'null' ? action.data.projectId : null,
             deadline: action.data.dueDate || null,
             scheduledDate: action.data.dueDate || null,
             scheduledTime: action.data.time || null,
