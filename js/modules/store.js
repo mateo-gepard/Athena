@@ -725,6 +725,8 @@ const NexusStore = {
     };
     
     console.log('💾 Final venture object to be saved:', venture);
+    console.log('   📊 Evaluation object:', venture.evaluation);
+    console.log('   ⏱️ Effort invested:', venture.effortInvested);
     
     this.state.ventures.push(venture);
     this.save();
