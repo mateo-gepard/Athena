@@ -194,8 +194,8 @@ const VentureCockpit = {
               <span class="panel-title">Roadmap Timeline</span>
               <div class="tabs-pills" style="border: none;">
                 <button class="tab active">Timeline</button>
-                <button class="tab">Gantt</button>
-                <button class="tab">Kanban</button>
+                <button class="tab" disabled style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">Gantt</button>
+                <button class="tab" disabled style="opacity: 0.5; cursor: not-allowed;" title="Coming Soon">Kanban</button>
               </div>
             </div>
             <div class="panel-body">
