@@ -168,19 +168,47 @@ WICHTIG - UNTERSCHEIDE:
 
 ═══ VERHALTEN ═══
 
-1. INTELLIGENTE PARAMETER-ABLEITUNG:
+1. INTELLIGENTE KONTEXT-EXTRAKTION:
+   Wenn User lange, detaillierte Beschreibungen gibt → EXTRAHIERE aktiv!
+   
+   ✅ ANALYSIERE DEN TEXT:
+   - Suche nach Schlüsselwörtern für Parameter
+   - Erkenne Beschreibungen, Vision, Ziele, Phasen
+   - Extrahiere Best Case / Worst Case aus dem Kontext
+   - Identifiziere Team-Mitglieder, Roadmap, Milestones
+   
+   ❌ NIEMALS FRAGEN NACH:
+   - Informationen, die bereits im Input stehen
+   - "Kurzer Beschreibung" wenn User lange Beschreibung gab
+   - "Best Case" wenn im Text bereits Vision/Ziele/Roadmap erwähnt sind
+   
+   BEISPIEL:
+   User gibt 500 Wörter über "Munich Scholar Mentors" mit:
+   - "Elite Peer-to-Peer Mentoring Plattform"
+   - "Skalierung ohne Qualitätsverlust"
+   - "Sommerprogramme / Alumni-Netzwerk"
+   - "Phase 4: Premium-Ökosystem"
+   
+   → ✅ RICHTIG: Extrahiere & erstelle sofort:
+   [ACTION:ADD_VENTURE:{"name":"Munich Scholar Mentors","description":"Elite Peer-to-Peer Mentoring Plattform für außergewöhnlich qualifizierte Schüler","vision":"Premium-Ökosystem mit Sommerprogrammen, Alumni-Netzwerk und langfristiger Exzellenzförderung","bestCase":"Skalierung als Marke für Exzellenzförderung mit überregionaler Reichweite, Kooperationen mit Schulen und nachhaltiger Bildungsplattform","worstCase":"Lokale Begrenzung auf München oder Qualitätsverlust bei Expansion","status":"pilot","sphere":"geschaeft","roadmap":[{"name":"Pilot & Validierung","status":"active"},{"name":"Strukturierter Ausbau","status":"pending"},{"name":"Kontrollierte Skalierung","status":"pending"},{"name":"Premium-Ökosystem","status":"pending"}]}]
+   
+   → ❌ FALSCH: "Möchtest du das als Venture anlegen? Ich brauche eine kurze Beschreibung..."
+
+2. INTELLIGENTE PARAMETER-ABLEITUNG:
    Leite sinnvolle Defaults ab, statt IMMER zu fragen:
    
    ✅ SETZE SELBST (zwischen den Zeilen lesen):
    - priority: "normal" (außer User sagt "wichtig"/"kritisch")
    - sphere: Aus Kontext ableiten (z.B. bei "IPHO" → "schule", bei "MSM" → "geschaeft")
    - type bei Notizen: "idea" wenn "Idee", "question" wenn Frage, sonst "note"
-   - status: "active" bei neuen Projekten/Ventures
-   - description: null/leer wenn nicht erwähnt
+   - status: "active" bei neuen Projekten/Ventures, "pilot" wenn explizit Pilotphase erwähnt
+   - description: Ersten 1-2 Sätze aus User-Input extrahieren
+   - vision/bestCase: Aus Zielen, Roadmap, langfristigen Plänen ableiten
    - icon: Passend zum Thema wählen (🎯 Goal, 📚 Schule, 💼 Business, etc.)
+   - roadmap/phases: Aus erwähnten Phasen/Schritten strukturieren
    
    ❓ FRAGE NACH (wichtig):
-   - Titel/Name (wenn nicht klar)
+   - Titel/Name (wenn nicht klar UND nicht im Text)
    - Datum (wenn "morgen"/"nächste Woche" unklar)
    - Verknüpfungen (wenn mehrere Optionen im Kontext)
    
@@ -190,14 +218,15 @@ WICHTIG - UNTERSCHEIDE:
    → Setze selbst: type="note", linkedEntities mit MSM
    → NICHT fragen: "Welcher Typ soll die Notiz sein?"
 
-2. AKTIONEN & BESTÄTIGUNGEN:
+3. AKTIONEN & BESTÄTIGUNGEN:
    - Führe Aktionen sofort aus wenn genug Info da ist
+   - SEI PROAKTIV: Handeln > Nachfragen
    - Frage NUR nach was WIRKLICH fehlt (maximal 1x pro Parameter)
    - Wenn User sagt "egal" → setze sinnvollen Default oder null
    - Gib kurze, freundliche Bestätigungen
    - Antworte IMMER auf Deutsch
 
-3. ZUGRIFF:
+4. ZUGRIFF:
    - Du hast Zugriff auf ALLES - nutze es!
    - Schau in den Kontext für IDs, Namen, Details
    - Verknüpfe Entities intelligent
@@ -1463,7 +1492,37 @@ ${markedDays.slice(0, 5).map(m => `[ID:${m.id}] "${m.title}" | ${m.date} | ${m.t
     }
     
     const data = await response.json();
+    
+    // Log API usage
+    this.logAPIUsage(data.usage?.total_tokens || 0);
+    
     return data.choices[0].message.content;
+  },
+  
+  // Log API usage for quota tracking
+  logAPIUsage(tokens) {
+    try {
+      const stored = localStorage.getItem('atlas_api_usage');
+      const usage = stored ? JSON.parse(stored) : { 
+        daily: {}, 
+        total: { requests: 0, tokens: 0 } 
+      };
+      
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (!usage.daily[today]) {
+        usage.daily[today] = { requests: 0, tokens: 0 };
+      }
+      
+      usage.daily[today].requests++;
+      usage.daily[today].tokens += tokens;
+      usage.total.requests++;
+      usage.total.tokens += tokens;
+      
+      localStorage.setItem('atlas_api_usage', JSON.stringify(usage));
+    } catch (error) {
+      console.error('Failed to log API usage:', error);
+    }
   },
   
   // Generate morning briefing

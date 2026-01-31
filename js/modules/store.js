@@ -153,6 +153,25 @@ const NexusStore = {
   },
   
   addTask(taskData) {
+    // Auto-assign default timeEstimate based on priority if not provided
+    let defaultTimeEstimate = 30; // Default: 30 min
+    if (!taskData.timeEstimate) {
+      switch (taskData.priority) {
+        case 'critical':
+          defaultTimeEstimate = 60; // 1h für kritische Tasks
+          break;
+        case 'high':
+          defaultTimeEstimate = 45; // 45min für wichtige Tasks
+          break;
+        case 'normal':
+          defaultTimeEstimate = 30; // 30min für normale Tasks
+          break;
+        case 'low':
+          defaultTimeEstimate = 15; // 15min für niedrige Priority
+          break;
+      }
+    }
+    
     const task = {
       id: this.generateId(),
       title: taskData.title,
@@ -164,7 +183,7 @@ const NexusStore = {
       deadline: taskData.deadline || null,
       scheduledDate: taskData.scheduledDate || null,
       scheduledTime: taskData.scheduledTime || null,
-      timeEstimate: taskData.timeEstimate || null,
+      timeEstimate: taskData.timeEstimate || defaultTimeEstimate,
       timeActual: null,
       dependencies: taskData.dependencies || [],
       tags: taskData.tags || [],

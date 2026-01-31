@@ -434,6 +434,33 @@ const NexusApp = {
     this.processAtlasMessage(message, messagesContainer);
   },
   
+  // Format Atlas AI response with proper HTML formatting
+  formatAtlasResponse(text) {
+    if (!text) return '';
+    
+    // Convert numbered lists: "1. " or "1. **"
+    text = text.replace(/(\d+)\.\s+\*\*(.*?)\*\*/g, '<div style="margin-top:12px"><strong>$1. $2</strong></div>');
+    text = text.replace(/(\d+)\.\s+([^*\n])/g, '<div style="margin-top:8px">$1. $2');
+    
+    // Convert bullet points: "- " or "• "
+    text = text.replace(/^[\-•]\s+(.+)/gm, '<div style="margin-left:16px;margin-top:4px">• $1</div>');
+    
+    // Convert bold: **text**
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert section headers (with emoji or caps)
+    text = text.replace(/^([🌅🌙📊💡🎯⚡🔥]+)\s+(.+)$/gm, '<div style="margin-top:16px;font-size:1.1em"><strong>$1 $2</strong></div>');
+    
+    // Convert line breaks (double newline = paragraph, single = br)
+    text = text.replace(/\n\n/g, '<div style="height:12px"></div>');
+    text = text.replace(/\n/g, '<br>');
+    
+    // Clean up any remaining closing divs that weren't opened
+    text = text.replace(/<\/div>(?!.*<div)/g, '');
+    
+    return text;
+  },
+  
   // Process message with AI
   async processAtlasMessage(message, container) {
     // Add thinking indicator
@@ -459,7 +486,7 @@ const NexusApp = {
         aiMsg.className = 'atlas-message-item assistant';
         aiMsg.innerHTML = `
           <div class="atlas-message-avatar">🧠</div>
-          <div class="atlas-message-content">${response}</div>
+          <div class="atlas-message-content">${this.formatAtlasResponse(response)}</div>
         `;
         container.appendChild(aiMsg);
       } else {

@@ -33,6 +33,20 @@ const CommandCenter = {
     const briefingEl = document.getElementById('atlasBriefing');
     if (!briefingEl) return;
     
+    // Check if auto-briefing is enabled
+    const settings = NexusStore.getSettings();
+    if (settings.autoBriefing === false) {
+      briefingEl.innerHTML = `
+        <div class="text-tertiary text-center p-4">
+          <i data-lucide="bot"></i>
+          <p class="mt-2">Automatisches Morning Briefing ist deaktiviert</p>
+          <p class="text-xs mt-1">Aktiviere es in den Einstellungen unter "Atlas AI"</p>
+        </div>
+      `;
+      NexusUI.refreshIcons();
+      return;
+    }
+    
     const today = new Date().toISOString().split('T')[0];
     const cacheKey = `briefing_${today}`;
     

@@ -309,7 +309,7 @@ const SettingsModule = {
                 <div class="setting-description">Atlas erstellt jeden Morgen automatisch ein Briefing</div>
               </div>
               <div class="setting-control">
-                <div class="toggle ${settings.autoBriefing ? 'active' : ''}" id="toggle-auto-briefing">
+                <div class="toggle ${settings.autoBriefing !== false ? 'active' : ''}" id="toggle-auto-briefing">
                   <div class="toggle-slider"></div>
                 </div>
               </div>
@@ -321,6 +321,18 @@ const SettingsModule = {
               </button>
             </div>
             
+          </div>
+        </div>
+      ` : ''}
+      
+      <!-- API Usage Stats -->
+      ${isConfigured ? `
+        <div class="panel mt-6">
+          <div class="panel-header">
+            <span class="panel-title">API Nutzung</span>
+          </div>
+          <div class="panel-body">
+            ${this.renderAPIUsageStats()}
           </div>
         </div>
       ` : ''}
@@ -514,6 +526,87 @@ const SettingsModule = {
     `;
   },
   
+  // Render API Usage Stats
+  renderAPIUsageStats() {
+    const usage = this.getAPIUsage();
+    const today = new Date().toISOString().split('T')[0];
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    
+    const todayUsage = usage.daily[today] || { requests: 0, tokens: 0 };
+    const monthUsage = Object.entries(usage.daily)
+      .filter(([date]) => date.startsWith(thisMonth))
+      .reduce((acc, [_, data]) => ({
+        requests: acc.requests + data.requests,
+        tokens: acc.tokens + data.tokens
+      }), { requests: 0, tokens: 0 });
+    
+    // Estimated cost (gpt-4o-mini: $0.15/1M input, $0.60/1M output)
+    const estimatedCost = (monthUsage.tokens / 1000000) * 0.375; // Average
+    
+    return `
+      <div class="api-stats">
+        <div class="mb-4">
+          <h4 class="text-sm font-medium mb-2">Heute</h4>
+          <div class="grid gap-2" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="stat-box p-3 rounded-md bg-surface-2">
+              <div class="text-xs text-tertiary">Requests</div>
+              <div class="text-lg font-medium">${todayUsage.requests}</div>
+            </div>
+            <div class="stat-box p-3 rounded-md bg-surface-2">
+              <div class="text-xs text-tertiary">Tokens</div>
+              <div class="text-lg font-medium">${this.formatNumber(todayUsage.tokens)}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mb-4">
+          <h4 class="text-sm font-medium mb-2">Dieser Monat</h4>
+          <div class="grid gap-2" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="stat-box p-3 rounded-md bg-surface-2">
+              <div class="text-xs text-tertiary">Requests</div>
+              <div class="text-lg font-medium">${monthUsage.requests}</div>
+            </div>
+            <div class="stat-box p-3 rounded-md bg-surface-2">
+              <div class="text-xs text-tertiary">Tokens</div>
+              <div class="text-lg font-medium">${this.formatNumber(monthUsage.tokens)}</div>
+            </div>
+            <div class="stat-box p-3 rounded-md bg-surface-2">
+              <div class="text-xs text-tertiary">~Kosten</div>
+              <div class="text-lg font-medium">$${estimatedCost.toFixed(2)}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="text-xs text-tertiary">
+          <i data-lucide="info" style="width: 12px; height: 12px;"></i>
+          Geschätzte Kosten basierend auf gpt-4o-mini Preisen
+        </div>
+      </div>
+    `;
+  },
+  
+  // Get API Usage from localStorage
+  getAPIUsage() {
+    const stored = localStorage.getItem('atlas_api_usage');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return {
+      daily: {},
+      total: { requests: 0, tokens: 0 }
+    };
+  },
+  
+  // Format number with K/M suffix
+  formatNumber(num) {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + 'K';
+    }
+    return num.toString();
+  },
+  
   // Calculate storage size
   getStorageSize() {
     let total = 0;
@@ -587,6 +680,38 @@ const SettingsModule = {
       NexusUI.showToast('Verbindung erfolgreich!', 'success');
     } else {
       NexusUI.showToast('Fehler: ' + result.error, 'error');
+    }
+  },
+  
+  // Toggle Auto-Briefing
+  toggleAutoBriefing() {
+    const settings = NexusStore.getSettings();
+    const newValue = !settings.autoBriefing;
+    
+    NexusStore.updateSettings({ autoBriefing: newValue });
+    NexusUI.showToast(
+      `Auto-Briefing ${newValue ? 'aktiviert' : 'deaktiviert'}`, 
+      'success'
+    );
+    
+    // Update toggle visual
+    const toggle = document.getElementById('toggle-auto-briefing');
+    if (toggle) {
+      if (newValue) {
+        toggle.classList.add('active');
+      } else {
+        toggle.classList.remove('active');
+      }
+    }
+  },
+  
+  // Save AI Settings
+  saveAISettings() {
+    const model = document.getElementById('setting-ai-model')?.value;
+    
+    if (model) {
+      NexusStore.updateSettings({ aiModel: model });
+      NexusUI.showToast('AI Einstellungen gespeichert!', 'success');
     }
   },
   
@@ -684,6 +809,18 @@ const SettingsModule = {
       // Test connection
       if (e.target.id === 'test-api-connection') {
         this.testConnection();
+        return;
+      }
+      
+      // Toggle auto-briefing
+      if (e.target.closest('#toggle-auto-briefing')) {
+        this.toggleAutoBriefing();
+        return;
+      }
+      
+      // Save AI settings
+      if (e.target.id === 'save-ai-settings') {
+        this.saveAISettings();
         return;
       }
       
