@@ -6,6 +6,7 @@
 const VentureCockpit = {
   
   currentVenture: null,
+  currentTab: 'overview',
   
   // Initialize
   init() {
@@ -87,15 +88,53 @@ const VentureCockpit = {
       
       <!-- Tabs -->
       <div class="tabs mb-6">
-        <button class="tab active" data-tab="overview">Übersicht</button>
-        <button class="tab" data-tab="roadmap">Roadmap</button>
-        <button class="tab" data-tab="tasks">Tasks</button>
-        <button class="tab" data-tab="evaluation">Evaluation</button>
-        <button class="tab" data-tab="team">Team</button>
-        <button class="tab" data-tab="mind-space">Mind Space</button>
-        <button class="tab" data-tab="analytics">Analytics</button>
+        <button class="tab ${this.currentTab === 'overview' ? 'active' : ''}" data-tab="overview">Übersicht</button>
+        <button class="tab ${this.currentTab === 'roadmap' ? 'active' : ''}" data-tab="roadmap">Roadmap</button>
+        <button class="tab ${this.currentTab === 'tasks' ? 'active' : ''}" data-tab="tasks">Tasks</button>
+        <button class="tab ${this.currentTab === 'evaluation' ? 'active' : ''}" data-tab="evaluation">Evaluation</button>
+        <button class="tab ${this.currentTab === 'team' ? 'active' : ''}" data-tab="team">Team</button>
+        <button class="tab ${this.currentTab === 'mind-space' ? 'active' : ''}" data-tab="mind-space">Mind Space</button>
+        <button class="tab ${this.currentTab === 'analytics' ? 'active' : ''}" data-tab="analytics">Analytics</button>
       </div>
       
+      <!-- Tab Content -->
+      <div id="venture-tab-content">
+        ${this.renderTabContent(venture, project, tasks, progress)}
+      </div>
+    `;
+  },
+  
+  // Render content for active tab
+  renderTabContent(venture, project, tasks, progress) {
+    switch (this.currentTab) {
+      case 'overview':
+        return this.renderOverviewTab(venture, project, tasks, progress);
+      case 'roadmap':
+        return this.renderRoadmapTab(venture);
+      case 'tasks':
+        return this.renderTasksTab(tasks);
+      case 'evaluation':
+        return this.renderEvaluationTab(venture);
+      case 'team':
+        return this.renderTeamTab(venture);
+      case 'mind-space':
+        return this.renderMindSpaceTab(venture);
+      case 'analytics':
+        return this.renderAnalyticsTab(venture);
+      default:
+        return this.renderOverviewTab(venture, project, tasks, progress);
+    }
+  },
+  
+  // Switch to a different tab
+  switchTab(tabName) {
+    this.currentTab = tabName;
+    this.render();
+  },
+  
+  // Render Overview Tab (original dashboard content)
+  renderOverviewTab(venture, project, tasks, progress) {
+    return `
       <!-- Scorecard -->
       <div class="panel mb-6">
         <div class="panel-header">
@@ -200,6 +239,122 @@ const VentureCockpit = {
             </div>
           </div>
           
+        </div>
+      </div>
+    `;
+  },
+  
+  // Render Roadmap Tab
+  renderRoadmapTab(venture) {
+    return `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Roadmap Timeline</span>
+          <button class="btn btn-sm" id="add-venture-phase-btn">+ Phase</button>
+        </div>
+        <div class="panel-body">
+          ${this.renderRoadmap(venture)}
+        </div>
+      </div>
+    `;
+  },
+  
+  // Render Tasks Tab
+  renderTasksTab(tasks) {
+    return `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Alle Tasks</span>
+          <button class="btn btn-sm" id="add-venture-task-btn">+ Task</button>
+        </div>
+        <div class="panel-body">
+          ${this.renderVentureTasks(tasks)}
+        </div>
+      </div>
+    `;
+  },
+  
+  // Render Evaluation Tab
+  renderEvaluationTab(venture) {
+    return `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">ROI & Evaluation</span>
+        </div>
+        <div class="panel-body">
+          <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
+            <div class="stat-card">
+              <div class="stat-label">📊 ROI Score</div>
+              <div class="stat-value">${venture.roiProjection?.score || '-'}/10</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">⏱️ Time Invested</div>
+              <div class="stat-value">${venture.effortInvested || 0}h</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">📈 Expected Return</div>
+              <div class="stat-value">${venture.roiProjection?.expected || '-'}x</div>
+            </div>
+          </div>
+          <div class="mt-6">
+            <h4 class="text-sm font-medium mb-3">Best & Worst Case</h4>
+            <div class="p-4 mb-3 rounded-md bg-success/10 border-l-3" style="border-left-color: var(--color-success)">
+              <div class="text-sm font-medium text-success">🎯 Best Case</div>
+              <div class="text-sm mt-1">${venture.bestCase || 'Nicht definiert'}</div>
+            </div>
+            <div class="p-4 rounded-md bg-critical/10 border-l-3" style="border-left-color: var(--color-critical)">
+              <div class="text-sm font-medium text-critical">⚠️ Worst Case</div>
+              <div class="text-sm mt-1">${venture.worstCase || 'Nicht definiert'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+  
+  // Render Team Tab
+  renderTeamTab(venture) {
+    return `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Team & Kontakte</span>
+          <button class="btn btn-sm" id="add-venture-contact-btn-2">+ Kontakt</button>
+        </div>
+        <div class="panel-body">
+          ${this.renderContacts(venture)}
+        </div>
+      </div>
+    `;
+  },
+  
+  // Render Mind Space Tab
+  renderMindSpaceTab(venture) {
+    return `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">💭 Mind Space</span>
+          <button class="btn btn-sm" id="add-venture-note-btn">+ Note</button>
+        </div>
+        <div class="panel-body">
+          ${this.renderMindSpaceLinks(venture)}
+        </div>
+      </div>
+    `;
+  },
+  
+  // Render Analytics Tab
+  renderAnalyticsTab(venture) {
+    return `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">📊 Analytics</span>
+        </div>
+        <div class="panel-body">
+          <div class="text-center p-8 text-secondary">
+            <div class="text-6xl mb-4">📈</div>
+            <p>Analytics Dashboard coming soon...</p>
+            <p class="text-sm mt-2">Track progress, velocity, and insights</p>
+          </div>
         </div>
       </div>
     `;
@@ -382,6 +537,14 @@ const VentureCockpit = {
   setupEventListeners() {
     // Tab switching
     document.addEventListener('click', (e) => {
+      // Handle tab clicks
+      const tabElement = e.target.closest('.tab[data-tab]');
+      if (tabElement) {
+        const tabName = tabElement.dataset.tab;
+        this.switchTab(tabName);
+        return;
+      }
+      
       // Add venture buttons
       if (e.target.closest('#add-venture-btn') || e.target.closest('#add-venture-btn-empty')) {
         this.showAddVentureModal();
