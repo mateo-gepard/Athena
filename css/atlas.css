@@ -83,9 +83,9 @@
   justify-content: center;
   gap: 8px;
   padding: 12px 16px;
-  background: var(--surface-2);
+  background: var(--color-surface-2);
   color: var(--text-primary);
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
@@ -95,7 +95,7 @@
 
 .atlas-new-chat-btn:hover {
   transform: translateY(-2px);
-  background: var(--surface-3);
+  background: var(--color-surface-3);
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
@@ -151,10 +151,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-2);
+  background: var(--color-surface-2);
   border-radius: 8px;
   color: var(--text-secondary);
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
 }
 
 .atlas-chat-icon svg {
@@ -262,7 +262,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  background: var(--surface-1);
+  background: var(--color-surface-1);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -278,9 +278,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-2);
+  background: var(--color-surface-2);
   border-radius: 11px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   color: var(--text-secondary);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -372,15 +372,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
   border-radius: 50%;
   color: var(--text-secondary);
   font-size: 20px;
 }
 
 .atlas-message.user .atlas-message-avatar {
-  background: var(--surface-3);
+  background: var(--color-surface-3);
   border-color: rgba(255, 255, 255, 0.15);
 }
 
@@ -533,8 +533,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   color: var(--text-primary);
   cursor: pointer;
@@ -543,7 +543,7 @@
 
 .atlas-send-btn:hover {
   transform: scale(1.05);
-  background: var(--surface-3);
+  background: var(--color-surface-3);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
