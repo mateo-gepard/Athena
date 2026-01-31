@@ -145,11 +145,16 @@ const NexusStore = {
   
   getOverdueTasks() {
     const today = new Date().toISOString().split('T')[0];
-    return this.state.tasks.filter(t => 
-      t.status !== 'completed' && 
-      t.deadline && 
-      t.deadline < today
-    );
+    return this.state.tasks.filter(t => {
+      if (t.status === 'completed') return false;
+      
+      // Check deadline (actual due date)
+      if (t.deadline && t.deadline < today) return true;
+      
+      // Don't mark scheduled tasks as overdue - they're just planned for today
+      // Only deadline counts as "overdue"
+      return false;
+    });
   },
   
   addTask(taskData) {
