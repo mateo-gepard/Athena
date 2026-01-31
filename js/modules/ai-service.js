@@ -118,7 +118,18 @@ TIPP: Team/Phasen/Milestones → DIREKT beim Erstellen im Array!
 [ACTION:ADD_PROJECT_MILESTONE:{"projectId":"*","milestone":{"name":"*","dueDate":null,"status":"pending"}}]
 
 ━━━ VENTURES (große Unternehmungen) ━━━
-[ACTION:ADD_VENTURE:{"name":"*","description":null,"spheres":["geschaeft"],"roadmap":[{"name":"MVP",...}],"team":["contact_123"],"bestCase":null,"worstCase":null,"linkedProjects":["project_123"],"linkedGoals":["goal_456"]}]
+[ACTION:ADD_VENTURE:{"name":"*","description":null,"spheres":["geschaeft"],"roadmap":[{"name":"MVP",...}],"team":["contact_123"],"bestCase":null,"worstCase":null,"linkedProjects":["project_123"],"linkedGoals":["goal_456"],"roiScore":7,"effortInvested":"10h/Woche","barriers":[{"description":"Zeit fehlt","severity":"medium"}]}]
+
+WICHTIG - VENTURE FELDER:
+- roiScore: Zahl 1-10 (z.B. 7) → wird in evaluation.roiScore gespeichert
+- effortInvested: String wie "10h/Woche" oder Zahl (Stunden) → wird automatisch geparst
+- barriers: Array von Hindernissen mit description und severity
+- bestCase/worstCase: Szenario-Beschreibungen als String
+
+BEISPIEL:
+User: "FinanzFreund App, ROI 7/10, ich investiere 10h/Woche, Hindernis ist Zeit"
+→ [ACTION:ADD_VENTURE:{"name":"FinanzFreund","description":"...","roiScore":7,"effortInvested":"10h/Woche","barriers":[{"description":"Zeitmangel","severity":"medium"}],"bestCase":"...","worstCase":"..."}]
+
 TIPP: Team/Roadmap/Linked Entities → DIREKT beim Erstellen!
 [ACTION:UPDATE_VENTURE:{"id":"*","updates":{...}}]
 [ACTION:DELETE_VENTURE:{"id":"*"}]
@@ -1126,6 +1137,26 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
       // ═══ VENTURES ═══
       case 'ADD_VENTURE':
         if (d.name) {
+          // Build evaluation object if roiScore provided
+          const evaluation = {};
+          if (d.roiScore !== undefined && d.roiScore !== null) {
+            evaluation.roiScore = d.roiScore;
+          }
+          if (d.expectedReturn !== undefined && d.expectedReturn !== null) {
+            evaluation.expectedReturn = d.expectedReturn;
+          }
+          
+          // Parse effortInvested if it's a string like "10h/Woche"
+          let effortHours = 0;
+          if (d.effortInvested) {
+            if (typeof d.effortInvested === 'number') {
+              effortHours = d.effortInvested;
+            } else if (typeof d.effortInvested === 'string') {
+              const match = d.effortInvested.match(/(\d+)/);
+              if (match) effortHours = parseInt(match[1]);
+            }
+          }
+          
           const venture = NexusStore.addVenture({
             name: d.name,
             description: d.description || '',
@@ -1133,7 +1164,10 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
             roadmap: d.roadmap || [],
             team: d.team || [],
             bestCase: d.bestCase || '',
-            worstCase: d.worstCase || ''
+            worstCase: d.worstCase || '',
+            barriers: d.barriers || [],
+            evaluation: Object.keys(evaluation).length > 0 ? evaluation : {},
+            effortInvested: effortHours
           });
           
           // Set as current venture in VentureCockpit if module exists
