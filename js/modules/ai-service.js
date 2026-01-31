@@ -197,7 +197,8 @@ KRITISCH: IMMER beim Erstellen verknüpfen! NIE zwei separate Aktionen!
 ✅ TASKS für Projekt erstellen (mit Zeitaufwand & Deadline):
 User: "Ich muss heute 2h IPHO Vorbereitung machen"
 → Suche Projekt "IPHO Vorbereitung" im Kontext
-→ [ACTION:ADD_TASK:{"title":"IPHO Vorbereitung","timeEstimate":120,"deadline":"2026-01-31","projectId":"project_ipho","priority":"normal"}]
+→ [ACTION:ADD_TASK:{"title":"IPHO Vorbereitung","timeEstimate":120,"deadline":"2026-01-31","scheduledDate":"2026-01-31","projectId":"project_ipho","priority":"normal"}]
+WICHTIG: Wenn "heute" → deadline UND scheduledDate auf heute setzen!
 
 ✅ HABITS mit Goal verknüpfen:
 [ACTION:ADD_HABIT:{"name":"Täglich lernen","linkedGoals":["goal_123"]}]
