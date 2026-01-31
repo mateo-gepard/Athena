@@ -2708,3 +2708,472 @@
   font-weight: 500;
   z-index: 5;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ANALYTICS MODULE
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Analytics Sections */
+.analytics-section {
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.section-header {
+  margin-bottom: 24px;
+}
+
+.section-header h2 {
+  font-size: 20px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.section-header h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 24px 0 16px;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.metric-card {
+  background: var(--surface-3);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.metric-label {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.metric-value {
+  font-size: 32px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+}
+
+.metric-detail {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 8px;
+}
+
+.text-success {
+  color: var(--success) !important;
+}
+
+.text-warning {
+  color: var(--warning) !important;
+}
+
+.text-danger {
+  color: var(--danger) !important;
+}
+
+/* Progress Bar */
+.progress-bar {
+  height: 8px;
+  background: var(--surface-1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Trend Indicator */
+.trend-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Weekly Heatmap */
+.heatmap-section {
+  margin-top: 24px;
+}
+
+.heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.heatmap-day {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: transform 0.2s;
+}
+
+.heatmap-day:hover {
+  transform: scale(1.05);
+}
+
+.heatmap-day.none {
+  background: var(--surface-3);
+}
+
+.heatmap-day.low {
+  background: color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
+.heatmap-day.medium {
+  background: color-mix(in srgb, var(--warning) 60%, transparent);
+}
+
+.heatmap-day.high {
+  background: var(--success);
+}
+
+.heatmap-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.heatmap-count {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+/* Burnout Risk Assessment */
+.risk-score-container {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.risk-score {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.risk-score.low {
+  background: radial-gradient(circle, var(--surface-3), transparent);
+  border: 4px solid var(--success);
+}
+
+.risk-score.medium {
+  background: radial-gradient(circle, var(--surface-3), transparent);
+  border: 4px solid var(--warning);
+}
+
+.risk-score.high {
+  background: radial-gradient(circle, var(--surface-3), transparent);
+  border: 4px solid var(--danger);
+  animation: pulse-risk 2s infinite;
+}
+
+@keyframes pulse-risk {
+  0%, 100% { box-shadow: 0 0 0 0 var(--danger); }
+  50% { box-shadow: 0 0 0 20px transparent; }
+}
+
+.risk-value {
+  font-size: 48px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.risk-label {
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.risk-description {
+  flex: 1;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Risk Factors */
+.risk-factors {
+  margin-bottom: 32px;
+}
+
+.factors-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.factor-card {
+  background: var(--surface-3);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  border-left: 3px solid transparent;
+}
+
+.factor-card.low {
+  border-left-color: var(--success);
+}
+
+.factor-card.medium {
+  border-left-color: var(--warning);
+}
+
+.factor-card.high {
+  border-left-color: var(--danger);
+}
+
+.factor-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-1);
+  flex-shrink: 0;
+}
+
+.factor-content {
+  flex: 1;
+}
+
+.factor-title {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+}
+
+.factor-value {
+  font-size: 24px;
+  font-weight: 500;
+  font-family: var(--font-mono);
+  margin-bottom: 4px;
+}
+
+.factor-detail {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+/* Recommendations */
+.recommendations {
+  background: var(--surface-3);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.recommendations h3 {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recommendations ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.recommendations li {
+  padding: 8px 0;
+  padding-left: 24px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.recommendations li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: var(--primary);
+}
+
+/* Sphere Balance */
+.balance-chart {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.pie-chart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pie-svg {
+  max-width: 240px;
+  width: 100%;
+  height: auto;
+}
+
+.sphere-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.legend-content {
+  flex: 1;
+}
+
+.legend-label {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.legend-value {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+}
+
+/* Balance Warning/Success */
+.balance-warning,
+.balance-success {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+
+.balance-warning {
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  border-left: 3px solid var(--warning);
+}
+
+.balance-success {
+  background: color-mix(in srgb, var(--success) 10%, transparent);
+  border-left: 3px solid var(--success);
+}
+
+.balance-warning strong,
+.balance-success strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.balance-warning p,
+.balance-success p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Sphere Trends */
+.sphere-trends {
+  margin-top: 24px;
+}
+
+.trends-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.trend-card {
+  background: var(--surface-3);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.trend-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.trend-bar {
+  height: 6px;
+  background: var(--surface-1);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.trend-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .balance-chart {
+    grid-template-columns: 1fr;
+  }
+  
+  .risk-score-container {
+    flex-direction: column;
+  }
+  
+  .factors-grid {
+    grid-template-columns: 1fr;
+  }
+}

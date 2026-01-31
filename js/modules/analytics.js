@@ -1,126 +1,108 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
-   NEXUS ULTRA - Analytics Module
-   Productivity insights and statistics
+   Athena Ultra - Analytics Module
+   Produktivitäts-Tracking & Insights
    ═══════════════════════════════════════════════════════════════════════════════ */
 
-const AnalyticsModule = {
+const Analytics = {
   
-  period: 'week', // today | week | month | year
-  _listenersInitialized: false,
-  
-  // Initialize
+  // Initialize Analytics
   init() {
     this.render();
+    
+    // Subscribe to store changes
+    NexusStore.subscribe((action) => {
+      if (action.startsWith('task:') || action.startsWith('habit:')) {
+        this.render();
+      }
+    });
   },
   
-  // Render
+  // Render all sections
   render() {
-    const container = document.getElementById('page-analytics');
+    this.renderCompletionMetrics();
+    this.renderBurnoutRisk();
+    this.renderSphereBalance();
+    NexusUI.refreshIcons();
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 1. COMPLETION METRICS DASHBOARD
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderCompletionMetrics() {
+    const container = document.getElementById('completionMetrics');
     if (!container) return;
     
-    const data = this.calculateStats();
+    const metrics = this.calculateCompletionMetrics();
     
     container.innerHTML = `
-      <!-- Header -->
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h2 class="text-xl font-medium">Analytics</h2>
-          <p class="text-secondary">Deine Produktivität im Überblick</p>
+      <div class="analytics-section">
+        <div class="section-header">
+          <h2><i data-lucide="trending-up"></i> Completion Metrics</h2>
+          <p class="text-tertiary">Deine Produktivitäts-Performance</p>
         </div>
         
-        <div class="tabs">
-          <button class="tab ${this.period === 'today' ? 'active' : ''}" data-period="today">Heute</button>
-          <button class="tab ${this.period === 'week' ? 'active' : ''}" data-period="week">Woche</button>
-          <button class="tab ${this.period === 'month' ? 'active' : ''}" data-period="month">Monat</button>
-          <button class="tab ${this.period === 'year' ? 'active' : ''}" data-period="year">Jahr</button>
-        </div>
-      </div>
-      
-      <!-- Overview Stats -->
-      <div class="grid gap-4 mb-6" style="grid-template-columns: repeat(5, 1fr);">
-        <div class="stat-card">
-          <div class="stat-label">Tasks erledigt</div>
-          <div class="stat-value">${data.tasksCompleted}</div>
-          <div class="stat-change ${data.tasksChange >= 0 ? 'positive' : 'negative'}">
-            ${data.tasksChange >= 0 ? '+' : ''}${data.tasksChange}% vs. Vorperiode
+        <div class="metrics-grid">
+          <!-- Daily Task Completion Rate -->
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Task Completion Rate (7 Tage)</span>
+              <span class="metric-value ${this.getCompletionClass(metrics.taskCompletionRate)}">${metrics.taskCompletionRate}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${metrics.taskCompletionRate}%; background: ${this.getCompletionColor(metrics.taskCompletionRate)}"></div>
+            </div>
+            <div class="metric-detail">
+              ${metrics.tasksCompletedWeek} / ${metrics.tasksScheduledWeek} Tasks erledigt
+            </div>
           </div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Habits gehalten</div>
-          <div class="stat-value">${data.habitsCompleted}%</div>
-          <div class="stat-detail">${data.habitsTotal} Completions</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Produktivster Tag</div>
-          <div class="stat-value">${data.bestDay}</div>
-          <div class="stat-detail">${data.bestDayTasks} Tasks</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Fokuszeit</div>
-          <div class="stat-value">${data.focusHours}h</div>
-          <div class="stat-detail">Geschätzt</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Streak</div>
-          <div class="stat-value">${data.currentStreak}🔥</div>
-          <div class="stat-detail">Aktive Tage</div>
-        </div>
-      </div>
-      
-      <!-- Charts Row -->
-      <div class="grid gap-6 mb-6" style="grid-template-columns: 2fr 1fr;">
-        <!-- Activity Chart -->
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Aktivität</span>
+          
+          <!-- Habit Consistency Score -->
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Habit Consistency (7 Tage)</span>
+              <span class="metric-value ${this.getCompletionClass(metrics.habitConsistency)}">${metrics.habitConsistency}%</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: ${metrics.habitConsistency}%; background: ${this.getCompletionColor(metrics.habitConsistency)}"></div>
+            </div>
+            <div class="metric-detail">
+              ${metrics.habitCompletionDays} / 7 Tage alle Habits completed
+            </div>
           </div>
-          <div class="panel-body">
-            ${this.renderActivityChart(data.dailyActivity)}
+          
+          <!-- Weekly Trend -->
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Trend (vs. Vorwoche)</span>
+              <span class="metric-value ${metrics.trend >= 0 ? 'text-success' : 'text-danger'}">
+                ${metrics.trend >= 0 ? '+' : ''}${metrics.trend}%
+              </span>
+            </div>
+            <div class="trend-indicator">
+              <i data-lucide="${metrics.trend >= 0 ? 'trending-up' : 'trending-down'}"></i>
+              ${metrics.trend >= 0 ? 'Aufwärtstrend' : 'Abwärtstrend'}
+            </div>
           </div>
-        </div>
-        
-        <!-- Sphere Distribution -->
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Sphären-Verteilung</span>
-          </div>
-          <div class="panel-body">
-            ${this.renderSphereChart(data.sphereDistribution)}
-          </div>
-        </div>
-      </div>
-      
-      <!-- Details Row -->
-      <div class="grid gap-6" style="grid-template-columns: 1fr 1fr;">
-        <!-- Task Stats -->
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Task-Statistiken</span>
-          </div>
-          <div class="panel-body">
-            ${this.renderTaskStats(data)}
+          
+          <!-- Current Streak -->
+          <div class="metric-card">
+            <div class="metric-header">
+              <span class="metric-label">Productivity Streak</span>
+              <span class="metric-value">${metrics.productivityStreak} Tage</span>
+            </div>
+            <div class="metric-detail">
+              <i data-lucide="flame"></i> Tage mit >80% Task Completion
+            </div>
           </div>
         </div>
         
-        <!-- Habit Stats -->
-        <div class="panel">
-          <div class="panel-header">
-            <span class="panel-title">Habit-Statistiken</span>
+        <!-- Weekly Heatmap -->
+        <div class="heatmap-section">
+          <h3>Last 7 Days Heatmap</h3>
+          <div class="heatmap-grid">
+            ${this.renderWeeklyHeatmap(metrics.dailyData)}
           </div>
-          <div class="panel-body">
-            ${this.renderHabitStats(data)}
-          </div>
-        </div>
-      </div>
-      
-      <!-- Insights -->
-      <div class="atlas-panel mt-6">
-        <div class="atlas-header">
-          <div class="atlas-icon">🔮</div>
-          <span class="atlas-title">Atlas Insights</span>
-        </div>
-        <div class="atlas-body">
-          ${this.generateInsights(data)}
         </div>
       </div>
     `;
@@ -128,396 +110,505 @@ const AnalyticsModule = {
     NexusUI.refreshIcons();
   },
   
-  // Calculate all stats
-  calculateStats() {
-    const tasks = NexusStore.getTasks();
-    const habits = NexusStore.getHabits();
-    const { startDate, endDate, days } = this.getPeriodDates();
+  calculateCompletionMetrics() {
+    const history = NexusStore.getAnalyticsHistory();
+    const today = new Date();
+    const last7Days = [];
+    const last14Days = [];
     
-    // Filter completed tasks in period
-    const completedInPeriod = tasks.filter(t => {
-      if (t.status !== 'completed' || !t.completedAt) return false;
-      const date = new Date(t.completedAt);
-      return date >= startDate && date <= endDate;
-    });
-    
-    // Daily activity
-    const dailyActivity = [];
-    for (let i = 0; i < days; i++) {
-      const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
+    // Get last 7 days data
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      
-      const tasksOnDay = completedInPeriod.filter(t => 
-        t.completedAt && t.completedAt.startsWith(dateStr)
-      ).length;
-      
-      let habitsOnDay = 0;
-      habits.forEach(h => {
-        if (h.completionLog?.includes(dateStr)) habitsOnDay++;
-      });
-      
-      dailyActivity.push({
-        date,
-        dateStr,
-        label: date.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric' }),
-        tasks: tasksOnDay,
-        habits: habitsOnDay
-      });
+      last7Days.push(history[dateStr] || { tasksCompleted: 0, tasksScheduled: 0, habitCompletions: 0, totalHabits: 0 });
     }
     
-    // Find best day
-    const bestDayData = dailyActivity.reduce((best, day) => 
-      day.tasks > best.tasks ? day : best
-    , { tasks: 0, label: '-' });
+    // Get last 14 days for trend comparison
+    for (let i = 13; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      last14Days.push(history[dateStr] || { tasksCompleted: 0, tasksScheduled: 0 });
+    }
     
-    // Sphere distribution
-    const sphereDistribution = {
-      geschaeft: 0,
-      projekte: 0,
-      schule: 0,
-      sport: 0,
-      freizeit: 0,
-      none: 0
-    };
-    completedInPeriod.forEach(t => {
-      if (t.sphere && sphereDistribution.hasOwnProperty(t.sphere)) {
-        sphereDistribution[t.sphere]++;
-      } else {
-        sphereDistribution.none++;
-      }
-    });
-    
-    // Habits completion rate
-    let habitsTotal = 0;
-    let habitsCompletedCount = 0;
-    habits.forEach(h => {
-      dailyActivity.forEach(d => {
-        habitsTotal++;
-        if (h.completionLog?.includes(d.dateStr)) habitsCompletedCount++;
-      });
-    });
-    const habitsCompleted = habitsTotal > 0 ? Math.round((habitsCompletedCount / habitsTotal) * 100) : 0;
-    
-    // Calculate change vs previous period
-    const prevStart = new Date(startDate);
-    prevStart.setDate(prevStart.getDate() - days);
-    const completedPrevPeriod = tasks.filter(t => {
-      if (t.status !== 'completed' || !t.completedAt) return false;
-      const date = new Date(t.completedAt);
-      return date >= prevStart && date < startDate;
-    }).length;
-    
-    const tasksChange = completedPrevPeriod > 0 
-      ? Math.round(((completedInPeriod.length - completedPrevPeriod) / completedPrevPeriod) * 100)
+    // Calculate task completion rate (last 7 days)
+    const tasksCompletedWeek = last7Days.reduce((sum, d) => sum + d.tasksCompleted, 0);
+    const tasksScheduledWeek = last7Days.reduce((sum, d) => sum + d.tasksScheduled, 0);
+    const taskCompletionRate = tasksScheduledWeek > 0 
+      ? Math.round((tasksCompletedWeek / tasksScheduledWeek) * 100) 
       : 0;
     
-    // Priority breakdown
-    const byPriority = {
-      high: completedInPeriod.filter(t => t.priority === 'high').length,
-      medium: completedInPeriod.filter(t => t.priority === 'medium').length,
-      low: completedInPeriod.filter(t => t.priority === 'low').length
-    };
+    // Calculate habit consistency (days with all habits completed)
+    const habitCompletionDays = last7Days.filter(d => 
+      d.totalHabits > 0 && d.habitCompletions === d.totalHabits
+    ).length;
+    const habitConsistency = Math.round((habitCompletionDays / 7) * 100);
     
-    // Current streak
-    let currentStreak = 0;
-    const today = new Date();
-    for (let i = 0; i < 365; i++) {
-      const checkDate = new Date(today);
-      checkDate.setDate(checkDate.getDate() - i);
-      const dateStr = checkDate.toISOString().split('T')[0];
-      
-      const hadActivity = tasks.some(t => 
-        t.completedAt && t.completedAt.startsWith(dateStr)
-      ) || habits.some(h => h.completionLog?.includes(dateStr));
-      
-      if (hadActivity) {
-        currentStreak++;
-      } else if (i > 0) {
+    // Calculate trend (this week vs last week)
+    const thisWeekCompletion = tasksScheduledWeek > 0 ? (tasksCompletedWeek / tasksScheduledWeek) : 0;
+    const lastWeekCompleted = last14Days.slice(0, 7).reduce((sum, d) => sum + d.tasksCompleted, 0);
+    const lastWeekScheduled = last14Days.slice(0, 7).reduce((sum, d) => sum + d.tasksScheduled, 0);
+    const lastWeekCompletion = lastWeekScheduled > 0 ? (lastWeekCompleted / lastWeekScheduled) : 0;
+    const trend = Math.round((thisWeekCompletion - lastWeekCompletion) * 100);
+    
+    // Calculate productivity streak (days with >80% completion)
+    let productivityStreak = 0;
+    for (let i = last7Days.length - 1; i >= 0; i--) {
+      const day = last7Days[i];
+      const dayCompletion = day.tasksScheduled > 0 ? (day.tasksCompleted / day.tasksScheduled) : 0;
+      if (dayCompletion >= 0.8) {
+        productivityStreak++;
+      } else {
         break;
       }
     }
     
     return {
-      tasksCompleted: completedInPeriod.length,
-      tasksChange,
-      habitsCompleted,
-      habitsTotal: habitsCompletedCount,
-      bestDay: bestDayData.label,
-      bestDayTasks: bestDayData.tasks,
-      focusHours: Math.round(completedInPeriod.length * 0.5), // Estimate 30min per task
-      currentStreak,
-      dailyActivity,
-      sphereDistribution,
-      byPriority,
-      totalTasks: tasks.length,
-      pendingTasks: tasks.filter(t => t.status !== 'completed').length,
-      overdueTasks: tasks.filter(t => t.status !== 'completed' && t.dueDate && new Date(t.dueDate) < new Date()).length,
-      topHabits: habits
-        .map(h => ({
-          ...h,
-          completions: h.completionLog?.filter(d => d >= startDate.toISOString().split('T')[0]).length || 0
-        }))
-        .sort((a, b) => b.completions - a.completions)
-        .slice(0, 5)
+      taskCompletionRate,
+      tasksCompletedWeek,
+      tasksScheduledWeek,
+      habitConsistency,
+      habitCompletionDays,
+      trend,
+      productivityStreak,
+      dailyData: last7Days
     };
   },
   
-  // Get period dates
-  getPeriodDates() {
-    const now = new Date();
-    let startDate, endDate, days;
+  renderWeeklyHeatmap(dailyData) {
+    const today = new Date();
+    const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
     
-    switch (this.period) {
-      case 'today':
-        startDate = new Date(now.setHours(0, 0, 0, 0));
-        endDate = new Date();
-        days = 1;
-        break;
-      case 'week':
-        startDate = new Date(now);
-        startDate.setDate(startDate.getDate() - 6);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date();
-        days = 7;
-        break;
-      case 'month':
-        startDate = new Date(now);
-        startDate.setDate(startDate.getDate() - 29);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date();
-        days = 30;
-        break;
-      case 'year':
-        startDate = new Date(now);
-        startDate.setFullYear(startDate.getFullYear() - 1);
-        startDate.setHours(0, 0, 0, 0);
-        endDate = new Date();
-        days = 365;
-        break;
-    }
-    
-    return { startDate, endDate, days };
-  },
-  
-  // Render activity chart (bar chart)
-  renderActivityChart(dailyActivity) {
-    const maxValue = Math.max(...dailyActivity.map(d => d.tasks + d.habits), 1);
-    const showDays = this.period === 'year' ? 12 : dailyActivity.length;
-    
-    // For year view, aggregate by month
-    let chartData = dailyActivity;
-    if (this.period === 'year') {
-      const byMonth = {};
-      dailyActivity.forEach(d => {
-        const monthKey = d.date.toLocaleDateString('de-DE', { month: 'short' });
-        if (!byMonth[monthKey]) byMonth[monthKey] = { label: monthKey, tasks: 0, habits: 0 };
-        byMonth[monthKey].tasks += d.tasks;
-        byMonth[monthKey].habits += d.habits;
-      });
-      chartData = Object.values(byMonth).slice(-12);
-    }
-    
-    return `
-      <div class="activity-chart">
-        <div class="chart-bars">
-          ${chartData.slice(-showDays).map(d => {
-            const total = d.tasks + d.habits;
-            const height = (total / maxValue) * 100;
-            return `
-              <div class="chart-bar-group" title="${d.label}: ${d.tasks} Tasks, ${d.habits} Habits">
-                <div class="chart-bar" style="height: ${height}%;">
-                  <div class="bar-tasks" style="height: ${(d.tasks / Math.max(total, 1)) * 100}%"></div>
-                  <div class="bar-habits" style="height: ${(d.habits / Math.max(total, 1)) * 100}%"></div>
-                </div>
-                <div class="chart-label">${d.label}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-        <div class="chart-legend">
-          <span><span class="legend-dot tasks"></span> Tasks</span>
-          <span><span class="legend-dot habits"></span> Habits</span>
-        </div>
-      </div>
-    `;
-  },
-  
-  // Render sphere distribution
-  renderSphereChart(distribution) {
-    const total = Object.values(distribution).reduce((a, b) => a + b, 0);
-    if (total === 0) {
-      return `<div class="text-center text-tertiary py-8">Keine Daten</div>`;
-    }
-    
-    const spheres = [
-      { key: 'geschaeft', label: 'Geschäft', icon: '💼' },
-      { key: 'projekte', label: 'Projekte', icon: '🚀' },
-      { key: 'schule', label: 'Schule', icon: '📚' },
-      { key: 'sport', label: 'Sport', icon: '💪' },
-      { key: 'freizeit', label: 'Freizeit', icon: '🎮' },
-      { key: 'none', label: 'Keine', icon: '○' }
-    ];
-    
-    return `
-      <div class="sphere-distribution">
-        ${spheres.map(s => {
-          const value = distribution[s.key] || 0;
-          const percent = Math.round((value / total) * 100);
-          return `
-            <div class="sphere-row">
-              <span class="sphere-icon">${s.icon}</span>
-              <span class="sphere-label">${s.label}</span>
-              <div class="sphere-bar">
-                <div class="sphere-fill" 
-                     style="width: ${percent}%; background: var(--color-sphere-${s.key}, var(--color-border))">
-                </div>
-              </div>
-              <span class="sphere-value">${value}</span>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  },
-  
-  // Render task stats
-  renderTaskStats(data) {
-    return `
-      <div class="stats-grid">
-        <div class="stat-row">
-          <span>Gesamt Tasks</span>
-          <span class="font-medium">${data.totalTasks}</span>
-        </div>
-        <div class="stat-row">
-          <span>Ausstehend</span>
-          <span class="font-medium">${data.pendingTasks}</span>
-        </div>
-        <div class="stat-row">
-          <span>Überfällig</span>
-          <span class="font-medium text-danger">${data.overdueTasks}</span>
-        </div>
-        <div class="divider my-3"></div>
-        <div class="stat-row">
-          <span>🔴 Hohe Priorität</span>
-          <span class="font-medium">${data.byPriority.high}</span>
-        </div>
-        <div class="stat-row">
-          <span>🟡 Mittlere Priorität</span>
-          <span class="font-medium">${data.byPriority.medium}</span>
-        </div>
-        <div class="stat-row">
-          <span>🟢 Niedrige Priorität</span>
-          <span class="font-medium">${data.byPriority.low}</span>
-        </div>
-      </div>
-    `;
-  },
-  
-  // Render habit stats
-  renderHabitStats(data) {
-    if (data.topHabits.length === 0) {
-      return `<div class="text-center text-tertiary py-4">Keine Habits definiert</div>`;
-    }
-    
-    return `
-      <div class="stats-grid">
-        <div class="text-xs text-tertiary mb-2">Top Habits diese Periode:</div>
-        ${data.topHabits.map((h, i) => `
-          <div class="stat-row">
-            <span>
-              <span class="text-tertiary">#${i + 1}</span>
-              ${h.icon || '🔄'} ${h.name}
-            </span>
-            <span class="font-medium">${h.completions}x</span>
-          </div>
-        `).join('')}
-        <div class="divider my-3"></div>
-        <div class="stat-row">
-          <span>Längster Streak</span>
-          <span class="font-medium text-warning">
-            ${Math.max(...data.topHabits.map(h => h.streak || 0))}🔥
-          </span>
-        </div>
-      </div>
-    `;
-  },
-  
-  // Generate AI-style insights
-  generateInsights(data) {
-    const insights = [];
-    
-    // Task completion insight
-    if (data.tasksCompleted > 10) {
-      insights.push(`🚀 Starke Woche! Du hast ${data.tasksCompleted} Tasks abgeschlossen.`);
-    } else if (data.tasksCompleted > 0) {
-      insights.push(`✓ Du hast ${data.tasksCompleted} Tasks in dieser Periode erledigt.`);
-    }
-    
-    // Habit insight
-    if (data.habitsCompleted >= 80) {
-      insights.push(`💪 Ausgezeichnete Habit-Konsistenz mit ${data.habitsCompleted}%!`);
-    } else if (data.habitsCompleted >= 50) {
-      insights.push(`🔄 Deine Habit-Rate liegt bei ${data.habitsCompleted}%. Weiter so!`);
-    } else if (data.habitsCompleted > 0) {
-      insights.push(`⚡ Tipp: Fokussiere dich auf 2-3 Kernhabits, um deine Rate zu verbessern.`);
-    }
-    
-    // Overdue insight
-    if (data.overdueTasks > 5) {
-      insights.push(`⚠️ ${data.overdueTasks} überfällige Tasks. Zeit aufzuräumen!`);
-    } else if (data.overdueTasks > 0) {
-      insights.push(`📋 ${data.overdueTasks} Task(s) überfällig - priorisiere sie heute.`);
-    }
-    
-    // Best day insight
-    if (data.bestDayTasks > 0) {
-      insights.push(`📈 Dein produktivster Tag war ${data.bestDay} mit ${data.bestDayTasks} Tasks.`);
-    }
-    
-    // Streak insight
-    if (data.currentStreak >= 7) {
-      insights.push(`🔥 Beeindruckender ${data.currentStreak}-Tage-Streak! Bleib dran!`);
-    }
-    
-    // Sphere balance
-    const sphereValues = Object.values(data.sphereDistribution);
-    const maxSphere = Math.max(...sphereValues);
-    const minSphere = Math.min(...sphereValues.filter(v => v > 0));
-    if (maxSphere > minSphere * 3 && minSphere > 0) {
-      insights.push(`⚖️ Deine Sphären sind unausgeglichen. Versuche, alle Bereiche zu berücksichtigen.`);
-    }
-    
-    if (insights.length === 0) {
-      insights.push(`📊 Sammle mehr Daten für personalisierte Insights!`);
-    }
-    
-    return insights.join('<br><br>');
-  },
-  
-  // Setup event listeners
-  setupEventListeners() {
-    if (this._listenersInitialized) return;
-    this._listenersInitialized = true;
-    
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('#page-analytics')) return;
+    return dailyData.map((day, index) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (6 - index));
+      const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
       
-      const periodTab = e.target.closest('[data-period]');
-      if (periodTab) {
-        this.period = periodTab.dataset.period;
-        this.render();
+      const completion = day.tasksScheduled > 0 
+        ? (day.tasksCompleted / day.tasksScheduled) 
+        : 0;
+      
+      const level = completion >= 0.8 ? 'high' : completion >= 0.5 ? 'medium' : completion > 0 ? 'low' : 'none';
+      
+      return `
+        <div class="heatmap-day ${level}" title="${dayName}: ${Math.round(completion * 100)}% completed">
+          <div class="heatmap-label">${dayName}</div>
+          <div class="heatmap-count">${day.tasksCompleted}/${day.tasksScheduled}</div>
+        </div>
+      `;
+    }).join('');
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 2. BURNOUT RISK SCORE
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderBurnoutRisk() {
+    const container = document.getElementById('burnoutRisk');
+    if (!container) return;
+    
+    const risk = this.calculateBurnoutRisk();
+    
+    container.innerHTML = `
+      <div class="analytics-section">
+        <div class="section-header">
+          <h2><i data-lucide="activity"></i> Burnout Risk Assessment</h2>
+          <p class="text-tertiary">Dein aktuelles Belastungslevel</p>
+        </div>
+        
+        <!-- Risk Score -->
+        <div class="risk-score-container">
+          <div class="risk-score ${risk.level}">
+            <div class="risk-value">${risk.score}</div>
+            <div class="risk-label">${risk.label}</div>
+          </div>
+          <div class="risk-description">
+            ${risk.message}
+          </div>
+        </div>
+        
+        <!-- Risk Factors -->
+        <div class="risk-factors">
+          <h3>Risk Factors</h3>
+          <div class="factors-grid">
+            ${risk.factors.map(factor => `
+              <div class="factor-card ${factor.severity}">
+                <div class="factor-icon">
+                  <i data-lucide="${factor.icon}"></i>
+                </div>
+                <div class="factor-content">
+                  <div class="factor-title">${factor.title}</div>
+                  <div class="factor-value">${factor.value}</div>
+                  <div class="factor-detail">${factor.detail}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        
+        <!-- Recommendations -->
+        <div class="recommendations">
+          <h3><i data-lucide="lightbulb"></i> Empfehlungen</h3>
+          <ul>
+            ${risk.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+    `;
+    
+    NexusUI.refreshIcons();
+  },
+  
+  calculateBurnoutRisk() {
+    const history = NexusStore.getAnalyticsHistory();
+    const today = new Date();
+    const last7Days = [];
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      last7Days.push(history[dateStr] || { overdueTasks: 0, plannedMinutes: 0, sphereMinutes: {} });
+    }
+    
+    // Calculate risk factors
+    const avgOverdue = last7Days.reduce((sum, d) => sum + d.overdueTasks, 0) / 7;
+    const avgPlannedHours = last7Days.reduce((sum, d) => sum + (d.plannedMinutes || 0), 0) / (7 * 60);
+    const currentOverdue = NexusStore.getOverdueTasks().length;
+    
+    // Get recreation sphere time (last 7 days)
+    let recreationMinutes = 0;
+    last7Days.forEach(day => {
+      if (day.sphereMinutes && day.sphereMinutes.freizeit) {
+        recreationMinutes += day.sphereMinutes.freizeit;
       }
     });
+    const avgRecreationHours = recreationMinutes / 60 / 7;
+    
+    // Calculate risk score (0-100)
+    let riskScore = 0;
+    const factors = [];
+    
+    // Factor 1: Overdue tasks (max 30 points)
+    const overdueRisk = Math.min(30, currentOverdue * 5);
+    riskScore += overdueRisk;
+    factors.push({
+      title: 'Überfällige Tasks',
+      value: currentOverdue,
+      detail: `Ø ${avgOverdue.toFixed(1)} in den letzten 7 Tagen`,
+      severity: currentOverdue > 5 ? 'high' : currentOverdue > 2 ? 'medium' : 'low',
+      icon: 'alert-triangle'
+    });
+    
+    // Factor 2: Daily load (max 30 points)
+    const loadRisk = avgPlannedHours > 10 ? 30 : avgPlannedHours > 8 ? 20 : avgPlannedHours > 6 ? 10 : 0;
+    riskScore += loadRisk;
+    factors.push({
+      title: 'Tägliche Arbeitslast',
+      value: `${avgPlannedHours.toFixed(1)}h`,
+      detail: `Ø geplante Zeit pro Tag`,
+      severity: avgPlannedHours > 10 ? 'high' : avgPlannedHours > 8 ? 'medium' : 'low',
+      icon: 'clock'
+    });
+    
+    // Factor 3: Recreation time (max 20 points - inverse)
+    const recreationRisk = avgRecreationHours < 0.5 ? 20 : avgRecreationHours < 1 ? 10 : 0;
+    riskScore += recreationRisk;
+    factors.push({
+      title: 'Erholungszeit',
+      value: `${avgRecreationHours.toFixed(1)}h`,
+      detail: `Ø Freizeit pro Tag`,
+      severity: avgRecreationHours < 0.5 ? 'high' : avgRecreationHours < 1 ? 'medium' : 'low',
+      icon: 'coffee'
+    });
+    
+    // Factor 4: Completion rate (max 20 points - inverse)
+    const metrics = this.calculateCompletionMetrics();
+    const completionRisk = metrics.taskCompletionRate < 50 ? 20 : metrics.taskCompletionRate < 70 ? 10 : 0;
+    riskScore += completionRisk;
+    factors.push({
+      title: 'Completion Rate',
+      value: `${metrics.taskCompletionRate}%`,
+      detail: `Tasks erledigt (7 Tage)`,
+      severity: metrics.taskCompletionRate < 50 ? 'high' : metrics.taskCompletionRate < 70 ? 'medium' : 'low',
+      icon: 'check-circle'
+    });
+    
+    // Determine risk level
+    let level, label, message, recommendations;
+    
+    if (riskScore >= 70) {
+      level = 'high';
+      label = 'HOCH - Burnout-Gefahr!';
+      message = '⚠️ Kritisches Belastungslevel! Du bist massiv überlastet. Sofortige Maßnahmen erforderlich.';
+      recommendations = [
+        'Streiche nicht-kritische Tasks von deiner Liste',
+        'Blockiere mindestens 2 Stunden täglich für Erholung',
+        'Delegiere Tasks wenn möglich',
+        'Sprich mit jemandem über deine Belastung',
+        'Erwäge professionelle Hilfe wenn das länger anhält'
+      ];
+    } else if (riskScore >= 40) {
+      level = 'medium';
+      label = 'MITTEL - Achtung!';
+      message = '🟡 Erhöhte Belastung erkannt. Du solltest deine Workload reduzieren.';
+      recommendations = [
+        'Reduziere deine tägliche Planned Time um 20%',
+        'Priorisiere nur kritische Tasks',
+        'Plane bewusst Erholungspausen ein',
+        'Checke ob du zu viele Projekte gleichzeitig läuft',
+        'Verbessere deine Time Estimation'
+      ];
+    } else {
+      level = 'low';
+      label = 'NIEDRIG - Alles gut!';
+      message = '✅ Gesundes Belastungslevel. Du hast deine Workload im Griff!';
+      recommendations = [
+        'Behalte dein aktuelles Tempo bei',
+        'Achte weiterhin auf Work-Life-Balance',
+        'Nutze freie Kapazität für langfristige Ziele',
+        'Experimentiere mit neuen Produktivitäts-Methoden'
+      ];
+    }
+    
+    return {
+      score: riskScore,
+      level,
+      label,
+      message,
+      factors,
+      recommendations
+    };
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 3. SPHERE BALANCE TRACKER
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderSphereBalance() {
+    const container = document.getElementById('sphereBalance');
+    if (!container) return;
+    
+    const balance = this.calculateSphereBalance();
+    
+    container.innerHTML = `
+      <div class="analytics-section">
+        <div class="section-header">
+          <h2><i data-lucide="pie-chart"></i> Sphere Balance</h2>
+          <p class="text-tertiary">Zeit-Verteilung über deine Life Spheres</p>
+        </div>
+        
+        <!-- Balance Chart -->
+        <div class="balance-chart">
+          <div class="pie-chart">
+            ${this.renderPieChart(balance.distribution)}
+          </div>
+          <div class="sphere-legend">
+            ${balance.spheres.map(sphere => `
+              <div class="legend-item">
+                <div class="legend-color" style="background: ${sphere.color}"></div>
+                <div class="legend-content">
+                  <div class="legend-label">${sphere.icon} ${sphere.name}</div>
+                  <div class="legend-value">${sphere.hours}h (${sphere.percentage}%)</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        
+        <!-- Balance Warning -->
+        ${balance.warning ? `
+          <div class="balance-warning">
+            <i data-lucide="alert-circle"></i>
+            <div>
+              <strong>Unbalance erkannt!</strong>
+              <p>${balance.warning}</p>
+            </div>
+          </div>
+        ` : `
+          <div class="balance-success">
+            <i data-lucide="check-circle"></i>
+            <div>
+              <strong>Gute Balance!</strong>
+              <p>Deine Zeit ist relativ ausgewogen über die Spheres verteilt.</p>
+            </div>
+          </div>
+        `}
+        
+        <!-- Sphere Trends (Last 7 Days) -->
+        <div class="sphere-trends">
+          <h3>Trends (Last 7 Days)</h3>
+          <div class="trends-grid">
+            ${balance.trends.map(trend => `
+              <div class="trend-card">
+                <div class="trend-header">
+                  <span>${trend.icon} ${trend.name}</span>
+                  <span class="${trend.change >= 0 ? 'text-success' : 'text-danger'}">
+                    ${trend.change >= 0 ? '+' : ''}${trend.change}%
+                  </span>
+                </div>
+                <div class="trend-bar">
+                  <div class="trend-fill" style="width: ${Math.min(100, trend.percentage)}%; background: ${trend.color}"></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    
+    NexusUI.refreshIcons();
+  },
+  
+  calculateSphereBalance() {
+    const history = NexusStore.getAnalyticsHistory();
+    const today = new Date();
+    const last7Days = [];
+    const last14Days = [];
+    
+    // Get last 7 days
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      last7Days.push(history[dateStr] || { sphereMinutes: {} });
+    }
+    
+    // Get previous 7 days for trend
+    for (let i = 13; i >= 7; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      last14Days.push(history[dateStr] || { sphereMinutes: {} });
+    }
+    
+    // Calculate total minutes per sphere (last 7 days)
+    const sphereMinutes = {};
+    last7Days.forEach(day => {
+      Object.entries(day.sphereMinutes || {}).forEach(([sphere, minutes]) => {
+        sphereMinutes[sphere] = (sphereMinutes[sphere] || 0) + minutes;
+      });
+    });
+    
+    // Calculate previous week totals
+    const prevSphereMinutes = {};
+    last14Days.forEach(day => {
+      Object.entries(day.sphereMinutes || {}).forEach(([sphere, minutes]) => {
+        prevSphereMinutes[sphere] = (prevSphereMinutes[sphere] || 0) + minutes;
+      });
+    });
+    
+    const totalMinutes = Object.values(sphereMinutes).reduce((sum, m) => sum + m, 0);
+    const prevTotalMinutes = Object.values(prevSphereMinutes).reduce((sum, m) => sum + m, 0);
+    
+    // Get sphere definitions
+    const sphereDefinitions = NexusStore.state.spheres;
+    
+    // Build distribution data
+    const spheres = sphereDefinitions.map(sphere => {
+      const minutes = sphereMinutes[sphere.id] || 0;
+      const prevMinutes = prevSphereMinutes[sphere.id] || 0;
+      const percentage = totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0;
+      const prevPercentage = prevTotalMinutes > 0 ? Math.round((prevMinutes / prevTotalMinutes) * 100) : 0;
+      const change = percentage - prevPercentage;
+      
+      return {
+        id: sphere.id,
+        name: sphere.name,
+        icon: sphere.icon,
+        color: sphere.color,
+        minutes,
+        hours: (minutes / 60).toFixed(1),
+        percentage,
+        change
+      };
+    }).sort((a, b) => b.percentage - a.percentage);
+    
+    // Check for imbalance (one sphere >60%)
+    const dominantSphere = spheres.find(s => s.percentage > 60);
+    const warning = dominantSphere 
+      ? `${dominantSphere.icon} ${dominantSphere.name} dominiert mit ${dominantSphere.percentage}%. Andere Lebensbereiche könnten zu kurz kommen.`
+      : null;
+    
+    return {
+      distribution: spheres,
+      spheres,
+      trends: spheres,
+      warning
+    };
+  },
+  
+  renderPieChart(distribution) {
+    const total = distribution.reduce((sum, s) => sum + s.percentage, 0);
+    if (total === 0) {
+      return '<div class="text-tertiary text-center p-4">Keine Daten verfügbar</div>';
+    }
+    
+    let currentAngle = 0;
+    const radius = 100;
+    const centerX = 120;
+    const centerY = 120;
+    
+    const slices = distribution.map(sphere => {
+      if (sphere.percentage === 0) return '';
+      
+      const angle = (sphere.percentage / 100) * 360;
+      const startAngle = currentAngle;
+      const endAngle = currentAngle + angle;
+      
+      currentAngle = endAngle;
+      
+      // Calculate arc path
+      const startX = centerX + radius * Math.cos((startAngle - 90) * Math.PI / 180);
+      const startY = centerY + radius * Math.sin((startAngle - 90) * Math.PI / 180);
+      const endX = centerX + radius * Math.cos((endAngle - 90) * Math.PI / 180);
+      const endY = centerY + radius * Math.sin((endAngle - 90) * Math.PI / 180);
+      
+      const largeArc = angle > 180 ? 1 : 0;
+      
+      const path = `M ${centerX},${centerY} L ${startX},${startY} A ${radius},${radius} 0 ${largeArc},1 ${endX},${endY} Z`;
+      
+      return `<path d="${path}" fill="${sphere.color}" stroke="#1a1a1a" stroke-width="2"/>`;
+    }).join('');
+    
+    return `
+      <svg viewBox="0 0 240 240" class="pie-svg">
+        ${slices}
+      </svg>
+    `;
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // HELPER FUNCTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  getCompletionClass(percentage) {
+    if (percentage >= 80) return 'text-success';
+    if (percentage >= 60) return 'text-warning';
+    return 'text-danger';
+  },
+  
+  getCompletionColor(percentage) {
+    if (percentage >= 80) return 'var(--success)';
+    if (percentage >= 60) return 'var(--warning)';
+    return 'var(--danger)';
   }
 };
 
-// Initialize on navigation
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  if (document.getElementById('page-analytics')) {
+    Analytics.init();
+  }
+});
+
+// Re-initialize on navigation
 window.addEventListener('nexus:navigate', (e) => {
   if (e.detail.page === 'analytics') {
-    AnalyticsModule.init();
+    Analytics.render();
   }
 });
 
 // Export
-window.AnalyticsModule = AnalyticsModule;
+window.Analytics = Analytics;

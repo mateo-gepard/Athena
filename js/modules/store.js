@@ -222,10 +222,15 @@ const NexusStore = {
   },
   
   completeTask(id) {
-    return this.updateTask(id, {
+    const result = this.updateTask(id, {
       status: 'completed',
       completedAt: new Date().toISOString()
     });
+    
+    // Track analytics
+    this.saveAnalyticsSnapshot();
+    
+    return result;
   },
   
   deleteTask(id) {
@@ -288,6 +293,9 @@ const NexusStore = {
         habit.updatedAt = new Date().toISOString();
         this.save();
         this.notify('habit:completed', habit);
+        
+        // Track analytics
+        this.saveAnalyticsSnapshot();
       }
       return habit;
     }
@@ -1055,6 +1063,85 @@ const NexusStore = {
         goals: this.state.goals.length
       }
     };
+  },
+  
+  // ═══ ANALYTICS ═══
+  
+  ANALYTICS_KEY: 'nexus_analytics_history',
+  
+  // Save daily analytics snapshot
+  saveAnalyticsSnapshot() {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const history = this.getAnalyticsHistory();
+      
+      // Calculate metrics for today
+      const todayTasks = this.getTasksForDate(today);
+      const completedToday = this.state.tasks.filter(t => 
+        t.completedAt && t.completedAt.split('T')[0] === today
+      );
+      
+      const habits = this.getHabits();
+      const completedHabits = habits.filter(h => 
+        this.isHabitCompletedToday(h.id)
+      );
+      
+      // Calculate sphere distribution (time in minutes)
+      const sphereMinutes = {};
+      todayTasks.forEach(task => {
+        const sphere = task.spheres[0] || 'freizeit';
+        sphereMinutes[sphere] = (sphereMinutes[sphere] || 0) + (task.timeEstimate || 0);
+      });
+      
+      const overdueTasks = this.getOverdueTasks();
+      const plannedMinutes = todayTasks.reduce((sum, t) => sum + (t.timeEstimate || 0), 0);
+      
+      // Update snapshot for today
+      history[today] = {
+        tasksCompleted: completedToday.length,
+        tasksScheduled: todayTasks.length,
+        habitCompletions: completedHabits.length,
+        totalHabits: habits.length,
+        sphereMinutes,
+        overdueTasks: overdueTasks.length,
+        plannedMinutes,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Keep only last 90 days
+      const dates = Object.keys(history).sort();
+      if (dates.length > 90) {
+        dates.slice(0, dates.length - 90).forEach(date => {
+          delete history[date];
+        });
+      }
+      
+      storage.setItem(this.ANALYTICS_KEY, JSON.stringify(history));
+    } catch (e) {
+      console.warn('Failed to save analytics:', e);
+    }
+  },
+  
+  // Get analytics history
+  getAnalyticsHistory() {
+    try {
+      const saved = storage.getItem(this.ANALYTICS_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      console.warn('Failed to load analytics:', e);
+      return {};
+    }
+  },
+  
+  // Get settings
+  getSettings() {
+    // Get settings from localStorage or return defaults
+    try {
+      const saved = storage.getItem('nexus_settings');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) {
+      return {};
+    }
   }
 };
 
