@@ -17,14 +17,6 @@ const AtlasController = {
     this.setupEventListeners();
     this.setupKeyboardShortcuts();
     this.renderChatList();
-    this.updateSystemStats();
-    
-    // Update stats every 30 seconds
-    setInterval(() => {
-      if (this.isOpen) {
-        this.updateSystemStats();
-      }
-    }, 30000);
   },
   
   // Setup event listeners
@@ -130,7 +122,6 @@ const AtlasController = {
       // Update UI
       this.renderChatList();
       this.renderCurrentChat();
-      this.updateSystemStats();
       
       // Refresh Lucide icons
       if (window.lucide) lucide.createIcons();
@@ -474,26 +465,6 @@ const AtlasController = {
         }
         break;
     }
-  },
-  
-  // Update system stats in context panel
-  updateSystemStats() {
-    const openTasks = NexusStore.getTasks().filter(t => t.status !== 'completed').length;
-    const overdueTasks = NexusStore.getOverdueTasks().length;
-    const habits = NexusStore.getHabits().length;
-    const neglected = NexusStore.getNeglectedWork();
-    const neglectedCount = neglected.tasks.length + neglected.projects.length + neglected.ventures.length;
-    
-    // Update stat values
-    const statOpenTasks = document.getElementById('stat-open-tasks');
-    const statOverdue = document.getElementById('stat-overdue-tasks');
-    const statHabits = document.getElementById('stat-habits');
-    const statNeglected = document.getElementById('stat-neglected');
-    
-    if (statOpenTasks) statOpenTasks.textContent = openTasks;
-    if (statOverdue) statOverdue.textContent = overdueTasks;
-    if (statHabits) statHabits.textContent = habits;
-    if (statNeglected) statNeglected.textContent = neglectedCount;
   },
   
   // Utility: Format timestamp
