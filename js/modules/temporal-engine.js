@@ -7,6 +7,7 @@ const TemporalEngine = {
   
   currentView: 'week', // day | week | month
   currentDate: new Date(),
+  clickHandler: null,
   layers: {
     events: true,
     deadlines: true,
@@ -401,9 +402,12 @@ const TemporalEngine = {
       const priorityClass = task.priority === 'critical' ? 'type-critical' : 
                             task.priority === 'high' ? 'type-high' : 'type-task';
       
+      const sphere = task.spheres && task.spheres.length > 0 ? task.spheres[0] : 'freizeit';
+      
       html += `
         <div class="calendar-event time-block ${priorityClass}" 
-             style="top: ${top}px; height: ${height}px;" data-task-id="${task.id}">
+             style="top: ${top}px; height: ${height}px; border-left: 3px solid var(--color-sphere-${sphere});" 
+             data-task-id="${task.id}">
           <div class="event-time">${task.scheduledTime}</div>
           <div class="event-title">${task.title}</div>
         </div>
@@ -479,9 +483,10 @@ const TemporalEngine = {
     
     return `
       <div class="month-day-events">
-        ${tasks.slice(0, 2).map(t => `
-          <div class="event-dot" style="background: var(--color-sphere-${t.sphere || 'geschaeft'})"></div>
-        `).join('')}
+        ${tasks.slice(0, 2).map(t => {
+          const sphere = t.spheres && t.spheres.length > 0 ? t.spheres[0] : 'freizeit';
+          return `<div class="event-dot" style="background: var(--color-sphere-${sphere})" title="${t.title}"></div>`;
+        }).join('')}
         ${habits.slice(0, 1).map(h => `
           <div class="event-dot habit-dot" style="background: var(--color-sphere-${h.sphere || 'sport'})" title="${h.name}"></div>
         `).join('')}
@@ -739,7 +744,13 @@ const TemporalEngine = {
   
   // Setup event listeners
   setupEventListeners() {
-    document.addEventListener('click', (e) => {
+    // Remove old listener if exists
+    if (this.clickHandler) {
+      document.removeEventListener('click', this.clickHandler);
+    }
+    
+    // Create new handler
+    this.clickHandler = (e) => {
       // New event button
       if (e.target.closest('#te-new-event')) {
         this.showNewEventModal();
@@ -791,7 +802,10 @@ const TemporalEngine = {
         this.render();
         return;
       }
-    });
+    };
+    
+    // Add new listener
+    document.addEventListener('click', this.clickHandler);
   }
 };
 
