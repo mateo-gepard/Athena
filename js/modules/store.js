@@ -1444,17 +1444,6 @@ const NexusStore = {
       console.warn('Failed to load analytics:', e);
       return {};
     }
-  },
-  
-  // Get settings
-  getSettings() {
-    // Get settings from localStorage or return defaults
-    try {
-      const saved = storage.getItem('nexus_settings');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) {
-      return {};
-    }
   }
 };
 
