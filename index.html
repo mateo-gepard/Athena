@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/layout.css">
   <link rel="stylesheet" href="css/modules.css">
+  <link rel="stylesheet" href="css/analytics.css">
   <link rel="stylesheet" href="css/atlas.css">
 </head>
 <body>
@@ -354,17 +355,193 @@
         </div>
         
         <div id="page-analytics" class="page-view">
-          <!-- Completion Metrics Dashboard -->
-          <div id="completionMetrics" class="mb-6"></div>
-          
-          <!-- Burnout Risk Assessment -->
-          <div id="burnoutRisk" class="mb-6"></div>
-          
-          <!-- Sphere Balance Tracker -->
-          <div id="sphereBalance" class="mb-6"></div>
-          
-          <!-- Neglected Work Warning -->
-          <div id="neglectedWork"></div>
+          <!-- Analytics Dashboard Header -->
+          <div class="analytics-header">
+            <div>
+              <h1 class="page-title">📊 Analytics & Insights</h1>
+              <p class="text-tertiary">Deine Produktivitäts-Performance im Überblick</p>
+            </div>
+            <div class="analytics-period">
+              <button class="btn btn-sm active" data-period="7">7 Tage</button>
+              <button class="btn btn-sm" data-period="30">30 Tage</button>
+              <button class="btn btn-sm" data-period="90">90 Tage</button>
+            </div>
+          </div>
+
+          <!-- Key Stats Row -->
+          <div class="analytics-stats-grid">
+            <div class="analytics-stat-card">
+              <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                <i data-lucide="check-circle"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Task Completion</div>
+                <div class="stat-value" id="stat-task-completion">0%</div>
+                <div class="stat-detail" id="stat-task-detail">0/0 Tasks</div>
+              </div>
+              <div class="stat-trend" id="stat-task-trend">
+                <i data-lucide="trending-up"></i>
+                <span>+0%</span>
+              </div>
+            </div>
+
+            <div class="analytics-stat-card">
+              <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+                <i data-lucide="repeat"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Habit Consistency</div>
+                <div class="stat-value" id="stat-habit-consistency">0%</div>
+                <div class="stat-detail" id="stat-habit-detail">0/7 Tage</div>
+              </div>
+              <div class="stat-trend" id="stat-habit-trend">
+                <i data-lucide="trending-up"></i>
+                <span>+0%</span>
+              </div>
+            </div>
+
+            <div class="analytics-stat-card">
+              <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+                <i data-lucide="clock"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Ø Tägliche Zeit</div>
+                <div class="stat-value" id="stat-avg-time">0h</div>
+                <div class="stat-detail" id="stat-time-detail">Geplante Arbeit</div>
+              </div>
+              <div class="stat-trend" id="stat-time-trend">
+                <i data-lucide="trending-up"></i>
+                <span>+0%</span>
+              </div>
+            </div>
+
+            <div class="analytics-stat-card">
+              <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%)">
+                <i data-lucide="flame"></i>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Productivity Streak</div>
+                <div class="stat-value" id="stat-streak">0</div>
+                <div class="stat-detail">Tage >80% Completion</div>
+              </div>
+              <div class="stat-trend" id="stat-streak-best">
+                <i data-lucide="award"></i>
+                <span>Best: 0</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Content Grid -->
+          <div class="analytics-grid">
+            
+            <!-- Left Column: Charts -->
+            <div class="analytics-column">
+              
+              <!-- Weekly Heatmap -->
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3><i data-lucide="calendar"></i> Weekly Activity Heatmap</h3>
+                  <span class="text-tertiary">Letzte 7 Tage</span>
+                </div>
+                <div class="analytics-card-body">
+                  <div id="weeklyHeatmap" class="heatmap-container"></div>
+                </div>
+              </div>
+
+              <!-- Sphere Balance Chart -->
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3><i data-lucide="pie-chart"></i> Life Sphere Balance</h3>
+                  <span class="text-tertiary">Zeit-Verteilung</span>
+                </div>
+                <div class="analytics-card-body">
+                  <div id="sphereBalanceChart" class="sphere-chart-container">
+                    <div class="sphere-donut" id="sphereDonut"></div>
+                    <div class="sphere-legend" id="sphereLegend"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Completion Trend -->
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3><i data-lucide="trending-up"></i> Completion Trend</h3>
+                  <span class="text-tertiary">Performance über Zeit</span>
+                </div>
+                <div class="analytics-card-body">
+                  <div id="completionTrend" class="trend-chart"></div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Right Column: Insights & Warnings -->
+            <div class="analytics-column">
+              
+              <!-- Burnout Risk Assessment -->
+              <div class="analytics-card" id="burnoutRiskCard">
+                <div class="analytics-card-header">
+                  <h3><i data-lucide="activity"></i> Burnout Risk</h3>
+                  <span class="text-tertiary">Belastungslevel</span>
+                </div>
+                <div class="analytics-card-body">
+                  <div id="burnoutRisk" class="burnout-assessment"></div>
+                </div>
+              </div>
+
+              <!-- Neglected Work Warning -->
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3><i data-lucide="alert-triangle"></i> Vernachlässigte Arbeit</h3>
+                  <span class="text-tertiary">Braucht Aufmerksamkeit</span>
+                </div>
+                <div class="analytics-card-body">
+                  <div id="neglectedWork"></div>
+                </div>
+              </div>
+
+              <!-- AI Insights -->
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3><i data-lucide="sparkles"></i> AI Insights</h3>
+                  <span class="text-tertiary">Personalisierte Empfehlungen</span>
+                </div>
+                <div class="analytics-card-body">
+                  <div id="aiInsights" class="ai-insights">
+                    <div class="insight-item">
+                      <i data-lucide="lightbulb"></i>
+                      <span>Starte Atlas für personalisierte Produktivitäts-Insights</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Actions -->
+              <div class="analytics-card">
+                <div class="analytics-card-header">
+                  <h3><i data-lucide="zap"></i> Quick Actions</h3>
+                </div>
+                <div class="analytics-card-body">
+                  <div class="analytics-actions">
+                    <button class="btn btn-primary w-full" id="optimize-schedule-btn">
+                      <i data-lucide="sparkles"></i>
+                      Schedule optimieren
+                    </button>
+                    <button class="btn btn-secondary w-full" id="export-analytics-btn">
+                      <i data-lucide="download"></i>
+                      Daten exportieren
+                    </button>
+                    <button class="btn btn-secondary w-full" id="reset-analytics-btn">
+                      <i data-lucide="refresh-cw"></i>
+                      Statistiken zurücksetzen
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
         </div>
         
         <div id="page-contacts" class="page-view">

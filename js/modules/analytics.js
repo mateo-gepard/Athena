@@ -1,13 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
    Athena Ultra - Analytics Module
-   Produktivitäts-Tracking & Insights
+   Modern Performance Analytics & Insights Dashboard
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 const Analytics = {
   
+  currentPeriod: 7, // Default: 7 days
+  
   // Initialize Analytics
   init() {
     this.render();
+    this.setupEventListeners();
     
     // Subscribe to store changes
     NexusStore.subscribe((action) => {
@@ -17,248 +20,523 @@ const Analytics = {
     });
   },
   
+  // Setup Event Listeners
+  setupEventListeners() {
+    // Period selection
+    document.querySelectorAll('.analytics-period .btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const period = parseInt(e.target.dataset.period);
+        this.changePeriod(period);
+      });
+    });
+    
+    // Quick Actions
+    const optimizeBtn = document.getElementById('optimize-schedule-btn');
+    if (optimizeBtn) {
+      optimizeBtn.addEventListener('click', () => this.handleOptimizeSchedule());
+    }
+    
+    const exportBtn = document.getElementById('export-analytics-btn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => this.handleExportData());
+    }
+    
+    const resetBtn = document.getElementById('reset-analytics-btn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => this.handleResetAnalytics());
+    }
+  },
+  
+  // Change Period
+  changePeriod(days) {
+    this.currentPeriod = days;
+    
+    // Update active button
+    document.querySelectorAll('.analytics-period .btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.period) === days);
+    });
+    
+    this.render();
+  },
+  
   // Render all sections
   render() {
-    this.renderCompletionMetrics();
-    this.renderBurnoutRisk();
+    this.renderKeyStats();
+    this.renderWeeklyHeatmap();
     this.renderSphereBalance();
+    this.renderCompletionTrend();
+    this.renderBurnoutRisk();
     this.renderNeglectedWork();
     NexusUI.refreshIcons();
   },
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // 1. COMPLETION METRICS DASHBOARD
+  // KEY STATS (Top Row)
   // ═══════════════════════════════════════════════════════════════════════════
   
-  renderCompletionMetrics() {
-    const container = document.getElementById('completionMetrics');
+  renderKeyStats() {
+    const metrics = this.calculateMetrics();
+    
+    // Task Completion
+    const taskCompletionEl = document.getElementById('stat-task-completion');
+    if (taskCompletionEl) {
+      taskCompletionEl.textContent = `${metrics.taskCompletionRate}%`;
+      taskCompletionEl.className = `stat-value ${this.getCompletionClass(metrics.taskCompletionRate)}`;
+    }
+    
+    const taskDetailEl = document.getElementById('stat-task-detail');
+    if (taskDetailEl) {
+      taskDetailEl.textContent = `${metrics.tasksCompleted}/${metrics.tasksScheduled} Tasks`;
+    }
+    
+    const taskTrendEl = document.getElementById('stat-task-trend');
+    if (taskTrendEl) {
+      const trend = metrics.taskTrend;
+      taskTrendEl.className = `stat-trend ${trend >= 0 ? 'positive' : 'negative'}`;
+      taskTrendEl.innerHTML = `
+        <i data-lucide="${trend >= 0 ? 'trending-up' : 'trending-down'}"></i>
+        <span>${trend >= 0 ? '+' : ''}${trend}%</span>
+      `;
+    }
+    
+    // Habit Consistency
+    const habitConsistencyEl = document.getElementById('stat-habit-consistency');
+    if (habitConsistencyEl) {
+      habitConsistencyEl.textContent = `${metrics.habitConsistency}%`;
+      habitConsistencyEl.className = `stat-value ${this.getCompletionClass(metrics.habitConsistency)}`;
+    }
+    
+    const habitDetailEl = document.getElementById('stat-habit-detail');
+    if (habitDetailEl) {
+      habitDetailEl.textContent = `${metrics.habitCompletionDays}/${this.currentPeriod} Tage`;
+    }
+    
+    const habitTrendEl = document.getElementById('stat-habit-trend');
+    if (habitTrendEl) {
+      const trend = metrics.habitTrend;
+      habitTrendEl.className = `stat-trend ${trend >= 0 ? 'positive' : 'negative'}`;
+      habitTrendEl.innerHTML = `
+        <i data-lucide="${trend >= 0 ? 'trending-up' : 'trending-down'}"></i>
+        <span>${trend >= 0 ? '+' : ''}${trend}%</span>
+      `;
+    }
+    
+    // Average Time
+    const avgTimeEl = document.getElementById('stat-avg-time');
+    if (avgTimeEl) {
+      avgTimeEl.textContent = `${metrics.avgDailyHours.toFixed(1)}h`;
+    }
+    
+    const timeDetailEl = document.getElementById('stat-time-detail');
+    if (timeDetailEl) {
+      timeDetailEl.textContent = `Ø ${metrics.avgDailyTasks} Tasks/Tag`;
+    }
+    
+    const timeTrendEl = document.getElementById('stat-time-trend');
+    if (timeTrendEl) {
+      const trend = metrics.timeTrend;
+      timeTrendEl.className = `stat-trend ${trend >= 0 ? 'negative' : 'positive'}`; // More time = negative
+      timeTrendEl.innerHTML = `
+        <i data-lucide="${trend >= 0 ? 'trending-up' : 'trending-down'}"></i>
+        <span>${trend >= 0 ? '+' : ''}${trend}%</span>
+      `;
+    }
+    
+    // Streak
+    const streakEl = document.getElementById('stat-streak');
+    if (streakEl) {
+      streakEl.textContent = metrics.currentStreak;
+    }
+    
+    const streakBestEl = document.getElementById('stat-streak-best');
+    if (streakBestEl) {
+      streakBestEl.innerHTML = `
+        <i data-lucide="award"></i>
+        <span>Best: ${metrics.bestStreak}</span>
+      `;
+    }
+    
+    NexusUI.refreshIcons();
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WEEKLY HEATMAP
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderWeeklyHeatmap() {
+    const container = document.getElementById('weeklyHeatmap');
     if (!container) return;
     
-    const metrics = this.calculateCompletionMetrics();
+    const history = NexusStore.getAnalyticsHistory();
+    const today = new Date();
+    const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
     
-    container.innerHTML = `
-      <div class="analytics-section">
-        <div class="section-header">
-          <h2><i data-lucide="trending-up"></i> Completion Metrics</h2>
-          <p class="text-tertiary">Deine Produktivitäts-Performance</p>
+    let html = '';
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayData = history[dateStr] || { tasksCompleted: 0, tasksScheduled: 0 };
+      
+      const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
+      const completion = dayData.tasksScheduled > 0 
+        ? (dayData.tasksCompleted / dayData.tasksScheduled) 
+        : 0;
+      
+      const level = completion >= 0.8 ? 'high' : 
+                    completion >= 0.5 ? 'medium' : 
+                    completion > 0 ? 'low' : 'none';
+      
+      html += `
+        <div class="heatmap-day ${level}" 
+             title="${dayName} ${date.getDate()}.${date.getMonth() + 1}: ${Math.round(completion * 100)}% completed">
+          <div class="heatmap-label">${dayName}</div>
+          <div class="heatmap-count">${dayData.tasksCompleted}/${dayData.tasksScheduled}</div>
         </div>
-        
-        <div class="metrics-grid">
-          <!-- Daily Task Completion Rate -->
-          <div class="metric-card">
-            <div class="metric-header">
-              <span class="metric-label">Task Completion Rate (7 Tage)</span>
-              <span class="metric-value ${this.getCompletionClass(metrics.taskCompletionRate)}">${metrics.taskCompletionRate}%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: ${metrics.taskCompletionRate}%; background: ${this.getCompletionColor(metrics.taskCompletionRate)}"></div>
-            </div>
-            <div class="metric-detail">
-              ${metrics.tasksCompletedWeek} / ${metrics.tasksScheduledWeek} Tasks erledigt
-            </div>
-          </div>
-          
-          <!-- Habit Consistency Score -->
-          <div class="metric-card">
-            <div class="metric-header">
-              <span class="metric-label">Habit Consistency (7 Tage)</span>
-              <span class="metric-value ${this.getCompletionClass(metrics.habitConsistency)}">${metrics.habitConsistency}%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="progress-fill" style="width: ${metrics.habitConsistency}%; background: ${this.getCompletionColor(metrics.habitConsistency)}"></div>
-            </div>
-            <div class="metric-detail">
-              ${metrics.habitCompletionDays} / 7 Tage alle Habits completed
-            </div>
-          </div>
-          
-          <!-- Weekly Trend -->
-          <div class="metric-card">
-            <div class="metric-header">
-              <span class="metric-label">Trend (vs. Vorwoche)</span>
-              <span class="metric-value ${metrics.trend >= 0 ? 'text-success' : 'text-danger'}">
-                ${metrics.trend >= 0 ? '+' : ''}${metrics.trend}%
-              </span>
-            </div>
-            <div class="trend-indicator">
-              <i data-lucide="${metrics.trend >= 0 ? 'trending-up' : 'trending-down'}"></i>
-              ${metrics.trend >= 0 ? 'Aufwärtstrend' : 'Abwärtstrend'}
-            </div>
-          </div>
-          
-          <!-- Current Streak -->
-          <div class="metric-card">
-            <div class="metric-header">
-              <span class="metric-label">Productivity Streak</span>
-              <span class="metric-value">${metrics.productivityStreak} Tage</span>
-            </div>
-            <div class="metric-detail">
-              <i data-lucide="flame"></i> Tage mit >80% Task Completion
-            </div>
-          </div>
-        </div>
-        
-        <!-- Weekly Heatmap -->
-        <div class="heatmap-section">
-          <h3>Last 7 Days Heatmap</h3>
-          <div class="heatmap-grid">
-            ${this.renderWeeklyHeatmap(metrics.dailyData)}
+      `;
+    }
+    
+    container.innerHTML = html;
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SPHERE BALANCE CHART
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderSphereBalance() {
+    const container = document.getElementById('sphereBalanceChart');
+    if (!container) return;
+    
+    const balance = this.calculateSphereBalance();
+    const donut = document.getElementById('sphereDonut');
+    const legend = document.getElementById('sphereLegend');
+    
+    if (!donut || !legend) return;
+    
+    // Build donut chart with CSS conic-gradient
+    const totalHours = balance.spheres.reduce((sum, s) => sum + s.hours, 0);
+    
+    if (totalHours === 0) {
+      donut.style.background = 'var(--surface-2)';
+      donut.setAttribute('data-total-hours', '0h');
+      legend.innerHTML = '<div class="text-tertiary">Noch keine Daten vorhanden</div>';
+      return;
+    }
+    
+    let currentDeg = 0;
+    const gradientParts = [];
+    
+    balance.spheres.forEach((sphere, index) => {
+      const percentage = (sphere.hours / totalHours) * 100;
+      const deg = (percentage / 100) * 360;
+      
+      donut.style.setProperty(`--sphere-${index + 1}-color`, sphere.color);
+      donut.style.setProperty(`--sphere-${index + 1}-deg`, `${currentDeg + deg}deg`);
+      
+      gradientParts.push(`${sphere.color} ${currentDeg}deg ${currentDeg + deg}deg`);
+      currentDeg += deg;
+    });
+    
+    donut.style.background = `conic-gradient(${gradientParts.join(', ')})`;
+    donut.setAttribute('data-total-hours', `${totalHours.toFixed(0)}h`);
+    
+    // Build legend
+    legend.innerHTML = balance.spheres.map(sphere => `
+      <div class="sphere-legend-item">
+        <div class="sphere-legend-color" style="background: ${sphere.color}"></div>
+        <div class="sphere-legend-content">
+          <div class="sphere-legend-label">${sphere.icon} ${sphere.name}</div>
+          <div>
+            <span class="sphere-legend-value">${sphere.hours.toFixed(1)}h</span>
+            <span class="sphere-legend-percentage">(${sphere.percentage}%)</span>
           </div>
         </div>
       </div>
+    `).join('');
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMPLETION TREND
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderCompletionTrend() {
+    const container = document.getElementById('completionTrend');
+    if (!container) return;
+    
+    const history = NexusStore.getAnalyticsHistory();
+    const today = new Date();
+    const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    
+    let html = '';
+    
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayData = history[dateStr] || { tasksCompleted: 0, tasksScheduled: 0 };
+      
+      const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
+      const completion = dayData.tasksScheduled > 0 
+        ? Math.round((dayData.tasksCompleted / dayData.tasksScheduled) * 100) 
+        : 0;
+      
+      html += `
+        <div class="trend-bar-item">
+          <div class="trend-bar-label">${dayName}</div>
+          <div class="trend-bar-container">
+            <div class="trend-bar-fill" style="width: ${completion}%">
+              <span class="trend-bar-value">${completion}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    container.innerHTML = html;
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BURNOUT RISK
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderBurnoutRisk() {
+    const container = document.getElementById('burnoutRisk');
+    const card = document.getElementById('burnoutRiskCard');
+    if (!container || !card) return;
+    
+    const risk = this.calculateBurnoutRisk();
+    
+    // Update card border color based on risk level
+    card.style.borderLeft = risk.level === 'high' ? '3px solid #ef4444' :
+                            risk.level === 'medium' ? '3px solid #fbbf24' :
+                            '3px solid #22c55e';
+    
+    container.innerHTML = `
+      <div class="burnout-score-display ${risk.level}">
+        <div class="burnout-score-circle">
+          <div>${risk.score}</div>
+          <div class="burnout-score-label">RISK</div>
+        </div>
+        <div class="burnout-score-info">
+          <div class="burnout-score-title">${risk.label}</div>
+          <div class="burnout-score-message">${risk.message}</div>
+        </div>
+      </div>
+      
+      <div class="burnout-factors">
+        ${risk.factors.map(factor => `
+          <div class="burnout-factor ${factor.severity}">
+            <div class="burnout-factor-icon">
+              <i data-lucide="${factor.icon}"></i>
+            </div>
+            <div class="burnout-factor-content">
+              <div class="burnout-factor-label">${factor.title}</div>
+              <div class="burnout-factor-value">${factor.value}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      ${risk.recommendations.length > 0 ? `
+        <div class="burnout-recommendations">
+          <div class="burnout-recommendations-title">
+            <i data-lucide="lightbulb"></i>
+            Empfehlungen
+          </div>
+          ${risk.recommendations.slice(0, 3).map(rec => `
+            <div class="burnout-recommendation">${rec}</div>
+          `).join('')}
+        </div>
+      ` : ''}
     `;
     
     NexusUI.refreshIcons();
   },
   
-  calculateCompletionMetrics() {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // NEGLECTED WORK
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderNeglectedWork() {
+    const container = document.getElementById('neglectedWork');
+    if (!container) return;
+    
+    const neglected = this.getNeglectedWork();
+    const total = neglected.tasks.length + neglected.projects.length + neglected.ventures.length;
+    
+    if (total === 0) {
+      container.innerHTML = `
+        <div class="neglected-empty">
+          <i data-lucide="party-popper"></i>
+          <div>Keine vernachlässigte Arbeit!</div>
+          <div style="font-size: 13px; margin-top: 8px;">Du hast alles im Griff 🎉</div>
+        </div>
+      `;
+      NexusUI.refreshIcons();
+      return;
+    }
+    
+    const allItems = [
+      ...neglected.tasks.map(t => ({ type: 'task', data: t, days: t.daysSinceUpdate, icon: 'list-todo' })),
+      ...neglected.projects.map(p => ({ type: 'project', data: p, days: p.daysSinceUpdate, icon: 'folder' })),
+      ...neglected.ventures.map(v => ({ type: 'venture', data: v, days: v.daysSinceUpdate, icon: 'rocket' }))
+    ].sort((a, b) => b.days - a.days).slice(0, 5);
+    
+    container.innerHTML = `
+      <div class="neglected-work-list">
+        ${allItems.map(item => `
+          <div class="neglected-item" data-type="${item.type}" data-id="${item.data.id}">
+            <div class="neglected-item-icon">
+              <i data-lucide="${item.icon}"></i>
+            </div>
+            <div class="neglected-item-content">
+              <div class="neglected-item-title">${item.data.name || item.data.title}</div>
+              <div class="neglected-item-detail">
+                ${item.type === 'task' ? `Priority: ${item.data.priority}` : 
+                  item.type === 'project' ? `Status: ${item.data.status}` :
+                  `Status: ${item.data.status}`}
+              </div>
+            </div>
+            <div class="neglected-item-days">${item.days}d</div>
+          </div>
+        `).join('')}
+      </div>
+      ${total > 5 ? `
+        <div style="text-align: center; margin-top: 12px; color: var(--text-tertiary); font-size: 13px;">
+          +${total - 5} weitere...
+        </div>
+      ` : ''}
+    `;
+    
+    NexusUI.refreshIcons();
+  },
+  
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CALCULATIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  calculateMetrics() {
     const history = NexusStore.getAnalyticsHistory();
     const today = new Date();
-    const last7Days = [];
-    const last14Days = [];
+    const period = this.currentPeriod;
     
-    // Get last 7 days data
-    for (let i = 6; i >= 0; i--) {
+    const currentPeriodData = [];
+    const prevPeriodData = [];
+    
+    // Current period
+    for (let i = period - 1; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      last7Days.push(history[dateStr] || { tasksCompleted: 0, tasksScheduled: 0, habitCompletions: 0, totalHabits: 0 });
+      currentPeriodData.push(history[dateStr] || { tasksCompleted: 0, tasksScheduled: 0, plannedMinutes: 0, habitCompletions: 0, totalHabits: 0 });
     }
     
-    // Get last 14 days for trend comparison
-    for (let i = 13; i >= 0; i--) {
+    // Previous period (for trend comparison)
+    for (let i = (period * 2) - 1; i >= period; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      last14Days.push(history[dateStr] || { tasksCompleted: 0, tasksScheduled: 0 });
+      prevPeriodData.push(history[dateStr] || { tasksCompleted: 0, tasksScheduled: 0, plannedMinutes: 0 });
     }
     
-    // Calculate task completion rate (last 7 days)
-    const tasksCompletedWeek = last7Days.reduce((sum, d) => sum + d.tasksCompleted, 0);
-    const tasksScheduledWeek = last7Days.reduce((sum, d) => sum + d.tasksScheduled, 0);
-    const taskCompletionRate = tasksScheduledWeek > 0 
-      ? Math.round((tasksCompletedWeek / tasksScheduledWeek) * 100) 
-      : 0;
+    // Task metrics
+    const tasksCompleted = currentPeriodData.reduce((sum, d) => sum + d.tasksCompleted, 0);
+    const tasksScheduled = currentPeriodData.reduce((sum, d) => sum + d.tasksScheduled, 0);
+    const taskCompletionRate = tasksScheduled > 0 ? Math.round((tasksCompleted / tasksScheduled) * 100) : 0;
     
-    // Calculate habit consistency (days with all habits completed)
-    const habitCompletionDays = last7Days.filter(d => 
+    const prevTasksCompleted = prevPeriodData.reduce((sum, d) => sum + d.tasksCompleted, 0);
+    const prevTasksScheduled = prevPeriodData.reduce((sum, d) => sum + d.tasksScheduled, 0);
+    const prevCompletionRate = prevTasksScheduled > 0 ? (prevTasksCompleted / prevTasksScheduled) * 100 : 0;
+    const taskTrend = Math.round(taskCompletionRate - prevCompletionRate);
+    
+    // Habit metrics
+    const habitCompletionDays = currentPeriodData.filter(d => 
       d.totalHabits > 0 && d.habitCompletions === d.totalHabits
     ).length;
-    const habitConsistency = Math.round((habitCompletionDays / 7) * 100);
+    const habitConsistency = Math.round((habitCompletionDays / period) * 100);
     
-    // Calculate trend (this week vs last week)
-    const thisWeekCompletion = tasksScheduledWeek > 0 ? (tasksCompletedWeek / tasksScheduledWeek) : 0;
-    const lastWeekCompleted = last14Days.slice(0, 7).reduce((sum, d) => sum + d.tasksCompleted, 0);
-    const lastWeekScheduled = last14Days.slice(0, 7).reduce((sum, d) => sum + d.tasksScheduled, 0);
-    const lastWeekCompletion = lastWeekScheduled > 0 ? (lastWeekCompleted / lastWeekScheduled) : 0;
-    const trend = Math.round((thisWeekCompletion - lastWeekCompletion) * 100);
+    const prevHabitCompletionDays = prevPeriodData.filter(d =>
+      d.totalHabits > 0 && d.habitCompletions === d.totalHabits
+    ).length;
+    const prevHabitConsistency = (prevHabitCompletionDays / period) * 100;
+    const habitTrend = Math.round(habitConsistency - prevHabitConsistency);
     
-    // Calculate productivity streak (days with >80% completion)
-    let productivityStreak = 0;
-    for (let i = last7Days.length - 1; i >= 0; i--) {
-      const day = last7Days[i];
-      const dayCompletion = day.tasksScheduled > 0 ? (day.tasksCompleted / day.tasksScheduled) : 0;
-      if (dayCompletion >= 0.8) {
-        productivityStreak++;
+    // Time metrics
+    const totalMinutes = currentPeriodData.reduce((sum, d) => sum + (d.plannedMinutes || 0), 0);
+    const avgDailyHours = totalMinutes / 60 / period;
+    const avgDailyTasks = Math.round(tasksScheduled / period);
+    
+    const prevTotalMinutes = prevPeriodData.reduce((sum, d) => sum + (d.plannedMinutes || 0), 0);
+    const prevAvgDailyHours = prevTotalMinutes / 60 / period;
+    const timeTrend = prevAvgDailyHours > 0 
+      ? Math.round(((avgDailyHours - prevAvgDailyHours) / prevAvgDailyHours) * 100) 
+      : 0;
+    
+    // Streak (days with >80% completion)
+    let currentStreak = 0;
+    let bestStreak = 0;
+    let tempStreak = 0;
+    
+    for (let i = currentPeriodData.length - 1; i >= 0; i--) {
+      const day = currentPeriodData[i];
+      const completion = day.tasksScheduled > 0 ? (day.tasksCompleted / day.tasksScheduled) : 0;
+      
+      if (completion >= 0.8) {
+        tempStreak++;
+        if (i === currentPeriodData.length - 1) currentStreak = tempStreak;
+        bestStreak = Math.max(bestStreak, tempStreak);
       } else {
-        break;
+        tempStreak = 0;
       }
     }
     
     return {
       taskCompletionRate,
-      tasksCompletedWeek,
-      tasksScheduledWeek,
+      tasksCompleted,
+      tasksScheduled,
+      taskTrend,
       habitConsistency,
       habitCompletionDays,
-      trend,
-      productivityStreak,
-      dailyData: last7Days
+      habitTrend,
+      avgDailyHours,
+      avgDailyTasks,
+      timeTrend,
+      currentStreak,
+      bestStreak
     };
   },
   
-  renderWeeklyHeatmap(dailyData) {
+  calculateSphereBalance() {
+    const history = NexusStore.getAnalyticsHistory();
     const today = new Date();
-    const days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    const period = this.currentPeriod;
     
-    return dailyData.map((day, index) => {
+    const sphereMinutes = {};
+    
+    for (let i = period - 1; i >= 0; i--) {
       const date = new Date(today);
-      date.setDate(date.getDate() - (6 - index));
-      const dayName = days[date.getDay() === 0 ? 6 : date.getDay() - 1];
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayData = history[dateStr] || { sphereMinutes: {} };
       
-      const completion = day.tasksScheduled > 0 
-        ? (day.tasksCompleted / day.tasksScheduled) 
-        : 0;
+      Object.entries(dayData.sphereMinutes || {}).forEach(([sphere, minutes]) => {
+        sphereMinutes[sphere] = (sphereMinutes[sphere] || 0) + minutes;
+      });
+    }
+    
+    const totalMinutes = Object.values(sphereMinutes).reduce((sum, m) => sum + m, 0);
+    
+    const spheres = Object.entries(sphereMinutes).map(([name, minutes]) => {
+      const hours = minutes / 60;
+      const percentage = totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0;
+      const color = NexusUI.getSphereColor(name);
+      const icon = NexusUI.getSphereIcon(name);
       
-      const level = completion >= 0.8 ? 'high' : completion >= 0.5 ? 'medium' : completion > 0 ? 'low' : 'none';
-      
-      return `
-        <div class="heatmap-day ${level}" title="${dayName}: ${Math.round(completion * 100)}% completed">
-          <div class="heatmap-label">${dayName}</div>
-          <div class="heatmap-count">${day.tasksCompleted}/${day.tasksScheduled}</div>
-        </div>
-      `;
-    }).join('');
-  },
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 2. BURNOUT RISK SCORE
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  renderBurnoutRisk() {
-    const container = document.getElementById('burnoutRisk');
-    if (!container) return;
+      return { name, hours, percentage, color, icon };
+    }).sort((a, b) => b.hours - a.hours);
     
-    const risk = this.calculateBurnoutRisk();
-    
-    container.innerHTML = `
-      <div class="analytics-section">
-        <div class="section-header">
-          <h2><i data-lucide="activity"></i> Burnout Risk Assessment</h2>
-          <p class="text-tertiary">Dein aktuelles Belastungslevel</p>
-        </div>
-        
-        <!-- Risk Score -->
-        <div class="risk-score-container">
-          <div class="risk-score ${risk.level}">
-            <div class="risk-value">${risk.score}</div>
-            <div class="risk-label">${risk.label}</div>
-          </div>
-          <div class="risk-description">
-            ${risk.message}
-          </div>
-        </div>
-        
-        <!-- Risk Factors -->
-        <div class="risk-factors">
-          <h3>Risk Factors</h3>
-          <div class="factors-grid">
-            ${risk.factors.map(factor => `
-              <div class="factor-card ${factor.severity}">
-                <div class="factor-icon">
-                  <i data-lucide="${factor.icon}"></i>
-                </div>
-                <div class="factor-content">
-                  <div class="factor-title">${factor.title}</div>
-                  <div class="factor-value">${factor.value}</div>
-                  <div class="factor-detail">${factor.detail}</div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        
-        <!-- Recommendations -->
-        <div class="recommendations">
-          <h3><i data-lucide="lightbulb"></i> Empfehlungen</h3>
-          <ul>
-            ${risk.recommendations.map(rec => `<li>${rec}</li>`).join('')}
-          </ul>
-        </div>
-      </div>
-    `;
-    
-    NexusUI.refreshIcons();
+    return { spheres };
   },
   
   calculateBurnoutRisk() {
@@ -273,12 +551,9 @@ const Analytics = {
       last7Days.push(history[dateStr] || { overdueTasks: 0, plannedMinutes: 0, sphereMinutes: {} });
     }
     
-    // Calculate risk factors
-    const avgOverdue = last7Days.reduce((sum, d) => sum + d.overdueTasks, 0) / 7;
-    const avgPlannedHours = last7Days.reduce((sum, d) => sum + (d.plannedMinutes || 0), 0) / (7 * 60);
     const currentOverdue = NexusStore.getOverdueTasks().length;
+    const avgPlannedHours = last7Days.reduce((sum, d) => sum + (d.plannedMinutes || 0), 0) / (7 * 60);
     
-    // Get recreation sphere time (last 7 days)
     let recreationMinutes = 0;
     last7Days.forEach(day => {
       if (day.sphereMinutes && day.sphereMinutes.freizeit) {
@@ -287,459 +562,146 @@ const Analytics = {
     });
     const avgRecreationHours = recreationMinutes / 60 / 7;
     
-    // Calculate risk score (0-100)
+    const metrics = this.calculateMetrics();
+    
     let riskScore = 0;
     const factors = [];
     
-    // Factor 1: Overdue tasks (max 30 points)
+    // Overdue tasks (max 30 points)
     const overdueRisk = Math.min(30, currentOverdue * 5);
     riskScore += overdueRisk;
     factors.push({
-      title: 'Überfällige Tasks',
+      title: 'Überfällig',
       value: currentOverdue,
-      detail: `Ø ${avgOverdue.toFixed(1)} in den letzten 7 Tagen`,
       severity: currentOverdue > 5 ? 'high' : currentOverdue > 2 ? 'medium' : 'low',
       icon: 'alert-triangle'
     });
     
-    // Factor 2: Daily load (max 30 points)
+    // Daily load (max 30 points)
     const loadRisk = avgPlannedHours > 10 ? 30 : avgPlannedHours > 8 ? 20 : avgPlannedHours > 6 ? 10 : 0;
     riskScore += loadRisk;
     factors.push({
-      title: 'Tägliche Arbeitslast',
+      title: 'Ø Arbeitslast',
       value: `${avgPlannedHours.toFixed(1)}h`,
-      detail: `Ø geplante Zeit pro Tag`,
       severity: avgPlannedHours > 10 ? 'high' : avgPlannedHours > 8 ? 'medium' : 'low',
       icon: 'clock'
     });
     
-    // Factor 3: Recreation time (max 20 points - inverse)
+    // Recreation (max 20 points - inverse)
     const recreationRisk = avgRecreationHours < 0.5 ? 20 : avgRecreationHours < 1 ? 10 : 0;
     riskScore += recreationRisk;
     factors.push({
-      title: 'Erholungszeit',
+      title: 'Erholung',
       value: `${avgRecreationHours.toFixed(1)}h`,
-      detail: `Ø Freizeit pro Tag`,
       severity: avgRecreationHours < 0.5 ? 'high' : avgRecreationHours < 1 ? 'medium' : 'low',
       icon: 'coffee'
     });
     
-    // Factor 4: Completion rate (max 20 points - inverse)
-    const metrics = this.calculateCompletionMetrics();
+    // Completion rate (max 20 points - inverse)
     const completionRisk = metrics.taskCompletionRate < 50 ? 20 : metrics.taskCompletionRate < 70 ? 10 : 0;
     riskScore += completionRisk;
     factors.push({
-      title: 'Completion Rate',
+      title: 'Completion',
       value: `${metrics.taskCompletionRate}%`,
-      detail: `Tasks erledigt (7 Tage)`,
       severity: metrics.taskCompletionRate < 50 ? 'high' : metrics.taskCompletionRate < 70 ? 'medium' : 'low',
       icon: 'check-circle'
     });
     
-    // Determine risk level
     let level, label, message, recommendations;
     
     if (riskScore >= 70) {
       level = 'high';
-      label = 'HOCH - Burnout-Gefahr!';
-      message = '⚠️ Kritisches Belastungslevel! Du bist massiv überlastet. Sofortige Maßnahmen erforderlich.';
+      label = 'KRITISCH';
+      message = 'Massiv überlastet! Sofortige Maßnahmen erforderlich.';
       recommendations = [
-        'Streiche nicht-kritische Tasks von deiner Liste',
-        'Blockiere mindestens 2 Stunden täglich für Erholung',
-        'Delegiere Tasks wenn möglich',
-        'Sprich mit jemandem über deine Belastung',
-        'Erwäge professionelle Hilfe wenn das länger anhält'
+        'Streiche nicht-kritische Tasks',
+        'Blockiere 2h täglich für Erholung',
+        'Delegiere wenn möglich'
       ];
     } else if (riskScore >= 40) {
       level = 'medium';
-      label = 'MITTEL - Achtung!';
-      message = '🟡 Erhöhte Belastung erkannt. Du solltest deine Workload reduzieren.';
+      label = 'ERHÖHT';
+      message = 'Workload sollte reduziert werden.';
       recommendations = [
-        'Reduziere deine tägliche Planned Time um 20%',
+        'Reduziere Planned Time um 20%',
         'Priorisiere nur kritische Tasks',
-        'Plane bewusst Erholungspausen ein',
-        'Checke ob du zu viele Projekte gleichzeitig läuft',
-        'Verbessere deine Time Estimation'
+        'Plane bewusst Pausen ein'
       ];
     } else {
       level = 'low';
-      label = 'NIEDRIG - Alles gut!';
-      message = '✅ Gesundes Belastungslevel. Du hast deine Workload im Griff!';
+      label = 'GESUND';
+      message = 'Workload ist unter Kontrolle!';
       recommendations = [
-        'Behalte dein aktuelles Tempo bei',
-        'Achte weiterhin auf Work-Life-Balance',
-        'Nutze freie Kapazität für langfristige Ziele',
-        'Experimentiere mit neuen Produktivitäts-Methoden'
+        'Tempo beibehalten',
+        'Work-Life-Balance achten'
       ];
     }
     
-    return {
-      score: riskScore,
-      level,
-      label,
-      message,
-      factors,
-      recommendations
-    };
+    return { score: riskScore, level, label, message, factors, recommendations };
+  },
+  
+  getNeglectedWork() {
+    // Get forgotten tasks (>7 days)
+    const tasks = NexusStore.getForgottenTasks ? NexusStore.getForgottenTasks() : [];
+    
+    // Get stale projects (>14 days)
+    const projects = NexusStore.getStaleProjects ? NexusStore.getStaleProjects() : [];
+    
+    // Get stale ventures (>14 days)
+    const ventures = NexusStore.getStaleVentures ? NexusStore.getStaleVentures() : [];
+    
+    return { tasks, projects, ventures };
   },
   
   // ═══════════════════════════════════════════════════════════════════════════
-  // 3. SPHERE BALANCE TRACKER
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  renderSphereBalance() {
-    const container = document.getElementById('sphereBalance');
-    if (!container) return;
-    
-    const balance = this.calculateSphereBalance();
-    
-    container.innerHTML = `
-      <div class="analytics-section">
-        <div class="section-header">
-          <h2><i data-lucide="pie-chart"></i> Sphere Balance</h2>
-          <p class="text-tertiary">Zeit-Verteilung über deine Life Spheres</p>
-        </div>
-        
-        <!-- Balance Chart -->
-        <div class="balance-chart">
-          <div class="pie-chart">
-            ${this.renderPieChart(balance.distribution)}
-          </div>
-          <div class="sphere-legend">
-            ${balance.spheres.map(sphere => `
-              <div class="legend-item">
-                <div class="legend-color" style="background: ${sphere.color}"></div>
-                <div class="legend-content">
-                  <div class="legend-label">${sphere.icon} ${sphere.name}</div>
-                  <div class="legend-value">${sphere.hours}h (${sphere.percentage}%)</div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        
-        <!-- Balance Warning -->
-        ${balance.warning ? `
-          <div class="balance-warning">
-            <i data-lucide="alert-circle"></i>
-            <div>
-              <strong>Unbalance erkannt!</strong>
-              <p>${balance.warning}</p>
-            </div>
-          </div>
-        ` : `
-          <div class="balance-success">
-            <i data-lucide="check-circle"></i>
-            <div>
-              <strong>Gute Balance!</strong>
-              <p>Deine Zeit ist relativ ausgewogen über die Spheres verteilt.</p>
-            </div>
-          </div>
-        `}
-        
-        <!-- Sphere Trends (Last 7 Days) -->
-        <div class="sphere-trends">
-          <h3>Trends (Last 7 Days)</h3>
-          <div class="trends-grid">
-            ${balance.trends.map(trend => `
-              <div class="trend-card">
-                <div class="trend-header">
-                  <span>${trend.icon} ${trend.name}</span>
-                  <span class="${trend.change >= 0 ? 'text-success' : 'text-danger'}">
-                    ${trend.change >= 0 ? '+' : ''}${trend.change}%
-                  </span>
-                </div>
-                <div class="trend-bar">
-                  <div class="trend-fill" style="width: ${Math.min(100, trend.percentage)}%; background: ${trend.color}"></div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-    `;
-    
-    NexusUI.refreshIcons();
-  },
-  
-  calculateSphereBalance() {
-    const history = NexusStore.getAnalyticsHistory();
-    const today = new Date();
-    const last7Days = [];
-    const last14Days = [];
-    
-    // Get last 7 days
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      last7Days.push(history[dateStr] || { sphereMinutes: {} });
-    }
-    
-    // Get previous 7 days for trend
-    for (let i = 13; i >= 7; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      last14Days.push(history[dateStr] || { sphereMinutes: {} });
-    }
-    
-    // Calculate total minutes per sphere (last 7 days)
-    const sphereMinutes = {};
-    last7Days.forEach(day => {
-      Object.entries(day.sphereMinutes || {}).forEach(([sphere, minutes]) => {
-        sphereMinutes[sphere] = (sphereMinutes[sphere] || 0) + minutes;
-      });
-    });
-    
-    // Calculate previous week totals
-    const prevSphereMinutes = {};
-    last14Days.forEach(day => {
-      Object.entries(day.sphereMinutes || {}).forEach(([sphere, minutes]) => {
-        prevSphereMinutes[sphere] = (prevSphereMinutes[sphere] || 0) + minutes;
-      });
-    });
-    
-    const totalMinutes = Object.values(sphereMinutes).reduce((sum, m) => sum + m, 0);
-    const prevTotalMinutes = Object.values(prevSphereMinutes).reduce((sum, m) => sum + m, 0);
-    
-    // Get sphere definitions
-    const sphereDefinitions = NexusStore.state.spheres;
-    
-    // Build distribution data
-    const spheres = sphereDefinitions.map(sphere => {
-      const minutes = sphereMinutes[sphere.id] || 0;
-      const prevMinutes = prevSphereMinutes[sphere.id] || 0;
-      const percentage = totalMinutes > 0 ? Math.round((minutes / totalMinutes) * 100) : 0;
-      const prevPercentage = prevTotalMinutes > 0 ? Math.round((prevMinutes / prevTotalMinutes) * 100) : 0;
-      const change = percentage - prevPercentage;
-      
-      return {
-        id: sphere.id,
-        name: sphere.name,
-        icon: sphere.icon,
-        color: sphere.color,
-        minutes,
-        hours: (minutes / 60).toFixed(1),
-        percentage,
-        change
-      };
-    }).sort((a, b) => b.percentage - a.percentage);
-    
-    // Check for imbalance (one sphere >60%)
-    const dominantSphere = spheres.find(s => s.percentage > 60);
-    const warning = dominantSphere 
-      ? `${dominantSphere.icon} ${dominantSphere.name} dominiert mit ${dominantSphere.percentage}%. Andere Lebensbereiche könnten zu kurz kommen.`
-      : null;
-    
-    return {
-      distribution: spheres,
-      spheres,
-      trends: spheres,
-      warning
-    };
-  },
-  
-  renderPieChart(distribution) {
-    const total = distribution.reduce((sum, s) => sum + s.percentage, 0);
-    if (total === 0) {
-      return '<div class="text-tertiary text-center p-4">Keine Daten verfügbar</div>';
-    }
-    
-    let currentAngle = 0;
-    const radius = 100;
-    const centerX = 120;
-    const centerY = 120;
-    
-    const slices = distribution.map(sphere => {
-      if (sphere.percentage === 0) return '';
-      
-      const angle = (sphere.percentage / 100) * 360;
-      const startAngle = currentAngle;
-      const endAngle = currentAngle + angle;
-      
-      currentAngle = endAngle;
-      
-      // Calculate arc path
-      const startX = centerX + radius * Math.cos((startAngle - 90) * Math.PI / 180);
-      const startY = centerY + radius * Math.sin((startAngle - 90) * Math.PI / 180);
-      const endX = centerX + radius * Math.cos((endAngle - 90) * Math.PI / 180);
-      const endY = centerY + radius * Math.sin((endAngle - 90) * Math.PI / 180);
-      
-      const largeArc = angle > 180 ? 1 : 0;
-      
-      const path = `M ${centerX},${centerY} L ${startX},${startY} A ${radius},${radius} 0 ${largeArc},1 ${endX},${endY} Z`;
-      
-      return `<path d="${path}" fill="${sphere.color}" stroke="#1a1a1a" stroke-width="2"/>`;
-    }).join('');
-    
-    return `
-      <svg viewBox="0 0 240 240" class="pie-svg">
-        ${slices}
-      </svg>
-    `;
-  },
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // 4. NEGLECTED WORK (VERGESSENE TASKS/PROJEKTE/VENTURES)
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  renderNeglectedWork() {
-    const container = document.getElementById('neglectedWork');
-    if (!container) return;
-    
-    const neglected = NexusStore.getNeglectedWork(7, 14, 14);
-    const totalNeglected = neglected.tasks.length + neglected.projects.length + neglected.ventures.length;
-    
-    container.innerHTML = `
-      <div class="analytics-section">
-        <div class="section-header">
-          <h2><i data-lucide="alert-triangle"></i> Vernachlässigte Arbeit</h2>
-          <p class="text-tertiary">Tasks, Projekte und Ventures, die lange nicht bearbeitet wurden</p>
-          ${totalNeglected > 0 ? 
-            `<div class="alert alert-warning" style="margin-top: 1rem;">
-              <i data-lucide="alert-circle"></i>
-              <span>Du hast ${totalNeglected} ${totalNeglected === 1 ? 'Element' : 'Elemente'}, die seit längerer Zeit nicht bearbeitet wurden!</span>
-            </div>` : 
-            `<div class="alert alert-success" style="margin-top: 1rem;">
-              <i data-lucide="check-circle"></i>
-              <span>Super! Du hast keine vernachlässigten Tasks oder Projekte. Alles im Griff! 🎉</span>
-            </div>`
-          }
-        </div>
-        
-        <!-- Forgotten Tasks -->
-        <div class="metric-group">
-          <h3 class="metric-group-title">
-            <i data-lucide="list-todo"></i> 
-            Vergessene Tasks (>7 Tage)
-            <span class="badge ${neglected.tasks.length > 0 ? 'badge-danger' : 'badge-success'}">${neglected.tasks.length}</span>
-          </h3>
-          
-          ${neglected.tasks.length === 0 ? 
-            '<p class="text-tertiary" style="padding: 1rem;">Keine vergessenen Tasks! 👍</p>' :
-            `<div class="neglected-list">
-              ${neglected.tasks.map(task => `
-                <div class="neglected-item task-item">
-                  <div class="item-header">
-                    <div>
-                      <div class="item-title">${task.title}</div>
-                      <div class="item-meta">
-                        <span class="priority-badge priority-${task.priority}">${task.priority}</span>
-                        ${task.sphere ? `<span class="sphere-badge">${task.sphere}</span>` : ''}
-                        ${task.projectId ? `<span class="project-badge">Projekt</span>` : ''}
-                      </div>
-                    </div>
-                    <div class="days-badge danger">
-                      <i data-lucide="clock"></i>
-                      ${task.daysSinceUpdate} ${task.daysSinceUpdate === 1 ? 'Tag' : 'Tage'}
-                    </div>
-                  </div>
-                  <div class="item-actions">
-                    <button class="btn-small btn-primary" onclick="NexusRouter.navigate('tasks')">
-                      <i data-lucide="external-link"></i> Ansehen
-                    </button>
-                    <button class="btn-small btn-success" onclick="NexusStore.completeTask('${task.id}'); Analytics.render();">
-                      <i data-lucide="check"></i> Erledigen
-                    </button>
-                  </div>
-                </div>
-              `).join('')}
-            </div>`
-          }
-        </div>
-        
-        <!-- Stale Projects -->
-        <div class="metric-group" style="margin-top: 2rem;">
-          <h3 class="metric-group-title">
-            <i data-lucide="folder"></i> 
-            Vernachlässigte Projekte (>14 Tage)
-            <span class="badge ${neglected.projects.length > 0 ? 'badge-warning' : 'badge-success'}">${neglected.projects.length}</span>
-          </h3>
-          
-          ${neglected.projects.length === 0 ? 
-            '<p class="text-tertiary" style="padding: 1rem;">Keine vernachlässigten Projekte! 👍</p>' :
-            `<div class="neglected-list">
-              ${neglected.projects.map(project => `
-                <div class="neglected-item project-item">
-                  <div class="item-header">
-                    <div>
-                      <div class="item-title">${project.name}</div>
-                      <div class="item-meta">
-                        <span class="status-badge status-${project.status}">${project.status}</span>
-                        ${project.sphere ? `<span class="sphere-badge">${project.sphere}</span>` : ''}
-                      </div>
-                    </div>
-                    <div class="days-badge warning">
-                      <i data-lucide="clock"></i>
-                      ${project.daysSinceUpdate} ${project.daysSinceUpdate === 1 ? 'Tag' : 'Tage'}
-                    </div>
-                  </div>
-                  <div class="item-actions">
-                    <button class="btn-small btn-primary" onclick="NexusRouter.navigate('projects'); NexusRouter.openProjectDetail('${project.id}');">
-                      <i data-lucide="external-link"></i> Ansehen
-                    </button>
-                  </div>
-                </div>
-              `).join('')}
-            </div>`
-          }
-        </div>
-        
-        <!-- Stale Ventures -->
-        <div class="metric-group" style="margin-top: 2rem;">
-          <h3 class="metric-group-title">
-            <i data-lucide="rocket"></i> 
-            Vernachlässigte Ventures (>14 Tage)
-            <span class="badge ${neglected.ventures.length > 0 ? 'badge-warning' : 'badge-success'}">${neglected.ventures.length}</span>
-          </h3>
-          
-          ${neglected.ventures.length === 0 ? 
-            '<p class="text-tertiary" style="padding: 1rem;">Keine vernachlässigten Ventures! 👍</p>' :
-            `<div class="neglected-list">
-              ${neglected.ventures.map(venture => `
-                <div class="neglected-item venture-item">
-                  <div class="item-header">
-                    <div>
-                      <div class="item-title">${venture.name}</div>
-                      <div class="item-meta">
-                        <span class="status-badge status-${venture.status}">${venture.status}</span>
-                        ${venture.spheres && venture.spheres.length > 0 ? `<span class="sphere-badge">${venture.spheres[0]}</span>` : ''}
-                      </div>
-                    </div>
-                    <div class="days-badge warning">
-                      <i data-lucide="clock"></i>
-                      ${venture.daysSinceUpdate} ${venture.daysSinceUpdate === 1 ? 'Tag' : 'Tage'}
-                    </div>
-                  </div>
-                  <div class="item-actions">
-                    <button class="btn-small btn-primary" onclick="NexusRouter.navigate('ventures'); setTimeout(() => VentureHub.openVentureDetail('${venture.id}'), 100);">
-                      <i data-lucide="external-link"></i> Ansehen
-                    </button>
-                  </div>
-                </div>
-              `).join('')}
-            </div>`
-          }
-        </div>
-      </div>
-    `;
-  },
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // HELPER FUNCTIONS
+  // HELPERS
   // ═══════════════════════════════════════════════════════════════════════════
   
   getCompletionClass(percentage) {
     if (percentage >= 80) return 'text-success';
-    if (percentage >= 60) return 'text-warning';
+    if (percentage >= 60) return '';
     return 'text-danger';
   },
   
-  getCompletionColor(percentage) {
-    if (percentage >= 80) return 'var(--success)';
-    if (percentage >= 60) return 'var(--warning)';
-    return 'var(--danger)';
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  handleOptimizeSchedule() {
+    if (typeof AtlasController !== 'undefined') {
+      if (!AtlasController.isOpen) {
+        AtlasController.toggle();
+      }
+      setTimeout(() => {
+        const input = document.getElementById('atlas-input');
+        if (input) {
+          input.value = 'Optimiere meinen Schedule basierend auf Analytics-Daten';
+          input.focus();
+        }
+      }, 350);
+    }
+  },
+  
+  handleExportData() {
+    const history = NexusStore.getAnalyticsHistory();
+    const dataStr = JSON.stringify(history, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `athena-analytics-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    
+    NexusUI.showToast({ type: 'success', title: 'Export erfolgreich', message: 'Analytics-Daten heruntergeladen' });
+  },
+  
+  handleResetAnalytics() {
+    if (confirm('Wirklich alle Analytics-Daten zurücksetzen? Dies kann nicht rückgängig gemacht werden!')) {
+      localStorage.removeItem('athena_analytics_history');
+      this.render();
+      NexusUI.showToast({ type: 'info', title: 'Zurückgesetzt', message: 'Analytics-Daten wurden gelöscht' });
+    }
   }
 };
 
