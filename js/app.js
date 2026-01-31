@@ -11,7 +11,7 @@ const NexusApp = {
   
   // Initialize the application
   init() {
-    console.log('🌌 NEXUS ULTRA initializing...');
+    console.log('Athena Ultra initializing...');
     
     // Initialize Lucide icons
     if (window.lucide) {
@@ -43,7 +43,7 @@ const NexusApp = {
     // Navigate to default page
     this.navigateTo('command-center');
     
-    console.log('✅ NEXUS ULTRA ready!');
+    console.log('Athena Ultra ready!');
   },
   
   // Update sidebar badges with real counts

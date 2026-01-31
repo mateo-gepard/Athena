@@ -25,7 +25,7 @@ const SettingsModule = {
       <div class="flex items-center justify-between mb-6">
         <div>
           <h2 class="text-xl font-medium">Einstellungen</h2>
-          <p class="text-secondary">Konfiguriere NEXUS ULTRA nach deinen Wünschen</p>
+          <p class="text-secondary">Konfiguriere Athena Ultra nach deinen Wünschen</p>
         </div>
       </div>
       
@@ -438,7 +438,7 @@ const SettingsModule = {
       <div class="panel">
         <div class="panel-body text-center p-8">
           <div class="text-4xl mb-4">🌌</div>
-          <h2 class="text-2xl font-medium mb-2">NEXUS ULTRA</h2>
+          <h2 class="text-2xl font-medium mb-2">Athena Ultra</h2>
           <p class="text-secondary mb-4">Das ultimative Life Operating System</p>
           <p class="text-tertiary text-sm mb-6">Version 1.0.0</p>
           

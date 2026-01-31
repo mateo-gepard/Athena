@@ -8,8 +8,11 @@ const MindCanvas = {
   notes: [],
   selectedNote: null,
   canvasOffset: { x: 0, y: 0 },
-  isDragging: false,
+  isDraggingNote: false,
+  isDraggingCanvas: false,
+  draggedNote: null,
   dragStart: { x: 0, y: 0 },
+  dragOffset: { x: 0, y: 0 },
   view: 'canvas', // canvas | list | graph
   
   // Initialize
@@ -143,11 +146,11 @@ const MindCanvas = {
             <span class="sphere-dot" style="background: var(--color-sphere-${note.sphere})"></span>
           ` : ''}
           <div class="canvas-note-actions">
-            <button class="btn-icon-sm" title="Bearbeiten">
+            <button class="btn-icon-sm" data-action="edit-note" title="Bearbeiten">
               ${NexusUI.icon('edit-2', 12)}
             </button>
-            <button class="btn-icon-sm" title="Verknüpfen">
-              ${NexusUI.icon('link', 12)}
+            <button class="btn-icon-sm" data-action="delete-note" title="Löschen">
+              ${NexusUI.icon('trash-2', 12)}
             </button>
           </div>
         </div>
@@ -505,6 +508,21 @@ const MindCanvas = {
     NexusUI.showToast('Notiz erstellt', 'success');
   },
   
+  // Delete note
+  deleteNote(noteId) {
+    if (!confirm('Notiz wirklich löschen?')) return;
+    
+    NexusStore.deleteNote(noteId);
+    this.notes = NexusStore.getNotes();
+    
+    if (this.selectedNote?.id === noteId) {
+      this.selectedNote = null;
+    }
+    
+    this.render();
+    NexusUI.showToast('Notiz gelöscht', 'success');
+  },
+  
   // Save current note
   saveNote() {
     if (!this.selectedNote) return;
@@ -540,6 +558,17 @@ const MindCanvas = {
   // Setup event listeners
   setupEventListeners() {
     document.addEventListener('click', (e) => {
+      // Delete note
+      const deleteBtn = e.target.closest('[data-action="delete-note"]');
+      if (deleteBtn) {
+        const noteEl = deleteBtn.closest('[data-note-id]');
+        if (noteEl) {
+          e.stopPropagation();
+          this.deleteNote(noteEl.dataset.noteId);
+        }
+        return;
+      }
+      
       // New note button
       if (e.target.closest('#mc-new-note') || e.target.closest('#mc-first-note')) {
         this.createNote();
@@ -553,9 +582,9 @@ const MindCanvas = {
         return;
       }
       
-      // Note selection
+      // Note selection (but not when clicking action buttons)
       const noteEl = e.target.closest('.canvas-note, .note-list-item, .graph-node');
-      if (noteEl && noteEl.dataset.noteId) {
+      if (noteEl && noteEl.dataset.noteId && !e.target.closest('.canvas-note-actions')) {
         this.selectNote(noteEl.dataset.noteId);
         return;
       }
@@ -571,6 +600,60 @@ const MindCanvas = {
       if (backlink && backlink.dataset.noteId) {
         this.selectNote(backlink.dataset.noteId);
         return;
+      }
+    });
+    
+    // Drag & Drop for canvas notes
+    document.addEventListener('mousedown', (e) => {
+      const noteEl = e.target.closest('.canvas-note');
+      if (noteEl && !e.target.closest('.canvas-note-actions') && !e.target.closest('.canvas-note-resize-handle')) {
+        e.preventDefault();
+        this.isDraggingNote = true;
+        this.draggedNote = this.notes.find(n => n.id === noteEl.dataset.noteId);
+        
+        const rect = noteEl.getBoundingClientRect();
+        const canvasRect = document.getElementById('canvas-area')?.getBoundingClientRect();
+        
+        if (this.draggedNote && canvasRect) {
+          this.dragOffset.x = e.clientX - rect.left;
+          this.dragOffset.y = e.clientY - rect.top;
+        }
+      }
+    });
+    
+    document.addEventListener('mousemove', (e) => {
+      if (this.isDraggingNote && this.draggedNote) {
+        e.preventDefault();
+        
+        const canvasRect = document.getElementById('canvas-area')?.getBoundingClientRect();
+        if (!canvasRect) return;
+        
+        const newX = e.clientX - canvasRect.left - this.dragOffset.x - this.canvasOffset.x;
+        const newY = e.clientY - canvasRect.top - this.dragOffset.y - this.canvasOffset.y;
+        
+        // Update position
+        if (!this.draggedNote.position) this.draggedNote.position = {};
+        this.draggedNote.position.x = Math.max(0, newX);
+        this.draggedNote.position.y = Math.max(0, newY);
+        
+        // Update visual position immediately
+        const noteEl = document.querySelector(`[data-note-id="${this.draggedNote.id}"]`);
+        if (noteEl) {
+          noteEl.style.left = `${this.draggedNote.position.x}px`;
+          noteEl.style.top = `${this.draggedNote.position.y}px`;
+        }
+      }
+    });
+    
+    document.addEventListener('mouseup', (e) => {
+      if (this.isDraggingNote && this.draggedNote) {
+        // Save position to store
+        NexusStore.updateNote(this.draggedNote.id, {
+          position: this.draggedNote.position
+        });
+        
+        this.isDraggingNote = false;
+        this.draggedNote = null;
       }
     });
     

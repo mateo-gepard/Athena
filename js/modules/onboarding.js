@@ -42,7 +42,7 @@ const OnboardingModule = {
         <div class="onboarding-hero">
           <div class="onboarding-logo">
             <span class="logo-icon">◈</span>
-            <span class="logo-text">NEXUS ULTRA</span>
+            <span class="logo-text">Athena ULTRA</span>
           </div>
           <h1 class="onboarding-title">Dein persönliches<br>Life Operating System</h1>
           <p class="onboarding-subtitle">
@@ -59,7 +59,7 @@ const OnboardingModule = {
         <div class="onboarding-content">
           <div class="onboarding-icon">👋</div>
           <h2 class="onboarding-heading">Wie dürfen wir dich nennen?</h2>
-          <p class="onboarding-text">Personalisiere dein NEXUS-Erlebnis</p>
+          <p class="onboarding-text">Personalisiere dein Athena-Erlebnis</p>
           <input 
             type="text" 
             id="onboarding-name" 
@@ -78,7 +78,7 @@ const OnboardingModule = {
         <div class="onboarding-content">
           <div class="onboarding-icon">🌐</div>
           <h2 class="onboarding-heading">Deine Lebensbereiche</h2>
-          <p class="onboarding-text">NEXUS organisiert dein Leben in "Sphären" – verschiedene Bereiche wie Arbeit, Projekte, Sport etc. Du kannst alle Tasks, Habits und Projekte einer oder mehreren Sphären zuordnen.</p>
+          <p class="onboarding-text">Athena organisiert dein Leben in "Sphären" – verschiedene Bereiche wie Arbeit, Projekte, Sport etc. Du kannst alle Tasks, Habits und Projekte einer oder mehreren Sphären zuordnen.</p>
           <div class="onboarding-spheres">
             <label class="sphere-option selected" data-sphere="geschaeft">
               <span class="sphere-icon">💼</span>

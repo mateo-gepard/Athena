@@ -434,6 +434,32 @@ const NexusStore = {
     return venture;
   },
   
+  updateVenture(id, updates) {
+    const index = this.state.ventures.findIndex(v => v.id === id);
+    if (index !== -1) {
+      this.state.ventures[index] = {
+        ...this.state.ventures[index],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+      this.save();
+      this.notify('venture:updated', this.state.ventures[index]);
+      return this.state.ventures[index];
+    }
+    return null;
+  },
+  
+  deleteVenture(id) {
+    const index = this.state.ventures.findIndex(v => v.id === id);
+    if (index !== -1) {
+      const venture = this.state.ventures.splice(index, 1)[0];
+      this.save();
+      this.notify('venture:deleted', venture);
+      return venture;
+    }
+    return null;
+  },
+  
   // ═══ GOALS ═══
   
   getGoals() {
@@ -462,6 +488,36 @@ const NexusStore = {
     return goal;
   },
   
+  updateGoal(id, updates) {
+    const index = this.state.goals.findIndex(g => g.id === id);
+    if (index !== -1) {
+      this.state.goals[index] = {
+        ...this.state.goals[index],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+      this.save();
+      this.notify('goal:updated', this.state.goals[index]);
+      return this.state.goals[index];
+    }
+    return null;
+  },
+  
+  deleteGoal(id) {
+    const index = this.state.goals.findIndex(g => g.id === id);
+    if (index !== -1) {
+      const goal = this.state.goals.splice(index, 1)[0];
+      this.save();
+      this.notify('goal:deleted', goal);
+      return goal;
+    }
+    return null;
+  },
+  
+  getGoalById(id) {
+    return this.state.goals.find(g => g.id === id);
+  },
+  
   // ═══ NOTES ═══
   
   getNotes() {
@@ -486,10 +542,44 @@ const NexusStore = {
     return note;
   },
   
+  updateNote(id, updates) {
+    const index = this.state.notes.findIndex(n => n.id === id);
+    if (index !== -1) {
+      this.state.notes[index] = {
+        ...this.state.notes[index],
+        ...updates,
+        updatedAt: new Date().toISOString()
+      };
+      this.save();
+      this.notify('note:updated', this.state.notes[index]);
+      return this.state.notes[index];
+    }
+    return null;
+  },
+  
+  deleteNote(id) {
+    const index = this.state.notes.findIndex(n => n.id === id);
+    if (index !== -1) {
+      const note = this.state.notes.splice(index, 1)[0];
+      this.save();
+      this.notify('note:deleted', note);
+      return note;
+    }
+    return null;
+  },
+  
+  getNoteById(id) {
+    return this.state.notes.find(n => n.id === id);
+  },
+  
   // ═══ CONTACTS ═══
   
   getContacts() {
     return this.state.contacts;
+  },
+  
+  getContactById(id) {
+    return this.state.contacts.find(c => c.id === id);
   },
   
   addContact(contactData) {
@@ -699,7 +789,7 @@ const NexusStore = {
     
     // Sample tasks
     this.addTask({
-      title: 'Willkommen bei NEXUS ULTRA! 👋',
+      title: 'Willkommen bei Athena Ultra!',  
       description: 'Klicke auf das Häkchen um diese Task als erledigt zu markieren.',
       spheres: ['freizeit'],
       priority: 'normal',
@@ -730,7 +820,7 @@ const NexusStore = {
   
   // Clear all data
   clearAll() {
-    console.log('🗑️ Clearing ALL NEXUS data...');
+    console.log('Clearing ALL Athena data...');
     
     // Clear localStorage completely (not just nexus keys, to be thorough)
     try {

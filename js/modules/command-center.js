@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
-   NEXUS ULTRA - Command Center Module
+   Athena Ultra - Command Center Module
    Das tägliche Mission Control
    ═══════════════════════════════════════════════════════════════════════════════ */
 
@@ -44,7 +44,7 @@ const CommandCenter = {
     }
     
     // Show loading state
-    briefingEl.innerHTML = '<div class="loading">🤖 Atlas erstellt dein Morning Briefing...</div>';
+    briefingEl.innerHTML = '<div class="loading"><i data-lucide="bot"></i> Atlas erstellt dein Morning Briefing...</div>';
     
     // Check if API key is configured
     if (!AtlasAI.hasApiKey()) {
@@ -86,23 +86,23 @@ const CommandCenter = {
     const highestStreak = habits.reduce((max, h) => h.streak > max.streak ? h : max, { streak: 0 });
     
     // Build briefing content
-    let briefing = '🌅 Guten Morgen! Hier ist dein Tag:<br><br>';
+    let briefing = '<i data-lucide="sunrise"></i> Guten Morgen! Hier ist dein Tag:<br><br>';
     
     briefing += `Du hast <strong>${todayTasks.length} Tasks</strong> geplant (ca. ${totalHours}h). `;
     briefing += `${habits.length - completedHabits.length} Habits sind noch fällig.<br><br>`;
     
     if (overdueTasks.length > 0) {
-      briefing += `⚠️ <strong>${overdueTasks.length} überfällige Tasks</strong> brauchen deine Aufmerksamkeit.<br><br>`;
+      briefing += `<i data-lucide="alert-triangle"></i> <strong>${overdueTasks.length} überfällige Tasks</strong> brauchen deine Aufmerksamkeit.<br><br>`;
     }
     
     if (highestStreak.streak > 30) {
-      briefing += `💡 Dein ${highestStreak.name}-Streak ist bei ${highestStreak.streak} Tagen! Weiter so! 🔥<br><br>`;
+      briefing += `<i data-lucide="lightbulb"></i> Dein ${highestStreak.name}-Streak ist bei ${highestStreak.streak} Tagen! Weiter so! <i data-lucide="flame"></i><br><br>`;
     }
     
     // Find critical tasks
     const criticalTasks = todayTasks.filter(t => t.priority === 'critical');
     if (criticalTasks.length > 0) {
-      briefing += `🔴 <strong>${criticalTasks.length} kritische Tasks</strong> heute: `;
+      briefing += `<i data-lucide="alert-circle"></i> <strong>${criticalTasks.length} kritische Tasks</strong> heute: `;
       briefing += criticalTasks.map(t => `"${t.title}"`).join(', ');
     }
     
@@ -225,7 +225,7 @@ const CommandCenter = {
           <div class="task-meta">
             <span class="badge">HABIT</span>
             <span class="task-meta-separator">·</span>
-            <span>Streak: ${habit.streak} ${habit.streak > 0 ? '🔥' : ''}</span>
+            <span>Streak: ${habit.streak} ${habit.streak > 0 ? '<i data-lucide="flame"></i>' : ''}</span>
           </div>
         </div>
         <div class="task-time">
@@ -247,7 +247,7 @@ const CommandCenter = {
     
     if (overdueContainer) {
       if (overdueTasks.length === 0) {
-        overdueContainer.innerHTML = '<div class="text-tertiary">Keine überfälligen Tasks 🎉</div>';
+        overdueContainer.innerHTML = '<div class="text-tertiary">Keine überfälligen Tasks <i data-lucide="party-popper"></i></div>';
       } else {
         overdueContainer.innerHTML = overdueTasks.slice(0, 3).map(task => 
           this.renderPoolTask(task)
@@ -422,7 +422,7 @@ const CommandCenter = {
         NexusStore.completeTask(taskId);
         NexusUI.showToast({
           type: 'success',
-          title: 'Task erledigt! ✓',
+          title: 'Task erledigt!',
           message: task.title
         });
       }
@@ -442,7 +442,7 @@ const CommandCenter = {
       NexusUI.showToast({
         type: 'success',
         title: `${habit.icon} ${habit.name}`,
-        message: `Streak: ${habit.streak + 1} Tage! 🔥`
+        message: `Streak: ${habit.streak + 1} Tage!`
       });
     }
   },

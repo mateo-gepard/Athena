@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
-   NEXUS ULTRA - Entity System
-   Unified Entity Structure nach dem NEXUS ULTRA Schema
+   Athena Ultra - Entity System
+   Unified Entity Structure nach dem Athena Ultra Schema
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 const EntityTypes = {

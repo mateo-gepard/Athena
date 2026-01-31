@@ -359,7 +359,7 @@ const NexusUI = {
           <div class="habit-name">${habit.name}</div>
           <div class="habit-streak">
             <span>Streak: ${habit.streak}</span>
-            ${habit.streak > 0 ? '<span class="streak-fire">🔥</span>' : ''}
+            ${habit.streak > 0 ? '<span class="streak-fire"><i data-lucide="flame"></i></span>' : ''}
           </div>
         </div>
         <div class="task-checkbox ${isCompleted ? 'checked' : ''}" data-action="toggle-habit"></div>
