@@ -736,15 +736,17 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
   },
   
   // Test API connection
-  async testConnection() {
-    if (!this.isConfigured()) {
+  async testConnection(apiKey = null) {
+    const keyToTest = apiKey || this.getApiKey();
+    
+    if (!keyToTest) {
       return { success: false, error: 'Kein API Key konfiguriert' };
     }
     
     try {
       const response = await this.chat([
         { role: 'user', content: 'Antworte nur mit "OK"' }
-      ], { maxTokens: 10 });
+      ], { maxTokens: 10, apiKey: keyToTest });
       
       return { success: true, message: 'Verbindung erfolgreich!' };
     } catch (error) {
@@ -1726,7 +1728,7 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
   
   // Core chat function (expects messages array)
   async chat(messages, options = {}) {
-    const apiKey = this.getApiKey();
+    const apiKey = options.apiKey || this.getApiKey();
     
     if (!apiKey) {
       throw new Error('OpenAI API Key nicht konfiguriert. Gehe zu Einstellungen.');

@@ -647,17 +647,15 @@ const SettingsModule = {
       return;
     }
     
-    AtlasAI.setApiKey(key);
-    
-    // Test the connection
+    // Test the connection BEFORE saving
     NexusUI.showToast('Teste Verbindung...', 'info');
-    const result = await AtlasAI.testConnection();
+    const result = await AtlasAI.testConnection(key);
     
     if (result.success) {
+      AtlasAI.setApiKey(key);
       NexusUI.showToast('API Key gespeichert & verifiziert!', 'success');
       this.render();
     } else {
-      AtlasAI.removeApiKey();
       NexusUI.showToast('Verbindung fehlgeschlagen: ' + result.error, 'error');
     }
   },
