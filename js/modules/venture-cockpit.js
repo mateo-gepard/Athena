@@ -294,7 +294,7 @@ const VentureCockpit = {
           <div class="grid" style="grid-template-columns: repeat(3, 1fr); gap: var(--space-4);">
             <div class="stat-card">
               <div class="stat-label">📊 ROI Score</div>
-              <div class="stat-value">${venture.roiProjection?.score || '-'}/10</div>
+              <div class="stat-value">${venture.evaluation?.roiScore || venture.roiProjection?.score || '-'}/10</div>
             </div>
             <div class="stat-card">
               <div class="stat-label">⏱️ Time Invested</div>
@@ -302,7 +302,7 @@ const VentureCockpit = {
             </div>
             <div class="stat-card">
               <div class="stat-label">📈 Expected Return</div>
-              <div class="stat-value">${venture.roiProjection?.expected || '-'}x</div>
+              <div class="stat-value">${venture.evaluation?.expectedReturn || venture.roiProjection?.expected || '-'}</div>
             </div>
           </div>
           <div class="mt-6">
@@ -467,24 +467,24 @@ const VentureCockpit = {
   
   // Render blockers
   renderBlockers(venture) {
-    // Get blockers from venture
-    const blockers = venture.blockers || [];
+    // Get barriers from venture (support both barriers and blockers for backwards compatibility)
+    const barriers = venture.barriers || venture.blockers || [];
     
-    if (blockers.length === 0) {
+    if (barriers.length === 0) {
       return '<div class="text-center text-success p-4">✓ Keine Blocker</div>';
     }
     
-    return blockers.map(b => `
+    return barriers.map(b => `
       <div class="p-3 mb-3 rounded-md bg-surface-1 border-l-3" 
-           style="border-left: 3px solid ${b.severity === 'high' ? 'var(--color-critical)' : 'var(--color-warning)'}">
+           style="border-left: 3px solid ${b.severity === 'high' || b.severity === 'critical' ? 'var(--color-critical)' : b.severity === 'medium' ? 'var(--color-warning)' : 'var(--color-info)'}">
         <div class="flex items-center gap-2 mb-1">
-          <span class="${b.severity === 'high' ? 'text-critical' : 'text-warning'}">
-            ${b.severity === 'high' ? '🔴' : '🟡'}
+          <span class="${b.severity === 'high' || b.severity === 'critical' ? 'text-critical' : b.severity === 'medium' ? 'text-warning' : 'text-info'}">
+            ${b.severity === 'high' || b.severity === 'critical' ? '🔴' : b.severity === 'medium' ? '🟡' : '🔵'}
           </span>
           <span class="font-medium">${b.description}</span>
         </div>
-        <div class="text-sm text-secondary mb-1">Impact: ${b.impact}</div>
-        <div class="text-sm text-tertiary">💡 ${b.suggestion}</div>
+        ${b.impact ? `<div class="text-sm text-secondary mb-1">Impact: ${b.impact}</div>` : ''}
+        ${b.suggestion || b.suggestedAction ? `<div class="text-sm text-tertiary">💡 ${b.suggestion || b.suggestedAction}</div>` : ''}
       </div>
     `).join('');
   },
