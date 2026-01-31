@@ -106,6 +106,9 @@ const TemporalEngine = {
     `;
     
     NexusUI.refreshIcons();
+    
+    // Re-attach event listeners after render
+    this.setupEventListeners();
   },
   
   // Get date title based on view
@@ -614,6 +617,7 @@ const TemporalEngine = {
   
   // Navigate calendar
   navigate(direction) {
+    console.log('🧭Navigating:', direction, 'Current view:', this.currentView, 'Current date:', this.currentDate);
     const d = new Date(this.currentDate);
     
     switch (this.currentView) {
@@ -629,6 +633,7 @@ const TemporalEngine = {
     }
     
     this.currentDate = d;
+    console.log('➡️ New date:', d);
     this.render();
   },
   
@@ -640,6 +645,7 @@ const TemporalEngine = {
   
   // Switch view
   switchView(view) {
+    console.log('🔄 Switching view to:', view);
     this.currentView = view;
     this.render();
   },
