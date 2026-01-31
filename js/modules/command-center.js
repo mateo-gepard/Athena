@@ -22,7 +22,6 @@ const CommandCenter = {
   render() {
     this.renderGreeting();
     this.renderHeaderStats();
-    this.renderMorningBriefing();
     this.renderFocusBlock();
     this.renderTimeBlocks();
     this.renderHabits();
@@ -35,6 +34,7 @@ const CommandCenter = {
   renderGreeting() {
     const greetingEl = document.getElementById('cc-greeting');
     const dateTimeEl = document.getElementById('cc-date-time');
+    const motivationEl = document.getElementById('cc-motivation');
     if (!greetingEl || !dateTimeEl) return;
     
     const now = new Date();
@@ -53,6 +53,19 @@ const CommandCenter = {
     const time = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
     
     dateTimeEl.textContent = `${dayName}, ${day}. ${month} ${year} · ${time}`;
+    
+    // Dynamic motivation based on time of day
+    if (motivationEl) {
+      let motivation = '';
+      if (hour < 12) {
+        motivation = 'Heute ist ein guter Tag, um Großes zu erreichen.';
+      } else if (hour < 18) {
+        motivation = 'Der Tag ist noch jung – nutze die Zeit weise.';
+      } else {
+        motivation = 'Ein erfolgreicher Tag endet mit Reflexion und Dankbarkeit.';
+      }
+      motivationEl.textContent = motivation;
+    }
   },
   
   // Render Header Stats
@@ -120,101 +133,6 @@ const CommandCenter = {
       const time = focusTask.timeEstimate ? `${(focusTask.timeEstimate / 60).toFixed(1)}h` : '0h';
       timeEl.textContent = time;
     }
-  },
-  
-  // Render Atlas Morning Briefing (AI-generated with caching)
-  async renderMorningBriefing() {
-    const briefingEl = document.getElementById('atlasBriefing');
-    if (!briefingEl) return;
-    
-    // Check if auto-briefing is enabled
-    const settings = NexusStore.getSettings();
-    if (settings.autoBriefing === false) {
-      briefingEl.innerHTML = `
-        <div class="text-tertiary text-center p-4">
-          <i data-lucide="bot"></i>
-          <p class="mt-2">Automatisches Morning Briefing ist deaktiviert</p>
-          <p class="text-xs mt-1">Aktiviere es in den Einstellungen unter "Atlas AI"</p>
-        </div>
-      `;
-      NexusUI.refreshIcons();
-      return;
-    }
-    
-    const today = new Date().toISOString().split('T')[0];
-    const cacheKey = `briefing_${today}`;
-    
-    // Check if we have a cached briefing for today
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      briefingEl.innerHTML = cached;
-      return;
-    }
-    
-    // Show loading state
-    briefingEl.innerHTML = '<div class="loading"><i data-lucide="bot"></i> Atlas erstellt dein Morning Briefing...</div>';
-    
-    // Check if API key is configured
-    if (!AtlasAI.hasApiKey()) {
-      this.renderManualBriefing();
-      return;
-    }
-    
-    try {
-      // Generate AI briefing
-      const briefingHTML = await AtlasAI.generateMorningBriefing();
-      
-      // Cache it for the day
-      localStorage.setItem(cacheKey, briefingHTML);
-      
-      // Display it
-      briefingEl.innerHTML = briefingHTML;
-    } catch (error) {
-      console.error('Failed to generate AI briefing:', error);
-      this.renderManualBriefing();
-    }
-  },
-  
-  // Fallback: Manual briefing when no API key
-  renderManualBriefing() {
-    const briefingEl = document.getElementById('atlasBriefing');
-    if (!briefingEl) return;
-    
-    const today = new Date().toISOString().split('T')[0];
-    const todayTasks = NexusStore.getTasksForDate(today);
-    const overdueTasks = NexusStore.getOverdueTasks();
-    const habits = NexusStore.getHabits();
-    const completedHabits = habits.filter(h => NexusStore.isHabitCompletedToday(h.id));
-    
-    // Calculate total planned time
-    const totalMinutes = todayTasks.reduce((sum, t) => sum + (t.timeEstimate || 0), 0);
-    const totalHours = (totalMinutes / 60).toFixed(1);
-    
-    // Find highest streak habit
-    const highestStreak = habits.reduce((max, h) => h.streak > max.streak ? h : max, { streak: 0 });
-    
-    // Build briefing content
-    let briefing = '<i data-lucide="sunrise"></i> Guten Morgen! Hier ist dein Tag:<br><br>';
-    
-    briefing += `Du hast <strong>${todayTasks.length} Tasks</strong> geplant (ca. ${totalHours}h). `;
-    briefing += `${habits.length - completedHabits.length} Habits sind noch fällig.<br><br>`;
-    
-    if (overdueTasks.length > 0) {
-      briefing += `<i data-lucide="alert-triangle"></i> <strong>${overdueTasks.length} überfällige Tasks</strong> brauchen deine Aufmerksamkeit.<br><br>`;
-    }
-    
-    if (highestStreak.streak > 30) {
-      briefing += `<i data-lucide="lightbulb"></i> Dein ${highestStreak.name}-Streak ist bei ${highestStreak.streak} Tagen! Weiter so! <i data-lucide="flame"></i><br><br>`;
-    }
-    
-    // Find critical tasks
-    const criticalTasks = todayTasks.filter(t => t.priority === 'critical');
-    if (criticalTasks.length > 0) {
-      briefing += `<i data-lucide="alert-circle"></i> <strong>${criticalTasks.length} kritische Tasks</strong> heute: `;
-      briefing += criticalTasks.map(t => `"${t.title}"`).join(', ');
-    }
-    
-    briefingEl.innerHTML = briefing;
   },
   
   // Render Time Blocks (Morning, Afternoon, Evening)

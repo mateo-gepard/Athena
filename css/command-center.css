@@ -56,6 +56,14 @@
   margin-top: 4px;
 }
 
+.cc-motivation {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  font-style: italic;
+  opacity: 0.9;
+}
+
 .cc-mission-stats {
   display: flex;
   align-items: center;
@@ -89,99 +97,6 @@
   width: 1px;
   height: 40px;
   background: var(--border);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   ATLAS BRIEFING (Compact)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-.cc-atlas-briefing {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px 20px;
-  background: var(--color-surface-1);
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-}
-
-.cc-atlas-briefing:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
-  border-color: rgba(102, 126, 234, 0.3);
-}
-
-.cc-briefing-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.cc-briefing-icon i {
-  width: 22px;
-  height: 22px;
-  color: white;
-}
-
-.cc-briefing-content {
-  flex: 1;
-  min-width: 0;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-secondary);
-}
-
-.cc-briefing-loading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--text-tertiary);
-  font-style: italic;
-}
-
-.cc-briefing-loading i {
-  width: 16px;
-  height: 16px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.cc-briefing-action {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--primary);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.cc-briefing-action:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.cc-briefing-action i {
-  width: 16px;
-  height: 16px;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -825,16 +740,6 @@
   .cc-mission-stats {
     width: 100%;
     justify-content: space-between;
-  }
-  
-  .cc-atlas-briefing {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  
-  .cc-briefing-action {
-    width: 100%;
-    justify-content: center;
   }
 }
 

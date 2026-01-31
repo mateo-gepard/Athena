@@ -135,13 +135,13 @@
 }
 
 .atlas-chat-item.active {
-  background: rgba(102, 126, 234, 0.15);
-  border-color: rgba(102, 126, 234, 0.3);
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
 }
 
 .atlas-chat-item.pinned {
-  background: rgba(255, 215, 0, 0.08);
-  border-color: rgba(255, 215, 0, 0.2);
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
 }
 
 .atlas-chat-icon {
