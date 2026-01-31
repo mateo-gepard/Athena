@@ -723,7 +723,9 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
   
   // Get API key from settings
   getApiKey() {
+    console.log('🔍 getApiKey: Calling NexusStore.getSettings()...');
     const settings = NexusStore.getSettings();
+    console.log('🔍 getApiKey: Got settings object:', settings);
     const apiKey = settings.apiKey || null;
     console.log('🔑 AtlasAI.getApiKey():', { apiKey: apiKey ? '***' + apiKey.slice(-4) : 'null', settings });
     return apiKey;
