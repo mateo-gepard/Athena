@@ -24,7 +24,7 @@ DEINE FÄHIGKEITEN:
 Du kannst das System für den Nutzer bedienen. Wenn der Nutzer dich bittet, etwas zu tun, antworte mit speziellen Befehlen die das System ausführt.
 
 VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
-[ACTION:ADD_TASK:{"title":"Task Titel","priority":"normal|high|critical","sphere":"geschaeft|projekte|schule|sport|freizeit","dueDate":"YYYY-MM-DD oder null"}]
+[ACTION:ADD_TASK:{"title":"Task Titel","priority":"normal|high|critical","sphere":"geschaeft|projekte|schule|sport|freizeit","dueDate":"YYYY-MM-DD oder null","time":"HH:MM oder null"}]
 [ACTION:COMPLETE_TASK:{"id":"task-id"}]
 [ACTION:ADD_HABIT:{"name":"Habit Name","frequency":"daily|weekly","sphere":"..."}]
 [ACTION:ADD_PROJECT:{"name":"Projekt Name","description":"..."}]
@@ -32,6 +32,11 @@ VERFÜGBARE BEFEHLE (nutze exakt dieses Format):
 [ACTION:SHOW_TASKS]
 [ACTION:SHOW_HABITS]
 [ACTION:SHOW_SUMMARY]
+
+WICHTIG FÜR ZEITEN:
+- Wenn der Nutzer eine Uhrzeit nennt (z.B. "um 14 Uhr", "um 9:30"), setze das "time" Feld im Format "HH:MM"
+- "morgen um 10" = dueDate: morgen, time: "10:00"
+- "heute nachmittag" = dueDate: heute, time: "14:00"
 
 KONTEXT-INFOS DIE DU ERHÄLTST:
 - Aktuelle Tasks, Habits, Projekte
@@ -261,9 +266,10 @@ ${projects.map(p => `- "${p.name}"`).join('\n') || 'Keine Projekte'}
             priority: action.data.priority || 'normal',
             spheres: action.data.sphere ? [action.data.sphere] : ['freizeit'],
             deadline: action.data.dueDate || null,
-            scheduledDate: action.data.dueDate || null // Also set scheduledDate for calendar
+            scheduledDate: action.data.dueDate || null,
+            scheduledTime: action.data.time || null // Add time support
           });
-          console.log('✅ Task created:', newTask.title, '| ID:', newTask.id);
+          console.log('✅ Task created:', newTask.title, '| ID:', newTask.id, '| Time:', newTask.scheduledTime);
           // Refresh UI
           if (typeof NexusApp !== 'undefined') {
             NexusApp.refreshCurrentPage();

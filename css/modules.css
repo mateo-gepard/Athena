@@ -601,6 +601,22 @@
   background: rgba(107, 104, 98, 0.15);
 }
 
+/* Task priority colors in calendar */
+.calendar-event.time-block.type-task {
+  border-left-color: var(--color-sphere-geschaeft);
+  background: rgba(74, 124, 148, 0.15);
+}
+
+.calendar-event.time-block.type-high {
+  border-left-color: var(--color-warning);
+  background: rgba(196, 160, 92, 0.15);
+}
+
+.calendar-event.time-block.type-critical {
+  border-left-color: var(--color-critical);
+  background: rgba(196, 92, 92, 0.2);
+}
+
 .calendar-event.deadline {
   background: rgba(200, 80, 80, 0.2);
   border-left: 3px solid var(--color-critical);

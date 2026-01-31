@@ -287,26 +287,29 @@ const TemporalEngine = {
   // Render events for a specific day
   renderDayEvents(date, dayIndex) {
     const dateStr = date.toISOString().split('T')[0];
-    const tasks = NexusStore.getTasks().filter(t => {
+    const allTasks = NexusStore.getTasks().filter(t => {
       // Check both scheduledDate and deadline
       const taskDate = t.scheduledDate || t.deadline;
       if (!taskDate) return false;
       return taskDate.split('T')[0] === dateStr;
     });
     
+    // Separate tasks with time from tasks without time
+    const tasksWithTime = allTasks.filter(t => t.scheduledTime);
+    const tasksWithoutTime = allTasks.filter(t => !t.scheduledTime);
+    
     // Get time blocks from store (events with time)
     const events = NexusStore.state.events || [];
-    const dayStr = date.toISOString().split('T')[0];
-    const todayBlocks = events.filter(e => e.date === dayStr && e.startTime);
+    const todayBlocks = events.filter(e => e.date === dateStr && e.startTime);
     
     let html = '';
     
-    // Render time blocks / events
+    // Render events from store
     if (this.layers.events && todayBlocks.length > 0) {
       todayBlocks.forEach(block => {
         const startHour = parseInt(block.startTime?.split(':')[0] || 9);
         const endHour = parseInt(block.endTime?.split(':')[0] || startHour + 1);
-        const top = (startHour - 6) * 60; // 60px per hour, starting at 6am
+        const top = (startHour - 6) * 60;
         const height = Math.max((endHour - startHour) * 60, 30);
         
         html += `
@@ -319,9 +322,27 @@ const TemporalEngine = {
       });
     }
     
-    // Render task deadlines
-    if (this.layers.deadlines) {
-      tasks.forEach((task, idx) => {
+    // Render tasks WITH scheduled time as time blocks
+    tasksWithTime.forEach(task => {
+      const [hours, minutes] = task.scheduledTime.split(':').map(Number);
+      const top = (hours - 6) * 60 + (minutes || 0);
+      const height = task.timeEstimate ? Math.max(task.timeEstimate, 30) : 45;
+      
+      const priorityClass = task.priority === 'critical' ? 'type-critical' : 
+                            task.priority === 'high' ? 'type-high' : 'type-task';
+      
+      html += `
+        <div class="calendar-event time-block ${priorityClass}" 
+             style="top: ${top}px; height: ${height}px;" data-task-id="${task.id}">
+          <div class="event-time">${task.scheduledTime}</div>
+          <div class="event-title">${task.title}</div>
+        </div>
+      `;
+    });
+    
+    // Render tasks WITHOUT time as deadline badges (at top)
+    if (this.layers.deadlines && tasksWithoutTime.length > 0) {
+      tasksWithoutTime.forEach((task, idx) => {
         html += `
           <div class="calendar-event deadline" 
                style="top: ${10 + idx * 28}px; right: 4px; left: auto; width: 100px; height: 24px;">
