@@ -216,10 +216,24 @@ const ProjectsModule = {
           </div>
         </div>
         
-        ${project.deadline ? `
+        ${project.targetEnd || project.deadline ? `
           <div class="project-deadline">
             ${NexusUI.icon('calendar', 14)}
-            <span>${NexusUI.formatDate(new Date(project.deadline))}</span>
+            <span>${NexusUI.formatDate(new Date(project.targetEnd || project.deadline))}</span>
+          </div>
+        ` : ''}
+        
+        ${project.phases && project.phases.length > 0 ? `
+          <div class="text-xs text-tertiary mt-2">
+            ${NexusUI.icon('list', 12)}
+            ${project.phases.length} Phase${project.phases.length > 1 ? 'n' : ''}
+          </div>
+        ` : ''}
+        
+        ${project.team && project.team.length > 0 ? `
+          <div class="text-xs text-tertiary mt-1">
+            ${NexusUI.icon('users', 12)}
+            ${project.team.length} Mitglied${project.team.length > 1 ? 'er' : ''}
           </div>
         ` : ''}
         
@@ -290,7 +304,8 @@ const ProjectsModule = {
       icon: document.getElementById('new-project-icon')?.value || '📁',
       description: document.getElementById('new-project-description')?.value || '',
       sphere: document.getElementById('new-project-sphere')?.value || null,
-      deadline: document.getElementById('new-project-deadline')?.value || null,
+      targetEnd: document.getElementById('new-project-deadline')?.value || null,
+      deadline: document.getElementById('new-project-deadline')?.value || null, // Keep for backwards compatibility
       notes: document.getElementById('new-project-notes')?.value || '',
       status: 'active',
       progress: 0
@@ -336,9 +351,40 @@ const ProjectsModule = {
           </div>
           <div class="stat-card">
             <div class="stat-label">Deadline</div>
-            <div class="stat-value">${project.deadline ? NexusUI.formatDate(new Date(project.deadline)) : '-'}</div>
+            <div class="stat-value">${project.targetEnd || project.deadline ? NexusUI.formatDate(new Date(project.targetEnd || project.deadline)) : '-'}</div>
           </div>
         </div>
+        
+        ${project.phases && project.phases.length > 0 ? `
+          <div class="mb-4">
+            <h4 class="font-medium mb-2">Phasen</h4>
+            <div class="content-stack gap-2">
+              ${project.phases.map(phase => `
+                <div class="flex items-center justify-between p-2 rounded-md bg-surface-2">
+                  <span>${phase.name}</span>
+                  <span class="text-xs text-tertiary">${phase.endDate ? NexusUI.formatDate(new Date(phase.endDate)) : 'Kein Datum'}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${project.team && project.team.length > 0 ? `
+          <div class="mb-4">
+            <h4 class="font-medium mb-2">Team</h4>
+            <div class="content-stack gap-2">
+              ${project.team.map(contactId => {
+                const contact = NexusStore.getContactById(contactId);
+                return contact ? `
+                  <div class="flex items-center gap-2 p-2 rounded-md bg-surface-2">
+                    <span>${contact.icon || '👤'}</span>
+                    <span>${contact.name}</span>
+                  </div>
+                ` : '';
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
         
         <div class="mb-4">
           <h4 class="font-medium mb-2">Verknüpfte Tasks</h4>
@@ -419,7 +465,7 @@ const ProjectsModule = {
           <div class="grid gap-4 mt-4" style="grid-template-columns: 1fr 1fr;">
             <div>
               <label class="input-label">Deadline</label>
-              <input type="date" class="input" id="edit-project-deadline" value="${project.deadline || ''}">
+              <input type="date" class="input" id="edit-project-deadline" value="${project.targetEnd || project.deadline || ''}">
             </div>
             <div>
               <label class="input-label">Fortschritt (%)</label>
@@ -455,7 +501,8 @@ const ProjectsModule = {
       description: document.getElementById('edit-project-description')?.value || '',
       sphere: document.getElementById('edit-project-sphere')?.value || null,
       status: document.getElementById('edit-project-status')?.value || 'active',
-      deadline: document.getElementById('edit-project-deadline')?.value || null,
+      targetEnd: document.getElementById('edit-project-deadline')?.value || null,
+      deadline: document.getElementById('edit-project-deadline')?.value || null, // Keep for backwards compatibility
       progress: parseInt(document.getElementById('edit-project-progress')?.value) || 0,
       notes: document.getElementById('edit-project-notes')?.value || ''
     });
