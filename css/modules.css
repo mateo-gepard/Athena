@@ -622,6 +622,17 @@
   border-left: 3px solid var(--color-critical);
 }
 
+.calendar-event.habit {
+  background: rgba(74, 148, 106, 0.2);
+  border-left: 3px solid var(--color-sphere-sport);
+  border-radius: var(--radius-md);
+}
+
+.calendar-event.habit.completed {
+  opacity: 0.6;
+  background: rgba(74, 148, 106, 0.1);
+}
+
 .event-time {
   font-size: 10px;
   color: var(--color-text-tertiary);

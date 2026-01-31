@@ -284,6 +284,21 @@ const TemporalEngine = {
     `;
   },
   
+  // Check if habit should be shown in calendar (positive habits only)
+  isPositiveHabit(habit) {
+    const name = habit.name.toLowerCase();
+    const negativeKeywords = ['kein', 'nicht', 'ohne', 'vermeiden', 'stoppen', 'weniger', 'reduzieren'];
+    
+    // Check if habit name contains negative keywords
+    for (const keyword of negativeKeywords) {
+      if (name.includes(keyword)) {
+        return false;
+      }
+    }
+    
+    return true;
+  },
+  
   // Render events for a specific day
   renderDayEvents(date, dayIndex) {
     const dateStr = date.toISOString().split('T')[0];
@@ -292,6 +307,19 @@ const TemporalEngine = {
       const taskDate = t.scheduledDate || t.deadline;
       if (!taskDate) return false;
       return taskDate.split('T')[0] === dateStr;
+    });
+    
+    // Get habits for today (only positive ones that should be displayed)
+    const allHabits = NexusStore.getHabits();
+    const todayHabits = allHabits.filter(h => {
+      // Only show daily habits or weekly habits on their scheduled day
+      if (h.frequency === 'daily') return this.isPositiveHabit(h);
+      if (h.frequency === 'weekly') {
+        // Check if today is one of the scheduled days
+        const dayOfWeek = date.getDay();
+        return h.scheduledDays?.includes(dayOfWeek) && this.isPositiveHabit(h);
+      }
+      return false;
     });
     
     // Separate tasks with time from tasks without time
@@ -339,6 +367,26 @@ const TemporalEngine = {
         </div>
       `;
     });
+    
+    // Render habits (if layer enabled)
+    if (this.layers.habits && todayHabits.length > 0) {
+      todayHabits.forEach((habit, idx) => {
+        // Render habits as small badges on the side
+        const top = 10 + idx * 32;
+        const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
+        
+        html += `
+          <div class="calendar-event habit ${isCompleted ? 'completed' : ''}" 
+               style="top: ${top}px; left: 4px; width: 120px; height: 28px;"
+               data-habit-id="${habit.id}">
+            <div class="event-title text-xs">
+              ${habit.icon || '🔄'} ${habit.name}
+              ${isCompleted ? '<span class="text-success ml-1">✓</span>' : ''}
+            </div>
+          </div>
+        `;
+      });
+    }
     
     // Render tasks WITHOUT time as deadline badges (at top)
     if (this.layers.deadlines && tasksWithoutTime.length > 0) {
