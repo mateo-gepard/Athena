@@ -391,11 +391,21 @@
   padding: 0;
   background: var(--color-surface-1);
   border: 1px solid var(--color-border);
-  border-radius: 24px;
+  border-radius: 28px;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1;
   color: var(--text-primary);
   max-width: 600px;
+  box-sizing: border-box;
+}
+
+/* Force no vertical spacing inside message bubbles */
+.atlas-message-content,
+.atlas-message-content * {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
 }
 
 .atlas-message.user .atlas-message-content {
