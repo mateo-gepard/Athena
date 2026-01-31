@@ -394,16 +394,45 @@ const MindCanvas = {
           <div class="mb-4">
             <label class="input-label">Verknüpfungen</label>
             <div class="linked-notes">
-              ${note.links?.length > 0 ? note.links.map(linkId => {
-                const linkedNote = this.notes.find(n => n.id === linkId);
-                return linkedNote ? `
+              ${note.linkedEntities?.length > 0 ? note.linkedEntities.map(link => {
+                let entityName = 'Unknown';
+                let entityIcon = '🔗';
+                
+                // Resolve entity name based on type
+                if (link.type === 'note') {
+                  const linkedNote = this.notes.find(n => n.id === link.id);
+                  entityName = linkedNote ? linkedNote.content.substring(0, 30) : 'Deleted note';
+                  entityIcon = '📝';
+                } else if (link.type === 'venture') {
+                  const venture = NexusStore.getVentures().find(v => v.id === link.id);
+                  entityName = venture ? venture.name : 'Deleted venture';
+                  entityIcon = '🚀';
+                } else if (link.type === 'project') {
+                  const project = NexusStore.getProjects().find(p => p.id === link.id);
+                  entityName = project ? project.name : 'Deleted project';
+                  entityIcon = '📦';
+                } else if (link.type === 'goal') {
+                  const goal = NexusStore.getGoals().find(g => g.id === link.id);
+                  entityName = goal ? goal.name : 'Deleted goal';
+                  entityIcon = '🎯';
+                } else if (link.type === 'task') {
+                  const task = NexusStore.getTaskById(link.id);
+                  entityName = task ? task.title : 'Deleted task';
+                  entityIcon = '✅';
+                } else if (link.type === 'contact') {
+                  const contact = NexusStore.getContactById(link.id);
+                  entityName = contact ? contact.name : 'Deleted contact';
+                  entityIcon = '👤';
+                }
+                
+                return `
                   <div class="linked-note-item">
-                    <span class="linked-note-content">[[${linkedNote.content.substring(0, 30)}...]]</span>
-                    <button class="btn-icon-sm remove-link" data-link-id="${linkId}">
+                    <span class="linked-note-content">${entityIcon} ${entityName}</span>
+                    <button class="btn-icon-sm remove-link" data-link-type="${link.type}" data-link-id="${link.id}">
                       ${NexusUI.icon('x', 12)}
                     </button>
                   </div>
-                ` : '';
+                `;
               }).join('') : '<div class="text-tertiary text-sm">Keine Verknüpfungen</div>'}
             </div>
             <button class="btn btn-sm btn-ghost mt-2" id="add-link-btn">
@@ -523,6 +552,22 @@ const MindCanvas = {
     NexusUI.showToast('Notiz gelöscht', 'success');
   },
   
+  // Remove link from note
+  removeLink(linkType, linkId) {
+    if (!this.selectedNote) return;
+    
+    const linkedEntities = this.selectedNote.linkedEntities || [];
+    const updatedLinks = linkedEntities.filter(link => 
+      !(link.type === linkType && link.id === linkId)
+    );
+    
+    NexusStore.updateNote(this.selectedNote.id, { linkedEntities: updatedLinks });
+    this.selectedNote.linkedEntities = updatedLinks;
+    this.render();
+    
+    NexusUI.showToast('Verknüpfung entfernt', 'success');
+  },
+  
   // Save current note
   saveNote() {
     if (!this.selectedNote) return;
@@ -599,6 +644,14 @@ const MindCanvas = {
       const backlink = e.target.closest('.backlink-item');
       if (backlink && backlink.dataset.noteId) {
         this.selectNote(backlink.dataset.noteId);
+        return;
+      }
+      
+      // Remove link button
+      const removeLink = e.target.closest('.remove-link');
+      if (removeLink) {
+        e.stopPropagation();
+        this.removeLink(removeLink.dataset.linkType, removeLink.dataset.linkId);
         return;
       }
     });
