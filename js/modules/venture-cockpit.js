@@ -376,19 +376,21 @@ const VentureCockpit = {
     
     return `
       <div class="flex items-center gap-4 mb-6">
-        ${phases.map((phase, i) => `
+        ${phases.map((phase, i) => {
+          const progress = typeof phase.progress === 'number' ? phase.progress : 0;
+          return `
           <div class="flex-1">
-            <div class="text-xs text-tertiary mb-1">Q${i + 1} 2024</div>
+            <div class="text-xs text-tertiary mb-1">Phase ${i + 1}</div>
             <div class="p-3 rounded-md ${phase.status === 'active' ? 'bg-surface-2 border border-border-hover' : 'bg-surface-1'}">
               <div class="text-sm font-medium mb-2">${phase.name}</div>
-              ${NexusUI.renderProgress(phase.progress, { labeled: true })}
+              ${NexusUI.renderProgress(progress, { labeled: true })}
               <div class="text-xs text-tertiary mt-1">
                 ${phase.status === 'completed' ? '✓ Abgeschlossen' : 
                   phase.status === 'active' ? '🔄 In Progress' : '○ Ausstehend'}
               </div>
             </div>
           </div>
-        `).join('')}
+        `}).join('')}
       </div>
       
       <div class="atlas-panel">
@@ -541,6 +543,15 @@ const VentureCockpit = {
       const tabElement = e.target.closest('.tab[data-tab]');
       if (tabElement) {
         const tabName = tabElement.dataset.tab;
+        
+        // Update active class
+        const container = tabElement.closest('.tabs, .tabs-pills');
+        if (container) {
+          container.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+          tabElement.classList.add('active');
+        }
+        
+        // Switch tab content
         this.switchTab(tabName);
         return;
       }
@@ -598,15 +609,6 @@ const VentureCockpit = {
         this.openCanvas();
         return;
       }
-      
-      const tab = e.target.closest('.tab');
-      if (!tab) return;
-      
-      const container = tab.closest('.tabs, .tabs-pills');
-      if (!container) return;
-      
-      container.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
     });
   },
   

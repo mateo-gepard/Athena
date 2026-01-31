@@ -379,22 +379,23 @@ const NexusUI = {
   
   // Render Progress Bar
   renderProgress(percent, options = {}) {
-    const barClass = percent >= 75 ? 'success' : percent >= 50 ? '' : 'warning';
+    const value = typeof percent === 'number' && !isNaN(percent) ? percent : 0;
+    const barClass = value >= 75 ? 'success' : value >= 50 ? '' : 'warning';
     
     if (options.labeled) {
       return `
         <div class="progress-labeled">
           <div class="progress">
-            <div class="progress-bar ${barClass}" style="width: ${percent}%"></div>
+            <div class="progress-bar ${barClass}" style="width: ${value}%"></div>
           </div>
-          <span class="progress-label">${Math.round(percent)}%</span>
+          <span class="progress-label">${Math.round(value)}%</span>
         </div>
       `;
     }
     
     return `
       <div class="progress">
-        <div class="progress-bar ${barClass}" style="width: ${percent}%"></div>
+        <div class="progress-bar ${barClass}" style="width: ${value}%"></div>
       </div>
     `;
   },
