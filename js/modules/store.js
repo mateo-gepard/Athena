@@ -63,6 +63,9 @@ const NexusStore = {
     contacts: [],
     markedDays: [], // Feiertage, Urlaub, Ferien, Besuche etc.
     
+    // Activity Log (alle Änderungen dokumentiert)
+    activities: [],
+    
     // Snapshots
     snapshots: [],
     
@@ -121,14 +124,112 @@ const NexusStore = {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   },
   
-  // ═══ TASKS ═══
+  // ═══ ACTIVITY LOG ═══
   
-  getTasks() {
-    return this.state.tasks;
+  ACTIVITY_KEY: 'nexus_activity_log',
+  
+  // Log an activity/change
+  logActivity(action, entityType, entityId, changes = {}, relatedEntities = []) {
+    const activity = {
+      id: this.generateId(),
+      timestamp: new Date().toISOString(),
+      action, // e.g. "task:created", "task:updated", "task:completed", "task:deleted"
+      entityType, // "task", "habit", "project", etc.
+      entityId,
+      changes, // { field: { old: value, new: value } }
+      relatedEntities, // [{ type: "project", id: "xyz", action: "updated" }]
+      user: this.state.user.name || 'User'
+    };
+    
+    this.state.activities.unshift(activity); // Neueste zuerst
+    
+    // Limit to last 1000 activities
+    if (this.state.activities.length > 1000) {
+      this.state.activities = this.state.activities.slice(0, 1000);
+    }
+    
+    this.save();
   },
   
-  getTaskById(id) {
-    return this.state.tasks.find(t => t.id === id);
+  // Get activities (optional filters)
+  getActivities(options = {}) {
+    let activities = [...this.state.activities];
+    
+    // Filter by entity type
+    if (options.entityType) {
+      activities = activities.filter(a => a.entityType === options.entityType);
+    }
+    
+    // Filter by entity ID
+    if (options.entityId) {
+      activities = activities.filter(a => a.entityId === options.entityId);
+    }
+    
+    // Filter by action
+    if (options.action) {
+      activities = activities.filter(a => a.action === options.action);
+    }
+    
+    // Filter by date range
+    if (options.since) {
+      activities = activities.filter(a => a.timestamp >= options.since);
+    }
+    
+    if (options.until) {
+      activities = activities.filter(a => a.timestamp <= options.until);
+    }
+    
+    // Limit results
+    if (options.limit) {
+      activities = activities.slice(0, options.limit);
+    }
+    
+    return activities;
+  },
+  
+  // Get recent activities (for Timeline/Feed)
+  getRecentActivities(limit = 50) {
+    return this.state.activities.slice(0, limit);
+  },
+  
+  // Get activities for a specific entity
+  getActivitiesForEntity(entityType, entityId) {
+    return this.state.activities.filter(a => 
+      a.entityType === entityType && a.entityId === entityId
+    );
+  },
+  
+  // Helper: Calculate changes between old and new object
+  calculateChanges(oldObj, newObj, fields = []) {
+    const changes = {};
+    const fieldsToCheck = fields.length > 0 ? fields : Object.keys(newObj);
+    
+    fieldsToCheck.forEach(field => {
+      if (oldObj[field] !== newObj[field]) {
+        changes[field] = {
+          old: oldObj[field],
+          new: newObj[field]
+        };
+      }
+    });
+    
+    return Object.keys(changes).length > 0 ? changes : null;
+  },
+  
+  // ═══ TASKS ═══
+  
+  getTasks(includeDeleted = false) {
+    if (includeDeleted) {
+      return this.state.tasks;
+    }
+    return this.state.tasks.filter(t => !t.deletedAt);
+  },
+  
+  getTaskById(id, includeDeleted = false) {
+    const task = this.state.tasks.find(t => t.id === id);
+    if (!task) return null;
+    if (!includeDeleted && task.deletedAt) return null;
+    return task;
   },
   
   getTasksForDate(date) {
@@ -177,6 +278,7 @@ const NexusStore = {
       }
     }
     
+    const now = new Date().toISOString();
     const task = {
       id: this.generateId(),
       title: taskData.title,
@@ -195,13 +297,22 @@ const NexusStore = {
       checklist: taskData.checklist || [],
       linkedNotes: taskData.linkedNotes || [],
       linkedContacts: taskData.linkedContacts || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      completedAt: null
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+      deletedAt: null
     };
     
     this.state.tasks.push(task);
     this.save();
+    
+    // Log activity
+    const relatedEntities = [];
+    if (task.projectId) {
+      relatedEntities.push({ type: 'project', id: task.projectId, action: 'task_added' });
+    }
+    this.logActivity('task:created', 'task', task.id, { created: { new: task } }, relatedEntities);
+    
     this.notify('task:added', task);
     return task;
   },
@@ -209,26 +320,64 @@ const NexusStore = {
   updateTask(id, updates) {
     const index = this.state.tasks.findIndex(t => t.id === id);
     if (index !== -1) {
-      this.state.tasks[index] = {
+      const oldTask = { ...this.state.tasks[index] };
+      const updatedTask = {
         ...this.state.tasks[index],
         ...updates,
         updatedAt: new Date().toISOString()
       };
+      
+      this.state.tasks[index] = updatedTask;
       this.save();
-      this.notify('task:updated', this.state.tasks[index]);
-      return this.state.tasks[index];
+      
+      // Calculate and log changes
+      const changes = this.calculateChanges(oldTask, updatedTask);
+      if (changes) {
+        const relatedEntities = [];
+        
+        // If project changed, track both old and new project
+        if (changes.projectId) {
+          if (changes.projectId.old) {
+            relatedEntities.push({ type: 'project', id: changes.projectId.old, action: 'task_removed' });
+          }
+          if (changes.projectId.new) {
+            relatedEntities.push({ type: 'project', id: changes.projectId.new, action: 'task_added' });
+          }
+        } else if (updatedTask.projectId) {
+          // Project didn't change, but task was updated in project
+          relatedEntities.push({ type: 'project', id: updatedTask.projectId, action: 'task_updated' });
+        }
+        
+        this.logActivity('task:updated', 'task', id, changes, relatedEntities);
+      }
+      
+      this.notify('task:updated', updatedTask);
+      return updatedTask;
     }
     return null;
   },
   
   completeTask(id) {
+    const task = this.getTaskById(id);
     const result = this.updateTask(id, {
       status: 'completed',
       completedAt: new Date().toISOString()
     });
     
-    // Track analytics
-    this.saveAnalyticsSnapshot();
+    if (result) {
+      // Log completion separately (important milestone)
+      const relatedEntities = [];
+      if (result.projectId) {
+        relatedEntities.push({ type: 'project', id: result.projectId, action: 'task_completed' });
+      }
+      this.logActivity('task:completed', 'task', id, 
+        { status: { old: 'pending', new: 'completed' } }, 
+        relatedEntities
+      );
+      
+      // Track analytics
+      this.saveAnalyticsSnapshot();
+    }
     
     return result;
   },
@@ -236,8 +385,23 @@ const NexusStore = {
   deleteTask(id) {
     const index = this.state.tasks.findIndex(t => t.id === id);
     if (index !== -1) {
-      const task = this.state.tasks.splice(index, 1)[0];
+      const task = { ...this.state.tasks[index] };
+      task.deletedAt = new Date().toISOString();
+      
+      // Soft delete: mark as deleted but keep in array for history
+      this.state.tasks[index] = task;
       this.save();
+      
+      // Log deletion
+      const relatedEntities = [];
+      if (task.projectId) {
+        relatedEntities.push({ type: 'project', id: task.projectId, action: 'task_removed' });
+      }
+      this.logActivity('task:deleted', 'task', id, 
+        { deleted: { old: false, new: true } }, 
+        relatedEntities
+      );
+      
       this.notify('task:deleted', task);
       return task;
     }
@@ -255,6 +419,7 @@ const NexusStore = {
   },
   
   addHabit(habitData) {
+    const now = new Date().toISOString();
     const habit = {
       id: this.generateId(),
       name: habitData.name,
@@ -270,12 +435,17 @@ const NexusStore = {
       bestStreak: 0,
       completionLog: [],
       linkedGoals: habitData.linkedGoals || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null
     };
     
     this.state.habits.push(habit);
     this.save();
+    
+    // Log activity
+    this.logActivity('habit:created', 'habit', habit.id, { created: { new: habit } });
+    
     this.notify('habit:added', habit);
     return habit;
   },
@@ -285,6 +455,7 @@ const NexusStore = {
     if (habit) {
       const dateStr = date.split('T')[0];
       if (!habit.completionLog.includes(dateStr)) {
+        const oldStreak = habit.streak;
         habit.completionLog.push(dateStr);
         habit.streak = this.calculateStreak(habit);
         if (habit.streak > habit.bestStreak) {
@@ -292,6 +463,13 @@ const NexusStore = {
         }
         habit.updatedAt = new Date().toISOString();
         this.save();
+        
+        // Log completion
+        this.logActivity('habit:completed', 'habit', id, {
+          streak: { old: oldStreak, new: habit.streak },
+          completionDate: { new: dateStr }
+        });
+        
         this.notify('habit:completed', habit);
         
         // Track analytics
@@ -372,6 +550,7 @@ const NexusStore = {
   },
   
   addProject(projectData) {
+    const now = new Date().toISOString();
     const project = {
       id: this.generateId(),
       name: projectData.name,
@@ -383,17 +562,23 @@ const NexusStore = {
       actionItems: [],
       team: projectData.team || [],
       variables: projectData.variables || {},
-      startDate: projectData.startDate || new Date().toISOString(),
+      startDate: projectData.startDate || now,
       targetEnd: projectData.targetEnd || null,
       progress: 0,
       linkedNotes: [],
       linkedContacts: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+      deletedAt: null
     };
     
     this.state.projects.push(project);
     this.save();
+    
+    // Log activity
+    this.logActivity('project:created', 'project', project.id, { created: { new: project } });
+    
     this.notify('project:added', project);
     return project;
   },
@@ -401,14 +586,24 @@ const NexusStore = {
   updateProject(id, updates) {
     const index = this.state.projects.findIndex(p => p.id === id);
     if (index !== -1) {
-      this.state.projects[index] = {
+      const oldProject = { ...this.state.projects[index] };
+      const updatedProject = {
         ...this.state.projects[index],
         ...updates,
         updatedAt: new Date().toISOString()
       };
+      
+      this.state.projects[index] = updatedProject;
       this.save();
-      this.notify('project:updated', this.state.projects[index]);
-      return this.state.projects[index];
+      
+      // Log changes
+      const changes = this.calculateChanges(oldProject, updatedProject);
+      if (changes) {
+        this.logActivity('project:updated', 'project', id, changes);
+      }
+      
+      this.notify('project:updated', updatedProject);
+      return updatedProject;
     }
     return null;
   },
@@ -435,6 +630,7 @@ const NexusStore = {
   },
   
   addVenture(ventureData) {
+    const now = new Date().toISOString();
     const venture = {
       id: this.generateId(),
       name: ventureData.name,
@@ -456,12 +652,18 @@ const NexusStore = {
       linkedProjects: [],
       linkedNotes: [],
       linkedGoals: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null,
+      deletedAt: null
     };
     
     this.state.ventures.push(venture);
     this.save();
+    
+    // Log activity
+    this.logActivity('venture:created', 'venture', venture.id, { created: { new: venture } });
+    
     this.notify('venture:added', venture);
     return venture;
   },
@@ -469,14 +671,24 @@ const NexusStore = {
   updateVenture(id, updates) {
     const index = this.state.ventures.findIndex(v => v.id === id);
     if (index !== -1) {
-      this.state.ventures[index] = {
+      const oldVenture = { ...this.state.ventures[index] };
+      const updatedVenture = {
         ...this.state.ventures[index],
         ...updates,
         updatedAt: new Date().toISOString()
       };
+      
+      this.state.ventures[index] = updatedVenture;
       this.save();
-      this.notify('venture:updated', this.state.ventures[index]);
-      return this.state.ventures[index];
+      
+      // Log changes
+      const changes = this.calculateChanges(oldVenture, updatedVenture);
+      if (changes) {
+        this.logActivity('venture:updated', 'venture', id, changes);
+      }
+      
+      this.notify('venture:updated', updatedVenture);
+      return updatedVenture;
     }
     return null;
   },
@@ -557,6 +769,7 @@ const NexusStore = {
   },
   
   addNote(noteData) {
+    const now = new Date().toISOString();
     const note = {
       id: this.generateId(),
       content: noteData.content,
@@ -564,12 +777,23 @@ const NexusStore = {
       canvasPosition: noteData.canvasPosition || null,
       linkedEntities: noteData.linkedEntities || [],
       tags: noteData.tags || [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: null
     };
     
     this.state.notes.push(note);
     this.save();
+    
+    // Log activity with related entities
+    const relatedEntities = note.linkedEntities.map(entity => ({
+      type: entity.type,
+      id: entity.id,
+      action: 'note_linked'
+    }));
+    
+    this.logActivity('note:created', 'note', note.id, { created: { new: note } }, relatedEntities);
+    
     this.notify('note:added', note);
     return note;
   },
@@ -577,14 +801,33 @@ const NexusStore = {
   updateNote(id, updates) {
     const index = this.state.notes.findIndex(n => n.id === id);
     if (index !== -1) {
-      this.state.notes[index] = {
+      const oldNote = { ...this.state.notes[index] };
+      const updatedNote = {
         ...this.state.notes[index],
         ...updates,
         updatedAt: new Date().toISOString()
       };
+      
+      this.state.notes[index] = updatedNote;
       this.save();
-      this.notify('note:updated', this.state.notes[index]);
-      return this.state.notes[index];
+      
+      // Log changes
+      const changes = this.calculateChanges(oldNote, updatedNote);
+      if (changes) {
+        // Track linked entity changes
+        const relatedEntities = [];
+        if (changes.linkedEntities) {
+          const newLinked = updatedNote.linkedEntities || [];
+          newLinked.forEach(entity => {
+            relatedEntities.push({ type: entity.type, id: entity.id, action: 'note_linked' });
+          });
+        }
+        
+        this.logActivity('note:updated', 'note', id, changes, relatedEntities);
+      }
+      
+      this.notify('note:updated', updatedNote);
+      return updatedNote;
     }
     return null;
   },
