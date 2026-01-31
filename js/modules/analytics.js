@@ -552,7 +552,8 @@ const Analytics = {
     }
     
     const currentOverdue = NexusStore.getOverdueTasks().length;
-    const avgPlannedHours = last7Days.reduce((sum, d) => sum + (d.plannedMinutes || 0), 0) / (7 * 60);
+    const totalPlannedMinutes = last7Days.reduce((sum, d) => sum + (d.plannedMinutes || 0), 0);
+    const avgPlannedHours = totalPlannedMinutes / (7 * 60);
     
     let recreationMinutes = 0;
     last7Days.forEach(day => {
@@ -563,6 +564,26 @@ const Analytics = {
     const avgRecreationHours = recreationMinutes / 60 / 7;
     
     const metrics = this.calculateMetrics();
+    
+    // Check if there's any actual data
+    const hasData = totalPlannedMinutes > 0 || currentOverdue > 0 || recreationMinutes > 0;
+    
+    if (!hasData) {
+      // No data yet - show healthy state
+      return {
+        score: 0,
+        level: 'low',
+        label: 'GESUND',
+        message: 'Keine Daten vorhanden',
+        factors: [
+          { title: 'Überfällig', value: 0, severity: 'low', icon: 'alert-triangle' },
+          { title: 'Ø Arbeitslast', value: '0h', severity: 'low', icon: 'clock' },
+          { title: 'Erholung', value: '0h', severity: 'low', icon: 'coffee' },
+          { title: 'Completion', value: '0%', severity: 'low', icon: 'check-circle' }
+        ],
+        recommendations: ['Beginne Tasks zu planen', 'Tracke deine Zeit']
+      };
+    }
     
     let riskScore = 0;
     const factors = [];
@@ -587,13 +608,13 @@ const Analytics = {
       icon: 'clock'
     });
     
-    // Recreation (max 20 points - inverse)
-    const recreationRisk = avgRecreationHours < 0.5 ? 20 : avgRecreationHours < 1 ? 10 : 0;
+    // Recreation (max 20 points - inverse) - only penalize if there's work planned
+    const recreationRisk = totalPlannedMinutes > 0 ? (avgRecreationHours < 0.5 ? 20 : avgRecreationHours < 1 ? 10 : 0) : 0;
     riskScore += recreationRisk;
     factors.push({
       title: 'Erholung',
       value: `${avgRecreationHours.toFixed(1)}h`,
-      severity: avgRecreationHours < 0.5 ? 'high' : avgRecreationHours < 1 ? 'medium' : 'low',
+      severity: avgRecreationHours < 0.5 && totalPlannedMinutes > 0 ? 'high' : avgRecreationHours < 1 && totalPlannedMinutes > 0 ? 'medium' : 'low',
       icon: 'coffee'
     });
     
