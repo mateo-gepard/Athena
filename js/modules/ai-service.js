@@ -45,10 +45,12 @@ TASK PARAMETER ERKLÄRUNG:
 - priority: low, normal, high, critical (Standard: normal)
 - sphere: Lebensbereich (geschaeft, projekte, schule, sport, freizeit)
 - projectId: Wenn Task zu einem Projekt gehört, nutze die Projekt-ID aus dem Kontext
-- dueDate: Fälligkeitsdatum im Format YYYY-MM-DD
-- time: Uhrzeit im Format HH:MM (z.B. "14:00")
+- dueDate: OPTIONAL - Fälligkeitsdatum im Format YYYY-MM-DD (null wenn nicht angegeben)
+- time: OPTIONAL - Uhrzeit im Format HH:MM (null wenn nicht angegeben)
 - timeEstimate: Geschätzte Dauer in Minuten (z.B. 30, 60, 120)
 - tags: Array von Tags zur Kategorisierung
+
+WICHTIG: Tasks KÖNNEN ohne Datum/Uhrzeit erstellt werden! Setze dueDate und time auf null wenn nicht explizit genannt.
 
 ZEIT-INTERPRETATION:
 - "um 14 Uhr" → time: "14:00"

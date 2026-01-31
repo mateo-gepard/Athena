@@ -267,7 +267,7 @@
                   <!-- Overdue -->
                   <div class="section">
                     <div class="flex items-center gap-2 mb-3">
-                      <span class="badge badge-critical">Überfällig (2)</span>
+                      <span class="badge badge-critical" id="overdue-count-badge">Überfällig (0)</span>
                     </div>
                     <div class="content-stack gap-2" id="overdueTasks">
                       <!-- Overdue tasks will be rendered here -->
@@ -277,7 +277,7 @@
                   <!-- This Week -->
                   <div class="section">
                     <div class="flex items-center gap-2 mb-3">
-                      <span class="badge badge-warning">Diese Woche (5)</span>
+                      <span class="badge badge-warning" id="week-count-badge">Diese Woche (0)</span>
                     </div>
                     <div class="content-stack gap-2" id="weekTasks">
                       <!-- Week tasks will be rendered here -->
@@ -476,9 +476,6 @@
           <button class="atlas-ai-send" id="atlas-send">
             <i data-lucide="send"></i>
           </button>
-        </div>
-        <div class="atlas-ai-hint">
-          <span>💡 Beispiel: "Erstelle eine Task für morgen: Meeting vorbereiten"</span>
         </div>
       </div>
     </div>

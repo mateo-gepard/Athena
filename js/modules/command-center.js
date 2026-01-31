@@ -239,6 +239,11 @@ const CommandCenter = {
   renderTaskPool() {
     const overdueTasks = NexusStore.getOverdueTasks();
     const overdueContainer = document.getElementById('overdueTasks');
+    const overdueBadge = document.getElementById('overdue-count-badge');
+    
+    if (overdueBadge) {
+      overdueBadge.textContent = `Überfällig (${overdueTasks.length})`;
+    }
     
     if (overdueContainer) {
       if (overdueTasks.length === 0) {
@@ -266,6 +271,12 @@ const CommandCenter = {
     });
     
     const weekContainer = document.getElementById('weekTasks');
+    const weekBadge = document.getElementById('week-count-badge');
+    
+    if (weekBadge) {
+      weekBadge.textContent = `Diese Woche (${weekTasks.length})`;
+    }
+    
     if (weekContainer) {
       if (weekTasks.length === 0) {
         weekContainer.innerHTML = '<div class="text-tertiary">Keine Tasks diese Woche fällig</div>';
