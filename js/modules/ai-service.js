@@ -923,9 +923,10 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
             priority: d.priority || 'normal',
             spheres: d.sphere ? [d.sphere] : ['freizeit'],
             projectId: d.projectId && d.projectId !== 'null' ? d.projectId : null,
-            deadline: d.dueDate || null,
-            scheduledDate: d.dueDate || null,
-            scheduledTime: d.time || null,
+            ventureId: d.ventureId && d.ventureId !== 'null' ? d.ventureId : null,
+            deadline: d.deadline || d.dueDate || null,
+            scheduledDate: d.scheduledDate || d.dueDate || null,
+            scheduledTime: d.scheduledTime || d.time || null,
             timeEstimate: d.timeEstimate || null,
             tags: d.tags || []
           });
