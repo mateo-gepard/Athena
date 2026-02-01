@@ -396,22 +396,34 @@ const TemporalEngine = {
       });
     }
     
-    // Render tasks WITH scheduled time as time blocks
+    // Render tasks WITH scheduled time as time blocks (SCHEDULED type)
     tasksWithTime.forEach(task => {
       const [hours, minutes] = task.scheduledTime.split(':').map(Number);
       const top = (hours - 6) * 60 + (minutes || 0);
-      const height = task.timeEstimate ? Math.max(task.timeEstimate, 30) : 45;
+      const duration = task.timeEstimate || 30;
+      const height = Math.max(duration, 30);
       
-      const priorityClass = task.priority === 'critical' ? 'type-critical' : 
-                            task.priority === 'high' ? 'type-high' : 'type-task';
+      // Calculate end time
+      const endMinutes = (hours * 60 + (minutes || 0)) + duration;
+      const endHour = Math.floor(endMinutes / 60);
+      const endMin = endMinutes % 60;
+      const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
+      
+      const priorityScore = task.priorityScore || 5;
+      const priorityClass = priorityScore >= 8 ? 'type-critical' : 
+                            priorityScore >= 6 ? 'type-high' : 'type-task';
       
       const sphere = task.spheres && task.spheres.length > 0 ? task.spheres[0] : 'freizeit';
+      const durationText = duration >= 60 ? `${(duration / 60).toFixed(1)}h` : `${duration}min`;
       
       html += `
         <div class="calendar-event time-block ${priorityClass}" 
-             style="top: ${top}px; height: ${height}px; border-left: 3px solid var(--color-sphere-${sphere});" 
+             style="top: ${top}px; height: ${height}px; border-left: 3px solid var(--color-sphere-${sphere});"
              data-task-id="${task.id}">
-          <div class="event-time">${task.scheduledTime}</div>
+          <div class="event-header">
+            <span class="event-time">${task.scheduledTime} - ${endTimeStr}</span>
+            <span class="event-duration">${durationText}</span>
+          </div>
           <div class="event-title">${task.title}</div>
         </div>
       `;
@@ -448,13 +460,23 @@ const TemporalEngine = {
       });
     }
     
-    // Render tasks WITHOUT time as deadline badges (at top)
+    // Render tasks WITHOUT time as deadline banners (DEADLINE type at top)
     if (this.layers.deadlines && tasksWithoutTime.length > 0) {
-      tasksWithoutTime.forEach((task, idx) => {
+      const deadlineTasks = tasksWithoutTime.filter(t => t.taskType === 'deadline' || t.deadline);
+      deadlineTasks.forEach((task, idx) => {
+        const sphere = task.spheres && task.spheres.length > 0 ? task.spheres[0] : 'freizeit';
+        const durationText = task.timeEstimate ? 
+          (task.timeEstimate >= 60 ? `${(task.timeEstimate / 60).toFixed(1)}h` : `${task.timeEstimate}min`) : '';
+        
         html += `
           <div class="calendar-event deadline" 
-               style="top: ${10 + idx * 28}px; right: 4px; left: auto; width: 100px; height: 24px;">
-            <div class="event-title text-xs">${task.title}</div>
+               style="top: ${5 + idx * 32}px; right: 4px; left: auto; width: auto; max-width: 180px; height: 28px; border-left: 3px solid var(--color-sphere-${sphere});"
+               data-task-id="${task.id}">
+            <div class="deadline-content">
+              <span class="deadline-icon">📅</span>
+              <span class="event-title">${task.title}</span>
+              ${durationText ? `<span class="deadline-duration">${durationText}</span>` : ''}
+            </div>
           </div>
         `;
       });

@@ -283,6 +283,46 @@ const NexusStore = {
   
   // ═══ TASKS ═══
   
+  // Calculate effective priority for deadline tasks (priority increases as deadline approaches)
+  getEffectivePriority(task) {
+    const basePriority = task.priorityScore || 5;
+    
+    // Only boost deadline tasks
+    if (task.taskType !== 'deadline' || !task.deadline) {
+      return basePriority;
+    }
+    
+    const today = new Date();
+    const deadline = new Date(task.deadline);
+    const daysUntilDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
+    
+    // Overdue: max priority
+    if (daysUntilDeadline < 0) return 10;
+    
+    // Calculate boost based on urgency
+    let boost = 0;
+    if (daysUntilDeadline === 0) boost = 4;      // Due today: +4
+    else if (daysUntilDeadline === 1) boost = 3;  // Due tomorrow: +3
+    else if (daysUntilDeadline <= 3) boost = 2;   // Due in 3 days: +2
+    else if (daysUntilDeadline <= 7) boost = 1;   // Due this week: +1
+    
+    return Math.min(basePriority + boost, 10);
+  },
+  
+  // Get someday tasks that haven't been touched in X days
+  getStaleSomedayTasks(days = 14) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffStr = cutoff.toISOString();
+    
+    return this.state.tasks.filter(t => {
+      if (t.status === 'completed' || t.deletedAt) return false;
+      if (t.taskType !== 'someday') return false;
+      const lastTouched = t.lastTouched || t.updatedAt || t.createdAt;
+      return lastTouched < cutoffStr;
+    });
+  },
+  
   getTasks(includeDeleted = false) {
     if (includeDeleted) {
       return this.state.tasks;
@@ -346,12 +386,23 @@ const NexusStore = {
     }
     
     const now = new Date().toISOString();
+    
+    // Determine taskType if not provided
+    let taskType = taskData.taskType || 'someday';
+    if (!taskData.taskType) {
+      if (taskData.scheduledDate && taskData.scheduledTime) taskType = 'scheduled';
+      else if (taskData.deadline) taskType = 'deadline';
+      else taskType = 'someday';
+    }
+    
     const task = {
       id: this.generateId(),
       title: taskData.title,
       description: taskData.description || '',
+      taskType: taskType,
       status: 'pending',
       priority: taskData.priority || 'normal',
+      priorityScore: taskData.priorityScore || 5,
       spheres: taskData.spheres || ['freizeit'],
       projectId: taskData.projectId || null,
       deadline: taskData.deadline || null,
@@ -367,7 +418,8 @@ const NexusStore = {
       createdAt: now,
       updatedAt: now,
       completedAt: null,
-      deletedAt: null
+      deletedAt: null,
+      lastTouched: now
     };
     
     this.state.tasks.push(task);

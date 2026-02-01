@@ -117,9 +117,10 @@ const CommandCenter = {
     const today = new Date().toISOString().split('T')[0];
     const todayTasks = NexusStore.getTasksForDate(today).filter(t => t.status !== 'completed');
     
+    // Sort by effective priority (considers deadline urgency)
     const focusTask = todayTasks.sort((a, b) => {
-      const scoreA = a.priorityScore || this.priorityToScore(a.priority) || 5;
-      const scoreB = b.priorityScore || this.priorityToScore(b.priority) || 5;
+      const scoreA = NexusStore.getEffectivePriority(a);
+      const scoreB = NexusStore.getEffectivePriority(b);
       return scoreB - scoreA;
     })[0];
     
@@ -252,10 +253,31 @@ const CommandCenter = {
     const isCompleted = task.status === 'completed';
     const sphere = task.spheres && task.spheres[0] ? task.spheres[0] : 'freizeit';
     const sphereColor = NexusUI.getSphereColor(sphere);
-    const priorityScore = task.priorityScore || task.priority || 5;
-    const priorityNum = typeof priorityScore === 'number' ? priorityScore : this.priorityToScore(priorityScore);
-    const priorityClass = priorityNum >= 8 ? 'critical' : priorityNum >= 6 ? 'high' : priorityNum >= 4 ? 'medium' : 'low';
-    const timeEstimate = task.timeEstimate ? `${task.timeEstimate}min` : '';
+    
+    // Use effective priority for deadline tasks
+    const effectivePriority = NexusStore.getEffectivePriority(task);
+    const priorityClass = effectivePriority >= 8 ? 'critical' : effectivePriority >= 6 ? 'high' : effectivePriority >= 4 ? 'medium' : 'low';
+    
+    // Format time estimate
+    const duration = task.timeEstimate || 0;
+    const durationText = duration >= 60 ? `${(duration / 60).toFixed(1)}h` : duration > 0 ? `${duration}min` : '';
+    
+    // Task type indicator
+    const typeIcons = { scheduled: '📅', deadline: '⏰', someday: '💭' };
+    const typeIcon = typeIcons[task.taskType] || '';
+    
+    // Calculate end time for scheduled tasks
+    let timeDisplay = '';
+    if (task.scheduledTime) {
+      const [h, m] = task.scheduledTime.split(':').map(Number);
+      const endMin = (h * 60 + m) + (task.timeEstimate || 30);
+      const endH = Math.floor(endMin / 60);
+      const endM = endMin % 60;
+      timeDisplay = `${task.scheduledTime} - ${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    } else if (task.deadline) {
+      const dl = new Date(task.deadline);
+      timeDisplay = `Bis ${dl.getDate()}.${dl.getMonth() + 1}.`;
+    }
     
     return `
       <div class="cc-task-card ${isCompleted ? 'completed' : ''}" 
@@ -263,24 +285,18 @@ const CommandCenter = {
            data-task-id="${task.id}">
         <div class="cc-task-checkbox ${isCompleted ? 'checked' : ''}" data-action="toggle-task"></div>
         <div class="cc-task-content">
-          <div class="cc-task-title">${task.title}</div>
+          <div class="cc-task-title">${typeIcon} ${task.title}</div>
           <div class="cc-task-meta">
-            <span class="badge badge-${priorityClass}">${priorityNum}/10</span>
+            <span class="badge badge-${priorityClass}">${effectivePriority}/10</span>
             <span class="cc-task-meta-separator">·</span>
             <span class="badge badge-${sphere}">${sphere}</span>
-            ${task.projectId ? `<span class="cc-task-meta-separator">·</span><span>Projekt</span>` : ''}
+            ${durationText ? `<span class="cc-task-meta-separator">·</span><span>${durationText}</span>` : ''}
           </div>
         </div>
-        ${timeEstimate ? `
+        ${timeDisplay ? `
           <div class="cc-task-time">
-            <i data-lucide="clock"></i>
-            <span>${timeEstimate}</span>
-          </div>
-        ` : ''}
-        ${task.scheduledTime ? `
-          <div class="cc-task-time">
-            <i data-lucide="calendar"></i>
-            <span>${task.scheduledTime}</span>
+            <i data-lucide="${task.scheduledTime ? 'clock' : 'calendar'}"></i>
+            <span>${timeDisplay}</span>
           </div>
         ` : ''}
       </div>

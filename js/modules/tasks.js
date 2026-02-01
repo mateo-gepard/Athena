@@ -169,6 +169,9 @@ const TasksModule = {
       case 'no-date':
         tasks = tasks.filter(t => !t.scheduledDate && !t.deadline && t.status !== 'completed');
         break;
+      case 'someday':
+        tasks = tasks.filter(t => t.taskType === 'someday' && t.status !== 'completed');
+        break;
       default:
         tasks = tasks.filter(t => t.status !== 'completed');
     }
@@ -178,15 +181,20 @@ const TasksModule = {
       tasks = tasks.filter(t => t.spheres && t.spheres.includes(this.sphereFilter));
     }
     
-    // Sort
+    // Sort using effective priority (considers deadline urgency)
     tasks.sort((a, b) => {
       switch (this.sortBy) {
         case 'priority':
-          const scoreA = a.priorityScore || 5;
-          const scoreB = b.priorityScore || 5;
+          // Use effective priority which boosts deadline tasks as they approach
+          const scoreA = NexusStore.getEffectivePriority(a);
+          const scoreB = NexusStore.getEffectivePriority(b);
           return scoreB - scoreA; // Higher priority first
         case 'createdAt':
           return new Date(b.createdAt) - new Date(a.createdAt);
+        case 'type':
+          // Group by type: scheduled > deadline > someday
+          const typeOrder = { scheduled: 0, deadline: 1, someday: 2 };
+          return (typeOrder[a.taskType] || 2) - (typeOrder[b.taskType] || 2);
         default: // dueDate
           // Tasks with dates come first, sorted by earliest date (scheduledDate or deadline)
           const dateA = a.scheduledDate || a.deadline;

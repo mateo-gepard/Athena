@@ -57,14 +57,55 @@ REGEL: Schreibe NACH den ACTIONs eine finale Bestätigung mit Zusammenfassung.
 
 Du kannst ALLES im System steuern. Nutze diese Befehle:
 
-━━━ TASKS ━━━
-[ACTION:ADD_TASK:{"title":"*","description":null,"priorityScore":5,"sphere":"freizeit","projectId":"project_123","ventureId":null,"deadline":null,"scheduledDate":"2026-01-31","scheduledTime":"14:00","timeEstimate":60,"tags":[]}]
+━━━ TASKS (3 KATEGORIEN) ━━━
 
-WICHTIG - ZEITBASIERTE TASKS:
-Wenn Task zu bestimmter Zeit stattfindet → IMMER scheduledDate + scheduledTime setzen!
-- scheduledDate: "2026-01-31" (Datum im ISO-Format YYYY-MM-DD)
-- scheduledTime: "14:00" (Zeit im HH:MM Format 24h)
-- deadline: "2026-01-31" (NUR wenn tatsächliche Deadline, nicht für geplante Zeit!)
+[ACTION:ADD_TASK:{"title":"*","taskType":"scheduled|deadline|someday","description":null,"priorityScore":5,"sphere":"freizeit","projectId":null,"ventureId":null,"deadline":null,"scheduledDate":null,"scheduledTime":null,"timeEstimate":60,"tags":[]}]
+
+═══ DIE 3 TASK-KATEGORIEN ═══
+
+1. SCHEDULED (Festes Datum + Uhrzeit)
+   → Geht in den Kalender als Zeitblock
+   → taskType: "scheduled"
+   → scheduledDate: "2026-02-01" (YYYY-MM-DD)
+   → scheduledTime: "14:00" (HH:MM)
+   → timeEstimate: Dauer in Minuten (PFLICHT!)
+   
+   BEISPIELE:
+   - "Sushi essen in 15 Minuten" → scheduledDate: heute, scheduledTime: jetzt+15min, timeEstimate: 90
+   - "Meeting um 14:00" → scheduledTime: "14:00", timeEstimate: 60
+   - "Arzttermin morgen 10:30" → scheduledDate: morgen, scheduledTime: "10:30"
+
+2. DEADLINE (Fälligkeitsdatum ohne feste Zeit)
+   → Markiert den Tag im Kalender, aber kein Zeitblock
+   → taskType: "deadline"
+   → deadline: "2026-02-15" (YYYY-MM-DD)
+   → scheduledDate: null, scheduledTime: null
+   → Priorität STEIGT automatisch je näher die Deadline!
+   
+   BEISPIELE:
+   - "Bewerbung bis zum 15." → deadline: "2026-02-15", taskType: "deadline"
+   - "Mit Mama über Freundin reden vor dem 17." → deadline: eine Woche VOR dem 17., taskType: "deadline"
+   - "Steuererklärung bis Ende Monat" → deadline: letzter Tag des Monats
+
+3. SOMEDAY (Kein Datum, irgendwann)
+   → Erscheint NICHT im Kalender
+   → taskType: "someday"
+   → deadline: null, scheduledDate: null, scheduledTime: null
+   → Kann erinnert werden wenn zu lange unberührt
+   
+   BEISPIELE:
+   - "Spüle reparieren" → taskType: "someday", keine Daten
+   - "Buch lesen" → taskType: "someday"
+   - "Garage aufräumen" → taskType: "someday"
+
+═══ SMART PARSING REGELN ═══
+
+• "in X Minuten/Stunden" → SCHEDULED mit scheduledTime = jetzt + X
+• "um HH:MM" → SCHEDULED mit scheduledTime
+• "morgen/heute um..." → SCHEDULED
+• "bis zum/vor dem/spätestens" → DEADLINE
+• "irgendwann/wenn Zeit ist/muss noch" → SOMEDAY
+• Keine Zeitangabe + aktionsbetonter Task → SOMEDAY
 
 WICHTIG - SPHERE ABLEITEN:
 - Klausur/Test/Lernen/Hausaufgaben → sphere: "schule"
@@ -85,22 +126,46 @@ WICHTIG - PRIORITYSCORE ABLEITEN (1-10):
 - 2: Sehr niedrig
 - 1: Optional, "wenn Zeit ist"
 
-WICHTIG - TIMEESTIMATE ABLEITEN:
+WICHTIG - TIMEESTIMATE ABLEITEN (in Minuten!):
+- Essen/Restaurant/Café → timeEstimate: 90 (1.5h)
+- Meeting/Call → timeEstimate: 60 (1h)
 - Klausur-Vorbereitung kurzfristig (<3 Tage) → timeEstimate: 240 (4h)
 - Normale Lerneinheit → timeEstimate: 120 (2h)
 - Workout/Sport → timeEstimate: 60 (1h)
-- User sagt "schnell" → timeEstimate: 30
-- User gibt keine Zeit an → schätze sinnvoll basierend auf Task-Typ
+- Arzttermin → timeEstimate: 45
+- Kurzer Task → timeEstimate: 30
+- User sagt "schnell" → timeEstimate: 15
+- Einkaufen → timeEstimate: 45
+- Telefonat → timeEstimate: 15
 
-BEISPIEL RICHTIG:
-User: "Morgenroutine um 9:00 Uhr"
-→ [ACTION:ADD_TASK:{"title":"Morgenroutine","scheduledDate":"2026-01-31","scheduledTime":"09:00","timeEstimate":60,"sphere":"freizeit","priorityScore":5}]
+BEI SCHEDULED TASKS: timeEstimate ist PFLICHT für Kalenderdarstellung!
 
-User: "ich muss heute für mathe klausur lernen"
-→ [ACTION:ADD_TASK:{"title":"Für Mathe Klausur lernen","scheduledDate":"2026-01-31","timeEstimate":240,"priorityScore":8,"sphere":"schule"}]
+═══ VOLLSTÄNDIGE BEISPIELE ═══
+
+1. SCHEDULED (feste Zeit):
+User: "Ich geh in 15 Minuten Sushi essen"
+→ [ACTION:ADD_TASK:{"title":"Sushi essen","taskType":"scheduled","scheduledDate":"2026-02-01","scheduledTime":"12:15","timeEstimate":90,"sphere":"freizeit","priorityScore":5}]
+
+User: "Meeting mit Max um 14:00"
+→ [ACTION:ADD_TASK:{"title":"Meeting mit Max","taskType":"scheduled","scheduledDate":"2026-02-01","scheduledTime":"14:00","timeEstimate":60,"sphere":"geschaeft","priorityScore":6}]
+
+2. DEADLINE (Fälligkeitsdatum):
+User: "Ich muss mit meiner Mutter über meine Freundin reden, die am 17. zu Besuch kommt"
+→ [ACTION:ADD_TASK:{"title":"Mit Mama über Freundin-Besuch am 17. sprechen","taskType":"deadline","deadline":"2026-02-10","timeEstimate":30,"sphere":"freizeit","priorityScore":6}]
+(Eine Woche vor dem 17. als Deadline!)
+
+User: "Steuererklärung bis Ende Februar"
+→ [ACTION:ADD_TASK:{"title":"Steuererklärung abgeben","taskType":"deadline","deadline":"2026-02-28","timeEstimate":180,"sphere":"geschaeft","priorityScore":7}]
+
+3. SOMEDAY (kein Datum):
+User: "Ich muss meine Spüle reparieren"
+→ [ACTION:ADD_TASK:{"title":"Spüle reparieren","taskType":"someday","timeEstimate":60,"sphere":"freizeit","priorityScore":4}]
+
+User: "Sollte mal das Buch von Opa lesen"
+→ [ACTION:ADD_TASK:{"title":"Opas Buch lesen","taskType":"someday","timeEstimate":180,"sphere":"freizeit","priorityScore":3}]
 
 BEISPIEL FALSCH:
-→ [ACTION:ADD_TASK:{"title":"Morgenroutine","dueDate":"2026-01-31T09:00:00"}] ← FALSCH!
+→ [ACTION:ADD_TASK:{"title":"Morgenroutine","dueDate":"2026-01-31T09:00:00"}] ← FALSCH! Nutze taskType + scheduledDate/scheduledTime!
 
 TIPP: Für Projekt/Venture verknüpfen → projectId oder ventureId DIREKT beim Erstellen!
 [ACTION:UPDATE_TASK:{"id":"*","updates":{...}}]
@@ -1130,20 +1195,29 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
             console.log('♻️ Task updated (prevented duplicate):', existingTask.title);
           } else {
             // Create new task
+            // Determine taskType from context
+            let taskType = d.taskType || 'someday';
+            if (!d.taskType) {
+              if (d.scheduledDate && d.scheduledTime) taskType = 'scheduled';
+              else if (d.deadline) taskType = 'deadline';
+              else taskType = 'someday';
+            }
+            
             const task = NexusStore.addTask({
               title: d.title,
               description: d.description || '',
+              taskType: taskType,
               priorityScore: d.priorityScore || (d.priority ? this.legacyPriorityToScore(d.priority) : 5),
               spheres: d.spheres || (d.sphere ? [d.sphere] : ['freizeit']),
               projectId: d.projectId && d.projectId !== 'null' ? d.projectId : null,
               ventureId: d.ventureId && d.ventureId !== 'null' ? d.ventureId : null,
-              deadline: d.deadline || d.dueDate || null,
-              scheduledDate: d.scheduledDate || d.dueDate || null,
-              scheduledTime: d.scheduledTime || d.time || null,
-              timeEstimate: d.timeEstimate || null,
+              deadline: taskType === 'deadline' || taskType === 'scheduled' ? (d.deadline || null) : null,
+              scheduledDate: taskType === 'scheduled' ? (d.scheduledDate || null) : null,
+              scheduledTime: taskType === 'scheduled' ? (d.scheduledTime || d.time || null) : null,
+              timeEstimate: d.timeEstimate || 30,
               tags: d.tags || []
             });
-            console.log('✅ Task created:', task.title, '| Sphere:', task.spheres[0], '| Priority:', task.priorityScore);
+            console.log('✅ Task created:', task.title, '| Type:', taskType, '| Sphere:', task.spheres[0], '| Priority:', task.priorityScore);
           }
           refreshUI();
         }
