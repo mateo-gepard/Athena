@@ -1,0 +1,10 @@
+# Local config (do not commit)
+js/config.local.js
+
+# Node / env
+node_modules/
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
