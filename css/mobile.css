@@ -305,11 +305,12 @@
     top: 104px; /* Header + Tab bar */
     left: 0;
     right: 0;
-    bottom: 0;
+    height: calc(100vh - 104px);
     flex-direction: column;
     background: var(--color-surface-1);
     z-index: 500;
     overflow: hidden;
+    transition: height 0.3s ease;
   }
   
   .mobile-atlas-chat.active {

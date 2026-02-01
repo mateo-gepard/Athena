@@ -267,26 +267,34 @@ const MobileNav = {
     const sendBtn = document.getElementById('mobile-atlas-send-btn');
     const input = document.getElementById('mobile-atlas-input');
     const messagesContainer = document.getElementById('mobile-atlas-messages');
+    const chatContainer = document.getElementById('mobile-atlas-chat');
     const quickActions = document.querySelectorAll('.mobile-atlas-quick-action');
+    
+    // Handle keyboard opening/closing with Visual Viewport API
+    if (window.visualViewport && chatContainer) {
+      const resizeHandler = () => {
+        // Calculate how much the viewport has shrunk (keyboard height)
+        const viewportHeight = window.visualViewport.height;
+        const windowHeight = window.innerHeight;
+        const keyboardHeight = windowHeight - viewportHeight;
+        
+        if (keyboardHeight > 150) {
+          // Keyboard is open - shrink the chat container
+          chatContainer.style.height = `${viewportHeight - 104}px`;
+          chatContainer.style.transition = 'height 0.3s ease';
+        } else {
+          // Keyboard is closed - restore full height
+          chatContainer.style.height = `calc(100vh - 104px)`;
+        }
+      };
+      
+      window.visualViewport.addEventListener('resize', resizeHandler);
+      window.visualViewport.addEventListener('scroll', resizeHandler);
+    }
     
     // Send button click
     if (sendBtn && input) {
       sendBtn.addEventListener('click', () => this.sendMobileMessage());
-      
-      // Prevent scrolling when input is focused (WhatsApp-like behavior)
-      input.addEventListener('focus', (e) => {
-        // Prevent default scroll behavior
-        e.preventDefault();
-        // Scroll to make input visible without moving the whole UI
-        setTimeout(() => {
-          input.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
-        }, 100);
-      });
-      
-      // Prevent page scroll when typing
-      input.addEventListener('touchstart', (e) => {
-        e.stopPropagation();
-      });
       
       // Enter to send
       input.addEventListener('keydown', (e) => {
