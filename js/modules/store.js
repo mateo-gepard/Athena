@@ -214,14 +214,19 @@ const NexusStore = {
           // Cloud data is newer, use it
           const localVersion = this.state._version || 0;
           const cloudVersion = cloudData._version || 0;
+          const hasLocalData = this.state.tasks?.length > 0 || this.state.habits?.length > 0;
+          const hasCloudData = cloudData.tasks?.length > 0 || cloudData.habits?.length > 0;
+          
           console.log('📊 Version comparison - Local:', localVersion, 'Cloud:', cloudVersion);
+          console.log('📊 Data check - hasLocalData:', hasLocalData, 'hasCloudData:', hasCloudData);
           console.log('☁️ Cloud data:', {
             tasks: cloudData.tasks?.length || 0,
             habits: cloudData.habits?.length || 0,
             version: cloudVersion
           });
           
-          if (cloudVersion > localVersion) {
+          // Use cloud data if: it's newer OR we have no local data but cloud has data
+          if (cloudVersion > localVersion || (!hasLocalData && hasCloudData)) {
             console.log('☁️ Cloud data is newer, syncing...');
             this.state = { ...this.state, ...cloudData };
             // Preserve user info from Auth

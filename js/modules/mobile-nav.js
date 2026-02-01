@@ -26,6 +26,28 @@ const MobileNav = {
   },
   
   setupEventListeners() {
+    // Mobile Cloud Status Click - Force Sync
+    const mobileCloudStatus = document.getElementById('cloud-sync-status-mobile');
+    if (mobileCloudStatus) {
+      mobileCloudStatus.addEventListener('click', async () => {
+        if (window.CloudSync && CloudSync.isInitialized) {
+          if (window.NexusUI) {
+            NexusUI.showToast({ type: 'info', title: 'Synchronisiere...', message: 'Lade Daten aus der Cloud' });
+          }
+          const success = await CloudSync.forceSync(window.NexusStore.state);
+          if (success && window.NexusUI) {
+            NexusUI.showToast({ type: 'success', title: '✅ Synchronisiert', message: 'Daten erfolgreich geladen' });
+          }
+          // Reload store to get latest cloud data
+          if (window.NexusStore) {
+            await NexusStore.reload();
+          }
+        }
+      });
+      // Make it look clickable
+      mobileCloudStatus.style.cursor = 'pointer';
+    }
+    
     // Hamburger Menu Toggle
     const menuToggle = document.getElementById('mobile-menu-toggle');
     const sidebar = document.querySelector('.sidebar');
