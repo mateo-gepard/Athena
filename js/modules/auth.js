@@ -7,7 +7,6 @@ const AuthService = {
   user: null,
   isAuthenticated: false,
   _initialized: false,
-  _isFirstAuth: true,
   
   // Initialize Firebase Auth
   init() {
@@ -27,9 +26,13 @@ const AuthService = {
           this.isAuthenticated = true;
           
           // Only call onAuthSuccess on first authentication (after login)
-          if (this._isFirstAuth) {
-            this._isFirstAuth = false;
+          const justLoggedIn = sessionStorage.getItem('justLoggedIn');
+          if (justLoggedIn === 'true') {
+            sessionStorage.removeItem('justLoggedIn');
             this.onAuthSuccess(user);
+          } else {
+            // Update user info in sidebar
+            this.updateUserInfo(user);
           }
           
           resolve(true);
@@ -168,9 +171,11 @@ const AuthService = {
     const errorEl = document.getElementById('login-error');
     
     try {
+      sessionStorage.setItem('justLoggedIn', 'true');
       await firebase.auth().signInWithEmailAndPassword(email, password);
-      // onAuthStateChanged will handle success
+      // onAuthStateChanged will handle the rest
     } catch (error) {
+      sessionStorage.removeItem('justLoggedIn');
       errorEl.textContent = this.getErrorMessage(error.code);
       errorEl.style.display = 'block';
     }
@@ -190,9 +195,11 @@ const AuthService = {
     }
     
     try {
+      sessionStorage.setItem('justLoggedIn', 'true');
       await firebase.auth().createUserWithEmailAndPassword(email, password);
-      // onAuthStateChanged will handle success
+      // onAuthStateChanged will handle the rest
     } catch (error) {
+      sessionStorage.removeItem('justLoggedIn');
       errorEl.textContent = this.getErrorMessage(error.code);
       errorEl.style.display = 'block';
     }
@@ -202,9 +209,11 @@ const AuthService = {
   async signInWithGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
+      sessionStorage.setItem('justLoggedIn', 'true');
       await firebase.auth().signInWithPopup(provider);
       // onAuthStateChanged will handle success
     } catch (error) {
+      sessionStorage.removeItem('justLoggedIn');
       console.error('Google Sign-In error:', error);
       alert('Google Anmeldung fehlgeschlagen: ' + error.message);
     }
@@ -231,6 +240,24 @@ const AuthService = {
     
     // Reload page to restore app structure
     window.location.reload();
+  },
+  
+  // Update user info in sidebar
+  updateUserInfo(user) {
+    const userName = user.displayName || user.email.split('@')[0];
+    const userNameEl = document.querySelector('.sidebar-user-name');
+    if (userNameEl) {
+      userNameEl.textContent = userName;
+    }
+  },
+  
+  // Update user info in sidebar
+  updateUserInfo(user) {
+    const userName = user.displayName || user.email.split('@')[0];
+    const userNameEl = document.querySelector('.sidebar-user-name');
+    if (userNameEl) {
+      userNameEl.textContent = userName;
+    }
   },
   
   // Get user-friendly error messages
