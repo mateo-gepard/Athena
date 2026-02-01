@@ -59,8 +59,12 @@ const CloudSync = {
       
       this.database = firebase.database();
       
-      // Generate or load user ID (anonymous user identifier)
-      this.userId = this.getUserId();
+      // Get user ID from Auth or generate anonymous ID
+      if (window.AuthService && AuthService.user) {
+        this.userId = AuthService.user.uid;
+      } else {
+        this.userId = this.getUserId();
+      }
       
       // Set up online/offline detection
       this.setupConnectivityListener();

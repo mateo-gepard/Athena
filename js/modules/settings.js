@@ -123,7 +123,29 @@ const SettingsModule = {
   
   // General Settings
   renderGeneralSettings(settings) {
+    const userEmail = window.AuthService && AuthService.user ? AuthService.user.email : 'Nicht angemeldet';
+    
     return `
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Account</span>
+        </div>
+        <div class="panel-body">
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Angemeldet als</div>
+              <div class="setting-description">${userEmail}</div>
+            </div>
+            <div class="setting-control">
+              <button class="btn btn-secondary" id="logout-btn">
+                <i data-lucide="log-out"></i>
+                Abmelden
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div class="panel">
         <div class="panel-header">
           <span class="panel-title">Allgemeine Einstellungen</span>
@@ -803,6 +825,14 @@ const SettingsModule = {
       // Save general settings
       if (e.target.id === 'save-general-settings') {
         this.saveGeneralSettings();
+        return;
+      }
+      
+      // Logout
+      if (e.target.id === 'logout-btn' || e.target.closest('#logout-btn')) {
+        if (window.AuthService) {
+          AuthService.logout();
+        }
         return;
       }
       

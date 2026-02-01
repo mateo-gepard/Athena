@@ -18,6 +18,15 @@ const NexusApp = {
       lucide.createIcons();
     }
     
+    // Initialize Authentication
+    if (typeof AuthService !== 'undefined') {
+      AuthService.init();
+      // If not authenticated, AuthService will show login screen
+      if (!AuthService.isAuthenticated) {
+        return; // Wait for authentication
+      }
+    }
+    
     // Check if onboarding needed
     if (typeof OnboardingModule !== 'undefined' && OnboardingModule.isNeeded()) {
       console.log('👋 Starting onboarding...');
