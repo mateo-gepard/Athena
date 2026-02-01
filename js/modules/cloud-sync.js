@@ -8,7 +8,7 @@ const CloudSync = {
   firebaseConfig: {
     apiKey: "AIzaSyBR0ecmgOa-rUVEzWi2SiUXEuyfoLRJRPw",
     authDomain: "athena-1df6d.firebaseapp.com",
-    databaseURL: "https://athena-1df6d-default-rtdb.firebaseio.com",
+    databaseURL: "https://athena-1df6d-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "athena-1df6d",
     storageBucket: "athena-1df6d.firebasestorage.app",
     messagingSenderId: "687796502304",
@@ -33,6 +33,17 @@ const CloudSync = {
   async init() {
     try {
       // Check if Firebase is loaded
+    // Delete all cloud data for current user
+    async deleteAll() {
+      if (!this.isInitialized || !this.database || !this.userId) return false;
+      try {
+        await this.database.ref(`users/${this.userId}`).remove();
+        return true;
+      } catch (e) {
+        console.error('Cloud delete failed:', e);
+        return false;
+      }
+    },
       if (typeof firebase === 'undefined') {
         console.warn('⚠️ Firebase SDK not loaded, falling back to localStorage only');
         this.isOnline = false;

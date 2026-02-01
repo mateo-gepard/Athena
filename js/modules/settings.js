@@ -777,6 +777,9 @@ const SettingsModule = {
   clearAllData() {
     if (confirm('ALLE Daten werden unwiderruflich gelöscht! Bist du sicher?')) {
       if (confirm('Wirklich ALLE Daten löschen?')) {
+        if (window.CloudSync && CloudSync.deleteAll) {
+          CloudSync.deleteAll();
+        }
         NexusStore.clearAll();
         NexusUI.showToast('Alle Daten gelöscht', 'success');
         this.render();
