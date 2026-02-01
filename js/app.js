@@ -64,7 +64,109 @@ const NexusApp = {
     // Navigate to default page
     this.navigateTo('command-center');
     
+    // Check if new day and setup automatic updates
+    this.setupDayCheckAndUpdates();
+    
     console.log('Athena Ultra ready!');
+  },
+  
+  // Setup day check on start and automatic updates
+  setupDayCheckAndUpdates() {
+    // Check if it's a new day compared to last session
+    const lastDate = localStorage.getItem('nexus_last_date');
+    const today = new Date().toISOString().split('T')[0];
+    
+    if (lastDate && lastDate !== today) {
+      console.log('🌅 New day detected! Refreshing all modules...');
+      this.refreshAllModules();
+      if (typeof NexusUI !== 'undefined') {
+        NexusUI.showToast('Neuer Tag! 🌅 Alle Module wurden aktualisiert.', 'success');
+      }
+    }
+    
+    // Store current date
+    localStorage.setItem('nexus_last_date', today);
+    
+    // Setup minute-by-minute updates for real-time UI
+    setInterval(() => {
+      // Update date display every minute
+      this.updateDateDisplay();
+      
+      // Update current page if it's time-sensitive
+      if (this.currentPage === 'command-center' && typeof CommandCenter !== 'undefined') {
+        CommandCenter.render();
+      }
+      if (this.currentPage === 'temporal' && typeof TemporalEngine !== 'undefined') {
+        TemporalEngine.render();
+      }
+    }, 60000); // Every minute
+    
+    // Setup midnight refresh
+    this.setupMidnightRefresh();
+  },
+  
+  // Refresh all modules
+  refreshAllModules() {
+    // Update date display
+    this.updateDateDisplay();
+    
+    // Refresh all active modules
+    if (typeof CommandCenter !== 'undefined' && this.currentPage === 'command-center') {
+      CommandCenter.render();
+    }
+    if (typeof HabitsModule !== 'undefined' && this.currentPage === 'habits') {
+      HabitsModule.render();
+    }
+    if (typeof TasksModule !== 'undefined' && this.currentPage === 'tasks') {
+      TasksModule.render();
+    }
+    if (typeof TemporalEngine !== 'undefined' && this.currentPage === 'temporal') {
+      TemporalEngine.render();
+    }
+    if (typeof HorizonTracker !== 'undefined' && this.currentPage === 'horizon') {
+      HorizonTracker.render();
+    }
+    if (typeof AnalyticsModule !== 'undefined' && this.currentPage === 'analytics') {
+      AnalyticsModule.render();
+    }
+    
+    // Update sidebar badges
+    this.updateSidebarBadges();
+  },
+  
+  // Setup automatic refresh at midnight
+  setupMidnightRefresh() {
+    const scheduleNextRefresh = () => {
+      const now = new Date();
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      
+      const msUntilMidnight = tomorrow - now;
+      
+      console.log(`⏰ Next midnight refresh scheduled in ${Math.round(msUntilMidnight / 1000 / 60)} minutes`);
+      
+      setTimeout(() => {
+        console.log('🌙 Midnight - Refreshing all modules...');
+        
+        // Update stored date
+        const today = new Date().toISOString().split('T')[0];
+        localStorage.setItem('nexus_last_date', today);
+        
+        // Refresh all modules
+        this.refreshAllModules();
+        
+        // Show notification
+        if (typeof NexusUI !== 'undefined') {
+          NexusUI.showToast('Neuer Tag! 🌅 Alle Module wurden aktualisiert.', 'success');
+        }
+        
+        // Schedule next refresh
+        scheduleNextRefresh();
+      }, msUntilMidnight);
+    };
+    
+    scheduleNextRefresh();
   },
   
   // Update sidebar badges with real counts
