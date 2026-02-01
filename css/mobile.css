@@ -286,6 +286,23 @@
     font-size: 11px;
   }
   
+  /* ═══ ATLAS COMMAND CENTER - HIDE ON MOBILE ═══ */
+  .atlas-command-center {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  
+  .atlas-sidebar {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  .atlas-container {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
   /* ═══ ATLAS CHAT MOBILE ═══ */
   .atlas-panel {
     position: fixed !important;
