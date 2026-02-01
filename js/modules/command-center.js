@@ -738,6 +738,8 @@ const CommandCenter = {
         const task = NexusStore.getTaskById(draggedTaskId);
         draggedFromBlock = task?.commandCenterBlock || null;
         taskCard.style.opacity = '0.5';
+        e.dataTransfer.effectAllowed = 'move';
+        console.log('🎯 Drag started:', draggedTaskId, 'from block:', draggedFromBlock);
       }
     });
     
@@ -745,20 +747,38 @@ const CommandCenter = {
       const taskCard = e.target.closest('[data-task-id]');
       if (taskCard) {
         taskCard.style.opacity = '1';
+        console.log('🎯 Drag ended');
       }
     });
     
     document.addEventListener('dragover', (e) => {
+      if (!draggedTaskId) return;
+      
       const blockContainer = e.target.closest('.cc-time-block-tasks, .cc-needs-attention-tasks');
-      if (blockContainer && draggedTaskId) {
-        e.preventDefault(); // Allow drop
+      if (blockContainer) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        // Visual feedback
+        blockContainer.style.background = 'var(--surface-hover)';
+      }
+    });
+    
+    document.addEventListener('dragleave', (e) => {
+      const blockContainer = e.target.closest('.cc-time-block-tasks, .cc-needs-attention-tasks');
+      if (blockContainer && !blockContainer.contains(e.relatedTarget)) {
+        blockContainer.style.background = '';
       }
     });
     
     document.addEventListener('drop', (e) => {
+      if (!draggedTaskId) return;
+      
       const blockContainer = e.target.closest('.cc-time-block-tasks, .cc-needs-attention-tasks');
-      if (blockContainer && draggedTaskId) {
+      if (blockContainer) {
         e.preventDefault();
+        blockContainer.style.background = '';
+        
+        console.log('🎯 Drop detected on:', blockContainer.className);
         
         // Determine which block this is
         const timeBlock = e.target.closest('.cc-time-block');
@@ -766,24 +786,26 @@ const CommandCenter = {
         
         let newBlock = null;
         if (timeBlock) {
-          const header = timeBlock.querySelector('.cc-block-header-title');
-          if (header) {
-            const title = header.textContent.trim();
-            if (title.includes('Morgen')) newBlock = 'morning';
-            else if (title.includes('Nachmittag')) newBlock = 'afternoon';
-            else if (title.includes('Abend')) newBlock = 'evening';
-          }
+          // Find the block ID from the tasks container ID
+          const containerId = blockContainer.id;
+          if (containerId === 'morningTasks') newBlock = 'morning';
+          else if (containerId === 'afternoonTasks') newBlock = 'afternoon';
+          else if (containerId === 'eveningTasks') newBlock = 'evening';
+          
+          console.log('🎯 Dropped on time block, container ID:', containerId, 'new block:', newBlock);
         } else if (needsAttention) {
           newBlock = null; // Remove from command center
+          console.log('🎯 Dropped on needs attention - removing from blocks');
         }
         
-        // Update task
+        // Update task if block changed
         if (newBlock !== draggedFromBlock) {
+          const task = NexusStore.getTaskById(draggedTaskId);
+          
           NexusStore.updateTask(draggedTaskId, {
             commandCenterBlock: newBlock
           });
           
-          const task = NexusStore.getTaskById(draggedTaskId);
           NexusUI.showToast({
             type: 'success',
             title: 'Task verschoben',
@@ -792,6 +814,7 @@ const CommandCenter = {
               : `"${task.title}" aus Zeitblock entfernt`
           });
           
+          console.log('✅ Task moved from', draggedFromBlock, 'to', newBlock);
           this.render();
         }
         
