@@ -667,27 +667,27 @@
 
 /* Sphere-colored backgrounds for calendar tasks - MUST come after type classes */
 .calendar-event.time-block.sphere-geschaeft {
-  background: rgba(74, 124, 148, 0.45) !important;
+  background: #4A7C94 !important;
   border-left-color: #4A7C94 !important;
 }
 
 .calendar-event.time-block.sphere-projekte {
-  background: rgba(124, 106, 148, 0.45) !important;
+  background: #7C6A94 !important;
   border-left-color: #7C6A94 !important;
 }
 
 .calendar-event.time-block.sphere-schule {
-  background: rgba(148, 133, 74, 0.45) !important;
+  background: #94854A !important;
   border-left-color: #94854A !important;
 }
 
 .calendar-event.time-block.sphere-sport {
-  background: rgba(74, 148, 106, 0.45) !important;
+  background: #4A946A !important;
   border-left-color: #4A946A !important;
 }
 
 .calendar-event.time-block.sphere-freizeit {
-  background: rgba(107, 104, 98, 0.45) !important;
+  background: #6B6862 !important;
   border-left-color: #6B6862 !important;
 }
 
