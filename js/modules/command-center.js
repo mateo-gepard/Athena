@@ -23,11 +23,81 @@ const CommandCenter = {
     this.renderGreeting();
     this.renderHeaderStats();
     this.renderFocusBlock();
+    this.reorderTimeBlocksByCurrentTime(); // Ordne Blöcke dynamisch
     this.renderTimeBlocks();
     this.renderHabits();
     this.renderAlerts();
     this.renderUpcoming();
     NexusUI.refreshIcons();
+  },
+  
+  // Ordne Zeitblöcke basierend auf der aktuellen Tageszeit
+  reorderTimeBlocksByCurrentTime() {
+    const timeline = document.querySelector('.cc-timeline');
+    if (!timeline) return;
+    
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Bestimme aktuellen Block
+    let currentBlock = 'morning';
+    if (currentHour >= 6 && currentHour < 12) {
+      currentBlock = 'morning';
+    } else if (currentHour >= 12 && currentHour < 18) {
+      currentBlock = 'afternoon';
+    } else if (currentHour >= 18 && currentHour < 24) {
+      currentBlock = 'evening';
+    } else {
+      // Nach Mitternacht bis 6 Uhr -> zeige morning zuerst
+      currentBlock = 'morning';
+    }
+    
+    // Finde alle Zeitblock-Elemente
+    const focusBlock = timeline.querySelector('.cc-focus-block');
+    const morningBlock = Array.from(timeline.children).find(el => 
+      el.querySelector('#morningTasks')
+    );
+    const afternoonBlock = Array.from(timeline.children).find(el => 
+      el.querySelector('#afternoonTasks')
+    );
+    const eveningBlock = Array.from(timeline.children).find(el => 
+      el.querySelector('#eveningTasks')
+    );
+    
+    if (!morningBlock || !afternoonBlock || !eveningBlock) return;
+    
+    // Entferne alle Blöcke (außer Focus)
+    if (morningBlock.parentNode) morningBlock.remove();
+    if (afternoonBlock.parentNode) afternoonBlock.remove();
+    if (eveningBlock.parentNode) eveningBlock.remove();
+    
+    // Füge in richtiger Reihenfolge wieder ein
+    if (currentBlock === 'morning') {
+      timeline.appendChild(morningBlock);
+      timeline.appendChild(afternoonBlock);
+      timeline.appendChild(eveningBlock);
+    } else if (currentBlock === 'afternoon') {
+      timeline.appendChild(afternoonBlock);
+      timeline.appendChild(eveningBlock);
+      timeline.appendChild(morningBlock);
+    } else { // evening
+      timeline.appendChild(eveningBlock);
+      timeline.appendChild(morningBlock);
+      timeline.appendChild(afternoonBlock);
+    }
+    
+    // Highlight aktuellen Block
+    [morningBlock, afternoonBlock, eveningBlock].forEach(block => {
+      block.classList.remove('cc-time-block-current');
+    });
+    
+    if (currentBlock === 'morning') {
+      morningBlock.classList.add('cc-time-block-current');
+    } else if (currentBlock === 'afternoon') {
+      afternoonBlock.classList.add('cc-time-block-current');
+    } else {
+      eveningBlock.classList.add('cc-time-block-current');
+    }
   },
   
   // Render Greeting
