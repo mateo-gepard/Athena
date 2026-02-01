@@ -5,11 +5,15 @@
 
 const TasksModule = {
   
-  view: 'list', // list | kanban
+  view: 'list', // list | kanban | map
   filter: 'all', // all | today | week | overdue | completed
   sphereFilter: null,
   sortBy: 'dueDate', // dueDate | priority | createdAt
   _listenersInitialized: false,
+  
+  // Task Map state
+  mapSelectedTasks: new Set(),
+  mapPlacedTasks: [], // Cache for placed task positions
   
   // Initialize
   init() {
@@ -34,11 +38,14 @@ const TasksModule = {
         
         <div class="flex items-center gap-3">
           <div class="tabs-pills">
-            <button class="tab ${this.view === 'list' ? 'active' : ''}" data-view="list">
+            <button class="tab ${this.view === 'list' ? 'active' : ''}" data-view="list" title="Liste">
               ${NexusUI.icon('list', 16)}
             </button>
-            <button class="tab ${this.view === 'kanban' ? 'active' : ''}" data-view="kanban">
+            <button class="tab ${this.view === 'kanban' ? 'active' : ''}" data-view="kanban" title="Kanban">
               ${NexusUI.icon('columns', 16)}
+            </button>
+            <button class="tab ${this.view === 'map' ? 'active' : ''}" data-view="map" title="Task Map">
+              ${NexusUI.icon('target', 16)}
             </button>
           </div>
           <button class="btn btn-primary" id="add-task-btn">
@@ -90,10 +97,12 @@ const TasksModule = {
             </div>
           </div>
           
-          <!-- Task List or Kanban -->
+          <!-- Task List, Kanban or Map -->
           <div class="panel">
-            <div class="panel-body ${this.view === 'kanban' ? 'p-0' : ''}">
-              ${this.view === 'list' ? this.renderListView(tasks) : this.renderKanbanView(tasks)}
+            <div class="panel-body ${this.view === 'kanban' ? 'p-0' : ''} ${this.view === 'map' ? 'p-0' : ''}">
+              ${this.view === 'list' ? this.renderListView(tasks) : 
+                this.view === 'kanban' ? this.renderKanbanView(tasks) :
+                this.renderMapView(tasks)}
             </div>
           </div>
         </div>
@@ -374,6 +383,355 @@ const TasksModule = {
     `;
   },
   
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TASK MAP VIEW - Visual Sphere-based Task Representation
+  // ═══════════════════════════════════════════════════════════════════════════
+  
+  renderMapView(tasks) {
+    // Filter out completed tasks for the map
+    const activeTasks = tasks.filter(t => t.status !== 'completed');
+    
+    // Calculate positions for all tasks
+    this.mapPlacedTasks = this.calculateTaskPositions(activeTasks);
+    
+    const hasSelectedTasks = this.mapSelectedTasks.size > 0;
+    
+    return `
+      <div class="task-map-container" id="task-map-container">
+        <!-- Action Bar -->
+        <div class="task-map-actions">
+          <div class="task-map-legend">
+            <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-geschaeft)"></span> Geschäft</div>
+            <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-schule)"></span> Schule</div>
+            <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-sport)"></span> Sport</div>
+            <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-projekte)"></span> Projekte</div>
+            <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-freizeit)"></span> Freizeit</div>
+          </div>
+          ${hasSelectedTasks ? `
+            <div class="task-map-selected-actions">
+              <span class="text-sm text-secondary">${this.mapSelectedTasks.size} ausgewählt</span>
+              <button class="btn btn-sm btn-ghost" data-map-action="clear-selection">
+                ${NexusUI.icon('x', 14)} Auswahl aufheben
+              </button>
+              <div class="task-map-block-selector">
+                <button class="btn btn-sm btn-primary" data-map-action="add-to-morning">
+                  🌅 Morgen
+                </button>
+                <button class="btn btn-sm btn-primary" data-map-action="add-to-afternoon">
+                  ☀️ Nachmittag
+                </button>
+                <button class="btn btn-sm btn-primary" data-map-action="add-to-evening">
+                  🌙 Abend
+                </button>
+              </div>
+            </div>
+          ` : `
+            <div class="task-map-hint">
+              <span class="text-sm text-tertiary">Klicke auf Tasks um sie für deinen Tag auszuwählen</span>
+            </div>
+          `}
+        </div>
+        
+        <!-- SVG Map -->
+        <svg class="task-map-svg" id="task-map-svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+          <defs>
+            <!-- Gradients for spheres -->
+            <radialGradient id="grad-freizeit" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color: #6B6862; stop-opacity: 0.1"/>
+              <stop offset="100%" style="stop-color: #6B6862; stop-opacity: 0.05"/>
+            </radialGradient>
+            <radialGradient id="grad-geschaeft" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color: #4A7C94; stop-opacity: 0.25"/>
+              <stop offset="100%" style="stop-color: #4A7C94; stop-opacity: 0.1"/>
+            </radialGradient>
+            <radialGradient id="grad-schule" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color: #94854A; stop-opacity: 0.25"/>
+              <stop offset="100%" style="stop-color: #94854A; stop-opacity: 0.1"/>
+            </radialGradient>
+            <radialGradient id="grad-sport" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color: #4A946A; stop-opacity: 0.25"/>
+              <stop offset="100%" style="stop-color: #4A946A; stop-opacity: 0.1"/>
+            </radialGradient>
+            <radialGradient id="grad-projekte" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" style="stop-color: #7C6A94; stop-opacity: 0.25"/>
+              <stop offset="100%" style="stop-color: #7C6A94; stop-opacity: 0.1"/>
+            </radialGradient>
+            
+            <!-- Glow filter for selected tasks -->
+            <filter id="glow-selected" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+              <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+              </feMerge>
+            </filter>
+          </defs>
+          
+          <!-- Outer Freizeit Circle -->
+          <circle cx="400" cy="300" r="280" fill="url(#grad-freizeit)" stroke="#6B6862" stroke-width="2" stroke-opacity="0.3"/>
+          <text x="400" y="35" text-anchor="middle" class="sphere-label freizeit">⚪ Freizeit</text>
+          
+          <!-- Inner Sphere Circles (Venn Diagram style) -->
+          <!-- Geschäft (Top-Left) -->
+          <circle cx="310" cy="230" r="120" fill="url(#grad-geschaeft)" stroke="#4A7C94" stroke-width="2" stroke-opacity="0.5" class="sphere-circle" data-sphere="geschaeft"/>
+          <text x="250" y="170" text-anchor="middle" class="sphere-label geschaeft">💼 Geschäft</text>
+          
+          <!-- Schule (Top-Right) -->
+          <circle cx="490" cy="230" r="120" fill="url(#grad-schule)" stroke="#94854A" stroke-width="2" stroke-opacity="0.5" class="sphere-circle" data-sphere="schule"/>
+          <text x="550" y="170" text-anchor="middle" class="sphere-label schule">📚 Schule</text>
+          
+          <!-- Sport (Bottom-Left) -->
+          <circle cx="310" cy="370" r="120" fill="url(#grad-sport)" stroke="#4A946A" stroke-width="2" stroke-opacity="0.5" class="sphere-circle" data-sphere="sport"/>
+          <text x="250" y="450" text-anchor="middle" class="sphere-label sport">🏃 Sport</text>
+          
+          <!-- Projekte (Bottom-Right) -->
+          <circle cx="490" cy="370" r="120" fill="url(#grad-projekte)" stroke="#7C6A94" stroke-width="2" stroke-opacity="0.5" class="sphere-circle" data-sphere="projekte"/>
+          <text x="550" y="450" text-anchor="middle" class="sphere-label projekte">🚀 Projekte</text>
+          
+          <!-- Task Nodes -->
+          <g id="task-nodes">
+            ${this.mapPlacedTasks.map(t => this.renderMapTaskNode(t)).join('')}
+          </g>
+        </svg>
+        
+        <!-- Task count info -->
+        <div class="task-map-info">
+          <span class="text-sm text-tertiary">${activeTasks.length} Tasks visualisiert</span>
+        </div>
+      </div>
+    `;
+  },
+  
+  // Calculate positions for tasks with overlap detection
+  calculateTaskPositions(tasks) {
+    const sphereCenters = {
+      geschaeft: { x: 310, y: 230 },
+      schule: { x: 490, y: 230 },
+      sport: { x: 310, y: 370 },
+      projekte: { x: 490, y: 370 },
+      freizeit: { x: 400, y: 300 }
+    };
+    
+    const sphereRadius = 120;
+    const outerRadius = 280;
+    const placedPositions = [];
+    
+    return tasks.map((task, index) => {
+      const sphere = task.spheres && task.spheres[0] ? task.spheres[0] : 'freizeit';
+      const priority = NexusStore.getEffectivePriority(task);
+      
+      // Task circle size based on priority (8-24px radius)
+      const taskRadius = 8 + (priority / 10) * 16;
+      
+      // Get sphere center
+      let center = sphereCenters[sphere] || sphereCenters.freizeit;
+      let maxRadius = sphere === 'freizeit' ? outerRadius - 30 : sphereRadius - 10;
+      
+      // For freizeit, place outside inner circles
+      if (sphere === 'freizeit') {
+        center = { x: 400, y: 300 };
+        // Place in outer ring
+        maxRadius = outerRadius - 20;
+      }
+      
+      // Find non-overlapping position
+      const pos = this.findNonOverlappingPosition(center, maxRadius, taskRadius, placedPositions, sphere);
+      
+      placedPositions.push({
+        x: pos.x,
+        y: pos.y,
+        radius: taskRadius
+      });
+      
+      return {
+        ...task,
+        mapX: pos.x,
+        mapY: pos.y,
+        mapRadius: taskRadius,
+        sphere,
+        priority
+      };
+    });
+  },
+  
+  // Find a position that doesn't overlap with existing tasks
+  findNonOverlappingPosition(center, maxRadius, taskRadius, existingPositions, sphere) {
+    const sphereCenters = {
+      geschaeft: { x: 310, y: 230 },
+      schule: { x: 490, y: 230 },
+      sport: { x: 310, y: 370 },
+      projekte: { x: 490, y: 370 }
+    };
+    
+    // For freizeit, we need to avoid the inner circles
+    const innerCircles = Object.values(sphereCenters);
+    const innerRadius = 120;
+    
+    // Try spiral placement from center outward
+    const maxAttempts = 100;
+    let bestPos = { x: center.x, y: center.y };
+    let spiralAngle = Math.random() * Math.PI * 2; // Random start angle
+    let spiralRadius = 20;
+    
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // Spiral outward
+      const x = center.x + Math.cos(spiralAngle) * spiralRadius;
+      const y = center.y + Math.sin(spiralAngle) * spiralRadius;
+      
+      // Check bounds
+      const distFromCenter = Math.sqrt((x - center.x) ** 2 + (y - center.y) ** 2);
+      if (distFromCenter > maxRadius - taskRadius) {
+        spiralAngle += 0.5;
+        spiralRadius = 20;
+        continue;
+      }
+      
+      // For freizeit tasks, check we're outside inner circles
+      if (sphere === 'freizeit') {
+        let insideInner = false;
+        for (const ic of innerCircles) {
+          const dist = Math.sqrt((x - ic.x) ** 2 + (y - ic.y) ** 2);
+          if (dist < innerRadius + taskRadius + 15) {
+            insideInner = true;
+            break;
+          }
+        }
+        if (insideInner) {
+          spiralAngle += 0.3;
+          spiralRadius += 5;
+          continue;
+        }
+      }
+      
+      // Check overlap with existing tasks
+      let hasOverlap = false;
+      for (const pos of existingPositions) {
+        const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
+        if (dist < taskRadius + pos.radius + 5) { // 5px padding
+          hasOverlap = true;
+          break;
+        }
+      }
+      
+      if (!hasOverlap) {
+        return { x, y };
+      }
+      
+      spiralAngle += 0.4;
+      spiralRadius += 3;
+    }
+    
+    // Fallback: return slightly offset position
+    return {
+      x: center.x + (Math.random() - 0.5) * maxRadius * 0.5,
+      y: center.y + (Math.random() - 0.5) * maxRadius * 0.5
+    };
+  },
+  
+  // Render a single task node in the map
+  renderMapTaskNode(task) {
+    const isSelected = this.mapSelectedTasks.has(task.id);
+    const sphereColors = {
+      geschaeft: '#4A7C94',
+      schule: '#94854A',
+      sport: '#4A946A',
+      projekte: '#7C6A94',
+      freizeit: '#6B6862'
+    };
+    
+    const color = sphereColors[task.sphere] || sphereColors.freizeit;
+    const priorityClass = task.priority >= 8 ? 'critical' : task.priority >= 6 ? 'high' : '';
+    
+    // Truncate title for display
+    const displayTitle = task.title.length > 15 ? task.title.substring(0, 12) + '...' : task.title;
+    
+    return `
+      <g class="task-node ${isSelected ? 'selected' : ''} ${priorityClass}" 
+         data-task-id="${task.id}"
+         data-map-task="true"
+         transform="translate(${task.mapX}, ${task.mapY})"
+         style="cursor: pointer;">
+        <!-- Task circle -->
+        <circle r="${task.mapRadius}" 
+                fill="${color}" 
+                fill-opacity="${isSelected ? 1 : 0.8}"
+                stroke="${isSelected ? '#fff' : color}"
+                stroke-width="${isSelected ? 3 : 1}"
+                ${isSelected ? 'filter="url(#glow-selected)"' : ''}/>
+        
+        <!-- Priority indicator for high priority -->
+        ${task.priority >= 7 ? `
+          <circle r="${task.mapRadius + 4}" 
+                  fill="none" 
+                  stroke="${task.priority >= 9 ? '#ef4444' : '#fbbf24'}"
+                  stroke-width="2"
+                  stroke-dasharray="4 2"
+                  opacity="0.7"/>
+        ` : ''}
+        
+        <!-- Task title (shown for larger nodes) -->
+        ${task.mapRadius >= 14 ? `
+          <text y="4" text-anchor="middle" 
+                class="task-node-label"
+                fill="#fff"
+                font-size="${Math.max(9, task.mapRadius * 0.6)}">
+            ${displayTitle}
+          </text>
+        ` : ''}
+        
+        <!-- Tooltip trigger area -->
+        <title>${task.title} (${task.priority}/10)</title>
+      </g>
+    `;
+  },
+  
+  // Add selected tasks to Command Center
+  addSelectedToCommandCenter(block) {
+    if (this.mapSelectedTasks.size === 0) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    let addedCount = 0;
+    
+    this.mapSelectedTasks.forEach(taskId => {
+      const task = NexusStore.getTaskById(taskId);
+      if (task) {
+        // Update task with command center block and today's date
+        NexusStore.updateTask(taskId, {
+          commandCenterBlock: block,
+          scheduledDate: today
+        });
+        addedCount++;
+      }
+    });
+    
+    // Clear selection
+    this.mapSelectedTasks.clear();
+    
+    NexusUI.showToast({
+      type: 'success',
+      title: 'Tasks hinzugefügt!',
+      message: `${addedCount} Task(s) zu "${block === 'morning' ? 'Morgen' : block === 'afternoon' ? 'Nachmittag' : 'Abend'}" hinzugefügt`
+    });
+    
+    this.render();
+  },
+  
+  // Toggle task selection in map
+  toggleMapTaskSelection(taskId) {
+    if (this.mapSelectedTasks.has(taskId)) {
+      this.mapSelectedTasks.delete(taskId);
+    } else {
+      this.mapSelectedTasks.add(taskId);
+    }
+    this.render();
+  },
+  
+  // Clear map selection
+  clearMapSelection() {
+    this.mapSelectedTasks.clear();
+    this.render();
+  },
+  
   // Get project name
   getProjectName(projectId) {
     const project = NexusStore.getProjects().find(p => p.id === projectId);
@@ -570,6 +928,38 @@ const TasksModule = {
     document.addEventListener('click', (e) => {
       // Debug: log all clicks
       console.log('🖱️ Tasks click:', e.target.tagName, e.target.className, e.target.id);
+      
+      // Task Map actions
+      const mapAction = e.target.closest('[data-map-action]');
+      if (mapAction && e.target.closest('#page-tasks')) {
+        const action = mapAction.dataset.mapAction;
+        console.log('  → Map action:', action);
+        
+        switch (action) {
+          case 'clear-selection':
+            this.clearMapSelection();
+            break;
+          case 'add-to-morning':
+            this.addSelectedToCommandCenter('morning');
+            break;
+          case 'add-to-afternoon':
+            this.addSelectedToCommandCenter('afternoon');
+            break;
+          case 'add-to-evening':
+            this.addSelectedToCommandCenter('evening');
+            break;
+        }
+        return;
+      }
+      
+      // Task Map node click
+      const taskNode = e.target.closest('[data-map-task]');
+      if (taskNode && e.target.closest('#page-tasks')) {
+        const taskId = taskNode.dataset.taskId;
+        console.log('  → Map task clicked:', taskId);
+        this.toggleMapTaskSelection(taskId);
+        return;
+      }
       
       // View toggle
       const viewTab = e.target.closest('[data-view]');

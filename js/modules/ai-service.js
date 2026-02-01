@@ -19,7 +19,17 @@ const AtlasAI = {
   },
   
   // Chat Session Management
-  CHAT_STORAGE_KEY: 'atlas_chat_sessions',
+  CHAT_STORAGE_KEY_BASE: 'atlas_chat_sessions',
+  
+  // Get user-specific chat storage key
+  getChatStorageKey() {
+    if (window.AuthService && AuthService.user) {
+      return `atlas_chat_sessions_${AuthService.user.uid}`;
+    }
+    // Return a temporary key for unauthenticated state
+    return 'atlas_chat_sessions_temp';
+  },
+  
   currentSessionId: null,
   chatSessions: [],
   
@@ -828,7 +838,8 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
   
   // Initialize chat sessions
   initChatSessions() {
-    const stored = localStorage.getItem(this.CHAT_STORAGE_KEY);
+    const storageKey = this.getChatStorageKey();
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       this.chatSessions = JSON.parse(stored);
     } else {
@@ -969,7 +980,8 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
   // Save sessions to localStorage
   saveSessions() {
     this.sortSessions();
-    localStorage.setItem(this.CHAT_STORAGE_KEY, JSON.stringify(this.chatSessions));
+    const storageKey = this.getChatStorageKey();
+    localStorage.setItem(storageKey, JSON.stringify(this.chatSessions));
   },
   
   // Get session statistics

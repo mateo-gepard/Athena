@@ -103,13 +103,20 @@ const Analytics = {
     // Habit Consistency
     const habitConsistencyEl = document.getElementById('stat-habit-consistency');
     if (habitConsistencyEl) {
-      habitConsistencyEl.textContent = `${metrics.habitConsistency}%`;
-      habitConsistencyEl.className = `stat-value ${this.getCompletionClass(metrics.habitConsistency)}`;
+      // Show "–" if no habits exist
+      const hasHabits = NexusStore.getHabits().length > 0;
+      habitConsistencyEl.textContent = hasHabits ? `${metrics.habitConsistency}%` : '–';
+      habitConsistencyEl.className = `stat-value ${hasHabits ? this.getCompletionClass(metrics.habitConsistency) : ''}`;
     }
     
     const habitDetailEl = document.getElementById('stat-habit-detail');
     if (habitDetailEl) {
-      habitDetailEl.textContent = `${metrics.habitCompletionDays}/${this.currentPeriod} Tage`;
+      const hasHabits = NexusStore.getHabits().length > 0;
+      if (hasHabits) {
+        habitDetailEl.textContent = `${metrics.habitCompletionDays}/${metrics.daysWithHabits || this.currentPeriod} Tage`;
+      } else {
+        habitDetailEl.textContent = 'Keine Habits';
+      }
     }
     
     const habitTrendEl = document.getElementById('stat-habit-trend');
@@ -451,16 +458,21 @@ const Analytics = {
     const prevCompletionRate = prevTasksScheduled > 0 ? (prevTasksCompleted / prevTasksScheduled) * 100 : 0;
     const taskTrend = Math.round(taskCompletionRate - prevCompletionRate);
     
-    // Habit metrics
-    const habitCompletionDays = currentPeriodData.filter(d => 
-      d.totalHabits > 0 && d.habitCompletions === d.totalHabits
-    ).length;
-    const habitConsistency = Math.round((habitCompletionDays / period) * 100);
+    // Habit metrics - only count days where habits actually existed
+    const daysWithHabits = currentPeriodData.filter(d => d.totalHabits > 0);
+    const habitCompletionDays = daysWithHabits.filter(d => d.habitCompletions === d.totalHabits).length;
     
-    const prevHabitCompletionDays = prevPeriodData.filter(d =>
-      d.totalHabits > 0 && d.habitCompletions === d.totalHabits
-    ).length;
-    const prevHabitConsistency = (prevHabitCompletionDays / period) * 100;
+    // If no habits exist (or never had any in the period), show 0%
+    let habitConsistency = 0;
+    if (daysWithHabits.length > 0) {
+      habitConsistency = Math.round((habitCompletionDays / daysWithHabits.length) * 100);
+    }
+    
+    const prevDaysWithHabits = prevPeriodData.filter(d => d.totalHabits > 0);
+    const prevHabitCompletionDays = prevDaysWithHabits.filter(d => d.habitCompletions === d.totalHabits).length;
+    const prevHabitConsistency = prevDaysWithHabits.length > 0 
+      ? (prevHabitCompletionDays / prevDaysWithHabits.length) * 100 
+      : 0;
     const habitTrend = Math.round(habitConsistency - prevHabitConsistency);
     
     // Time metrics
@@ -499,6 +511,7 @@ const Analytics = {
       taskTrend,
       habitConsistency,
       habitCompletionDays,
+      daysWithHabits: daysWithHabits.length,
       habitTrend,
       avgDailyHours,
       avgDailyTasks,
@@ -543,16 +556,24 @@ const Analytics = {
   calculateBurnoutRisk() {
     const history = NexusStore.getAnalyticsHistory();
     const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
     const last7Days = [];
     
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
-      last7Days.push(history[dateStr] || { overdueTasks: 0, plannedMinutes: 0, sphereMinutes: {} });
+      last7Days.push(history[dateStr] || { overdueTasks: 0, overdueTasksHistorical: 0, plannedMinutes: 0, sphereMinutes: {} });
     }
     
+    // Use historical overdue data from the last 7 days (sum of max overdue per day)
+    // This ensures that even if tasks are completed, the stress from past overdue remains
+    const historicalOverdueSum = last7Days.reduce((sum, d) => sum + (d.overdueTasksHistorical || d.overdueTasks || 0), 0);
+    const avgHistoricalOverdue = historicalOverdueSum / 7;
+    
+    // Current overdue is still important but historical average matters more for burnout
     const currentOverdue = NexusStore.getOverdueTasks().length;
+    
     const totalPlannedMinutes = last7Days.reduce((sum, d) => sum + (d.plannedMinutes || 0), 0);
     const avgPlannedHours = totalPlannedMinutes / (7 * 60);
     
@@ -567,7 +588,7 @@ const Analytics = {
     const metrics = this.calculateMetrics();
     
     // Check if there's any actual data
-    const hasData = totalPlannedMinutes > 0 || currentOverdue > 0 || recreationMinutes > 0;
+    const hasData = totalPlannedMinutes > 0 || currentOverdue > 0 || historicalOverdueSum > 0 || recreationMinutes > 0;
     
     if (!hasData) {
       // No data yet - show healthy state
@@ -577,7 +598,7 @@ const Analytics = {
         label: 'GESUND',
         message: 'Keine Daten vorhanden',
         factors: [
-          { title: 'Überfällig', value: 0, severity: 'low', icon: 'alert-triangle' },
+          { title: 'Überfällig (7d Ø)', value: '0', severity: 'low', icon: 'alert-triangle' },
           { title: 'Ø Arbeitslast', value: '0h', severity: 'low', icon: 'clock' },
           { title: 'Erholung', value: '0h', severity: 'low', icon: 'coffee' },
           { title: 'Completion', value: '0%', severity: 'low', icon: 'check-circle' }
@@ -589,13 +610,15 @@ const Analytics = {
     let riskScore = 0;
     const factors = [];
     
-    // Overdue tasks (max 30 points)
-    const overdueRisk = Math.min(30, currentOverdue * 5);
+    // Overdue tasks - use average of historical + current (max 30 points)
+    // Historical data prevents instant burnout reset when tasks are completed
+    const combinedOverdue = (avgHistoricalOverdue + currentOverdue) / 2;
+    const overdueRisk = Math.min(30, combinedOverdue * 5);
     riskScore += overdueRisk;
     factors.push({
-      title: 'Überfällig',
-      value: currentOverdue,
-      severity: currentOverdue > 5 ? 'high' : currentOverdue > 2 ? 'medium' : 'low',
+      title: 'Überfällig (7d Ø)',
+      value: avgHistoricalOverdue.toFixed(1),
+      severity: avgHistoricalOverdue > 3 ? 'high' : avgHistoricalOverdue > 1 ? 'medium' : 'low',
       icon: 'alert-triangle'
     });
     

@@ -359,7 +359,9 @@ const NexusStore = {
     }
     
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const deadline = new Date(task.deadline);
+    deadline.setHours(0, 0, 0, 0);
     const daysUntilDeadline = Math.ceil((deadline - today) / (1000 * 60 * 60 * 24));
     
     // Overdue: max priority
@@ -367,9 +369,10 @@ const NexusStore = {
     
     // Calculate boost based on urgency
     let boost = 0;
-    if (daysUntilDeadline === 0) boost = 4;      // Due today: +4
-    else if (daysUntilDeadline === 1) boost = 3;  // Due tomorrow: +3
-    else if (daysUntilDeadline <= 3) boost = 2;   // Due in 3 days: +2
+    if (daysUntilDeadline === 0) boost = 5;      // Due today: +5 (almost max)
+    else if (daysUntilDeadline === 1) boost = 4;  // Due tomorrow: +4
+    else if (daysUntilDeadline === 2) boost = 3;  // Due in 2 days: +3
+    else if (daysUntilDeadline <= 4) boost = 2;   // Due in 3-4 days: +2
     else if (daysUntilDeadline <= 7) boost = 1;   // Due this week: +1
     
     return Math.min(basePriority + boost, 10);
@@ -474,6 +477,7 @@ const NexusStore = {
       deadline: taskData.deadline || null,
       scheduledDate: taskData.scheduledDate || null,
       scheduledTime: taskData.scheduledTime || null,
+      commandCenterBlock: taskData.commandCenterBlock || null, // 'morning', 'afternoon', 'evening' for deadline/someday tasks
       timeEstimate: taskData.timeEstimate || defaultTimeEstimate,
       timeActual: null,
       dependencies: taskData.dependencies || [],
@@ -1657,6 +1661,12 @@ const NexusStore = {
       const overdueTasks = this.getOverdueTasks();
       const plannedMinutes = todayTasks.reduce((sum, t) => sum + (t.timeEstimate || 0), 0);
       
+      // Track max overdue count for historical burnout calculation
+      // This preserves the stress history even after tasks are completed
+      const existingData = history[today] || {};
+      const previousMaxOverdue = existingData.overdueTasksHistorical || 0;
+      const overdueTasksHistorical = Math.max(previousMaxOverdue, overdueTasks.length);
+      
       // Update snapshot for today
       history[today] = {
         tasksCompleted: completedToday.length,
@@ -1665,6 +1675,7 @@ const NexusStore = {
         totalHabits: habits.length,
         sphereMinutes,
         overdueTasks: overdueTasks.length,
+        overdueTasksHistorical, // Max overdue seen today (for burnout tracking)
         plannedMinutes,
         timestamp: new Date().toISOString()
       };

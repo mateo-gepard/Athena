@@ -152,25 +152,95 @@ const CommandCenter = {
   // Render Time Blocks (Morning, Afternoon, Evening)
   renderTimeBlocks() {
     const today = new Date().toISOString().split('T')[0];
-    const tasks = NexusStore.getTasksForDate(today);
+    const todayDate = new Date();
     
-    // Sort tasks by scheduled time
-    tasks.sort((a, b) => {
-      if (!a.scheduledTime) return 1;
-      if (!b.scheduledTime) return -1;
-      return a.scheduledTime.localeCompare(b.scheduledTime);
+    // Get all tasks for today (scheduled)
+    const scheduledTasks = NexusStore.getTasksForDate(today);
+    
+    // Get deadline tasks that are due today or past (needs attention)
+    const overdueTasks = NexusStore.getOverdueTasks();
+    
+    // Get deadline tasks due tomorrow (high priority)
+    const tomorrow = new Date(todayDate);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    
+    const urgentDeadlineTasks = NexusStore.getTasks().filter(t => {
+      if (t.status === 'completed') return false;
+      if (!t.deadline) return false;
+      // Due today or tomorrow but not already scheduled today
+      return (t.deadline === today || t.deadline === tomorrowStr) && !t.scheduledDate;
+    });
+    
+    // Get someday tasks with commandCenterBlock assignment
+    const somedayInBlocks = NexusStore.getTasks().filter(t => {
+      if (t.status === 'completed') return false;
+      if (t.taskType !== 'someday' && t.taskType !== 'deadline') return false;
+      return t.commandCenterBlock && !t.scheduledDate;
+    });
+    
+    // Combine all tasks
+    const allTasks = [...scheduledTasks];
+    
+    // Add urgent deadline tasks if not already in scheduled
+    urgentDeadlineTasks.forEach(t => {
+      if (!allTasks.find(st => st.id === t.id)) {
+        allTasks.push(t);
+      }
+    });
+    
+    // Add someday tasks with block assignment
+    somedayInBlocks.forEach(t => {
+      if (!allTasks.find(st => st.id === t.id)) {
+        allTasks.push(t);
+      }
+    });
+    
+    // Sort tasks by scheduled time (if available) then by effective priority
+    allTasks.sort((a, b) => {
+      // First by scheduled time
+      if (a.scheduledTime && !b.scheduledTime) return -1;
+      if (!a.scheduledTime && b.scheduledTime) return 1;
+      if (a.scheduledTime && b.scheduledTime) {
+        return a.scheduledTime.localeCompare(b.scheduledTime);
+      }
+      // Then by effective priority (higher first)
+      const prioA = NexusStore.getEffectivePriority(a);
+      const prioB = NexusStore.getEffectivePriority(b);
+      return prioB - prioA;
     });
     
     // Categorize by time block
     const blocks = {
-      morning: [],    // 06:00 - 12:00
-      afternoon: [],  // 12:00 - 18:00
-      evening: []     // 18:00 - 22:00
+      needsAttention: [], // Overdue or due today
+      morning: [],        // 06:00 - 12:00
+      afternoon: [],      // 12:00 - 18:00
+      evening: []         // 18:00 - 22:00
     };
     
-    tasks.forEach(task => {
+    allTasks.forEach(task => {
+      // Check if overdue or due today (needs attention)
+      if (task.deadline) {
+        const deadlineDate = task.deadline.split('T')[0];
+        if (deadlineDate <= today && task.status !== 'completed') {
+          blocks.needsAttention.push(task);
+          return;
+        }
+      }
+      
+      // If task has commandCenterBlock assignment, use that
+      if (task.commandCenterBlock) {
+        const block = task.commandCenterBlock;
+        if (blocks[block]) {
+          blocks[block].push(task);
+          return;
+        }
+      }
+      
+      // Otherwise use scheduled time
       if (!task.scheduledTime) {
-        blocks.morning.push(task); // Default to morning
+        // Default deadline/someday tasks to morning if no block assigned
+        blocks.morning.push(task);
         return;
       }
       
@@ -185,9 +255,36 @@ const CommandCenter = {
     });
     
     // Render each block
+    this.renderNeedsAttentionBlock(blocks.needsAttention);
     this.renderBlock('morningTasks', blocks.morning);
     this.renderBlock('afternoonTasks', blocks.afternoon);
     this.renderBlock('eveningTasks', blocks.evening);
+  },
+  
+  // Render Needs Attention Block (Overdue & Due Today)
+  renderNeedsAttentionBlock(tasks) {
+    const container = document.getElementById('needsAttentionTasks');
+    const countEl = document.getElementById('cc-needsAttention-count');
+    const sectionEl = document.getElementById('cc-needsAttention-section');
+    
+    if (countEl) {
+      countEl.textContent = tasks.length;
+    }
+    
+    // Hide section if no tasks need attention
+    if (sectionEl) {
+      sectionEl.style.display = tasks.length > 0 ? 'block' : 'none';
+    }
+    
+    if (!container) return;
+    
+    if (tasks.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    
+    container.innerHTML = tasks.map(task => this.renderTaskCard(task, true)).join('');
+    NexusUI.refreshIcons();
   },
   
   // Render a single time block
@@ -255,7 +352,7 @@ const CommandCenter = {
   },
   
   // Render Task Card (new style)
-  renderTaskCard(task) {
+  renderTaskCard(task, isUrgent = false) {
     const isCompleted = task.status === 'completed';
     const sphere = task.spheres && task.spheres[0] ? task.spheres[0] : 'freizeit';
     const sphereColor = NexusUI.getSphereColor(sphere);
@@ -263,6 +360,7 @@ const CommandCenter = {
     // Use effective priority for deadline tasks
     const effectivePriority = NexusStore.getEffectivePriority(task);
     const priorityClass = effectivePriority >= 8 ? 'critical' : effectivePriority >= 6 ? 'high' : effectivePriority >= 4 ? 'medium' : 'low';
+    const urgentClass = isUrgent ? 'urgent' : '';
     
     // Format time estimate
     const duration = task.timeEstimate || 0;
@@ -286,12 +384,12 @@ const CommandCenter = {
     }
     
     return `
-      <div class="cc-task-card ${isCompleted ? 'completed' : ''}" 
+      <div class="cc-task-card ${isCompleted ? 'completed' : ''} ${urgentClass}" 
            style="--sphere-color: ${sphereColor}"
            data-task-id="${task.id}">
         <div class="cc-task-checkbox ${isCompleted ? 'checked' : ''}" data-action="toggle-task"></div>
         <div class="cc-task-content">
-          <div class="cc-task-title">${typeIcon} ${task.title}</div>
+          <div class="cc-task-title">${isUrgent ? '⚠️ ' : ''}${typeIcon} ${task.title}</div>
           <div class="cc-task-meta">
             <span class="badge badge-${priorityClass}">${effectivePriority}/10</span>
             <span class="cc-task-meta-separator">·</span>

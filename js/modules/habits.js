@@ -384,16 +384,21 @@ const HabitsModule = {
                   const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                   const isToday = dateStr === new Date().toISOString().split('T')[0];
                   
-                  // Count completions for this day
-                  const completions = displayHabits.map(h => ({
+                  // Only count habits that are due on this day
+                  const dueHabits = displayHabits.filter(h => this.isHabitDueOnDate(h, dateStr));
+                  
+                  // Count completions for habits due on this day
+                  const completions = dueHabits.map(h => ({
                     habit: h,
-                    completed: h.completionLog?.includes(dateStr)
+                    completed: h.completionLog?.includes(dateStr),
+                    isDue: true
                   }));
                   const completedCount = completions.filter(c => c.completed).length;
-                  const allCompleted = displayHabits.length > 0 && completedCount === displayHabits.length;
+                  const allCompleted = dueHabits.length > 0 && completedCount === dueHabits.length;
+                  const noDueHabits = dueHabits.length === 0;
                   
                   return `
-                    <div class="habit-month-cell ${isToday ? 'today' : ''} ${allCompleted ? 'all-completed' : ''}"
+                    <div class="habit-month-cell ${isToday ? 'today' : ''} ${allCompleted ? 'all-completed' : ''} ${noDueHabits ? 'no-habits-due' : ''}"
                          data-date="${dateStr}">
                       <div class="cell-day">${day}</div>
                       <div class="cell-dots">
@@ -405,8 +410,10 @@ const HabitsModule = {
                         `).join('')}
                         ${completions.length > 5 ? `<span class="text-xs">+${completions.length - 5}</span>` : ''}
                       </div>
-                      ${displayHabits.length > 0 ? `
-                        <div class="cell-count ${allCompleted ? 'complete' : ''}">${completedCount}/${displayHabits.length}</div>
+                      ${dueHabits.length > 0 ? `
+                        <div class="cell-count ${allCompleted ? 'complete' : ''}">${completedCount}/${dueHabits.length}</div>
+                      ` : displayHabits.length > 0 ? `
+                        <div class="cell-count no-due">–</div>
                       ` : ''}
                     </div>
                   `;
@@ -504,18 +511,57 @@ const HabitsModule = {
     return labels[frequency] || frequency || '📅 Täglich';
   },
   
-  // Get success rate
+  // Check if a habit is due on a specific date
+  isHabitDueOnDate(habit, dateStr) {
+    const date = new Date(dateStr);
+    const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, etc.
+    
+    // Daily habits are always due
+    if (habit.frequency === 'daily') return true;
+    
+    // Weekdays (Mon-Fri)
+    if (habit.frequency === 'weekdays') {
+      return dayOfWeek >= 1 && dayOfWeek <= 5;
+    }
+    
+    // Weekends (Sat-Sun)
+    if (habit.frequency === 'weekends') {
+      return dayOfWeek === 0 || dayOfWeek === 6;
+    }
+    
+    // Weekly with specific days
+    if (habit.frequency === 'weekly' && habit.scheduledDays && habit.scheduledDays.length > 0) {
+      return habit.scheduledDays.includes(dayOfWeek);
+    }
+    
+    // Default: assume daily if no specific frequency
+    return true;
+  },
+  
+  // Get success rate (accounting for scheduled days)
   getSuccessRate(habit) {
     if (!habit.createdAt) return 0;
     
     const start = new Date(habit.createdAt);
     const now = new Date();
-    const days = Math.ceil((now - start) / (1000 * 60 * 60 * 24));
     
-    if (days === 0) return 100;
+    // Count only days where the habit was due
+    let dueDays = 0;
+    let currentDate = new Date(start);
+    currentDate.setHours(0, 0, 0, 0);
+    
+    while (currentDate <= now) {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      if (this.isHabitDueOnDate(habit, dateStr)) {
+        dueDays++;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    if (dueDays === 0) return 100;
     
     const completed = habit.completionLog?.length || 0;
-    return Math.round((completed / days) * 100);
+    return Math.round((completed / dueDays) * 100);
   },
   
   // Toggle habit for today

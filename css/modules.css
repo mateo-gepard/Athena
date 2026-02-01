@@ -4015,3 +4015,180 @@
 .btn-small.btn-success:hover {
   background: color-mix(in srgb, var(--success) 90%, black);
 }
+
+/* ============================================
+   TASK MAP VIEW
+   ============================================ */
+
+.task-map-container {
+  width: 100%;
+  height: 100%;
+  min-height: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--glass-bg);
+  border-radius: 16px;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.task-map-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.task-map-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.task-map-selected-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.task-map-block-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-map-hint {
+  display: flex;
+  align-items: center;
+}
+
+.task-map-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+.task-map-svg {
+  flex: 1;
+  width: 100%;
+  min-height: 480px;
+  background: radial-gradient(ellipse at center, 
+    color-mix(in srgb, var(--primary) 3%, transparent) 0%, 
+    transparent 70%);
+  border-radius: 12px;
+}
+
+/* Sphere Labels in SVG */
+.sphere-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  user-select: none;
+  fill: var(--text-secondary);
+}
+
+.sphere-label.geschaeft { fill: #4A7C94; }
+.sphere-label.schule { fill: #94854A; }
+.sphere-label.sport { fill: #4A946A; }
+.sphere-label.projekte { fill: #7C6A94; }
+.sphere-label.freizeit { fill: #6B6862; }
+
+/* Task Node Labels in SVG */
+.task-node-label {
+  pointer-events: none;
+  user-select: none;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+/* Task Nodes */
+.task-node {
+  cursor: pointer;
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.task-node:hover {
+  filter: brightness(1.2) drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+.task-node.selected {
+  filter: brightness(1.2) drop-shadow(0 0 12px var(--primary));
+}
+
+.task-node.critical circle:first-child {
+  animation: pulse-critical 2s ease-in-out infinite;
+}
+
+.task-node.high circle:first-child {
+  animation: pulse-high 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-critical {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px #ef4444);
+  }
+  50% {
+    filter: drop-shadow(0 0 12px #ef4444);
+  }
+}
+
+@keyframes pulse-high {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px #fbbf24);
+  }
+  50% {
+    filter: drop-shadow(0 0 8px #fbbf24);
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .task-map-container {
+    min-height: 500px;
+    padding: 12px;
+  }
+  
+  .task-map-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .task-map-legend {
+    justify-content: center;
+  }
+  
+  .task-map-selected-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .task-map-svg {
+    min-height: 350px;
+  }
+}
