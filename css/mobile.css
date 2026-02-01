@@ -300,7 +300,7 @@
   
   /* ═══ MOBILE ATLAS CHAT ═══ */
   .mobile-atlas-chat {
-    display: none;
+    display: none !important;
     position: fixed;
     top: 104px; /* Header + Tab bar */
     left: 0;
@@ -308,21 +308,26 @@
     bottom: 0;
     flex-direction: column;
     background: var(--color-surface-1);
-    z-index: 100;
+    z-index: 500;
+    overflow: hidden;
   }
   
   .mobile-atlas-chat.active {
     display: flex !important;
+    visibility: visible !important;
   }
   
   .mobile-atlas-messages {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 16px;
+    padding-bottom: 8px;
     display: flex;
     flex-direction: column;
     gap: 12px;
     -webkit-overflow-scrolling: touch;
+    min-height: 0; /* Important for flex scroll */
   }
   
   .mobile-atlas-message {
@@ -381,9 +386,12 @@
     display: flex;
     gap: 10px;
     padding: 12px 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
     background: var(--color-surface-1);
     border-top: 1px solid var(--color-border);
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
   }
   
   .mobile-atlas-input {
@@ -430,6 +438,32 @@
   .mobile-atlas-send-btn i {
     width: 20px;
     height: 20px;
+  }
+  
+  /* Mobile Atlas Loading Animation */
+  .mobile-atlas-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-tertiary);
+  }
+  
+  .mobile-atlas-loading i {
+    width: 16px;
+    height: 16px;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  
+  /* Improve touch targets for quick actions */
+  .mobile-atlas-quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 4px 0;
   }
 
   /* ═══ ATLAS CHAT MOBILE (legacy) ═══ */
@@ -559,7 +593,8 @@
     display: none !important;
   }
   
-  .mobile-atlas-chat {
+  .mobile-atlas-chat,
+  .mobile-atlas-chat.active {
     display: none !important;
   }
   

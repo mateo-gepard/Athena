@@ -19,7 +19,13 @@ const MobileNav = {
     this.setupMobileAtlas();
     this.syncCloudStatus();
     
-    // Set initial state
+    // Set initial state - ensure mobile atlas is hidden on startup
+    const mobileAtlasChat = document.getElementById('mobile-atlas-chat');
+    if (mobileAtlasChat) {
+      mobileAtlasChat.classList.remove('active');
+      mobileAtlasChat.style.display = 'none';
+    }
+    
     this.setActiveTab('command-center');
     
     console.log('✅ MobileNav initialized');
@@ -162,23 +168,56 @@ const MobileNav = {
     const ccView = document.getElementById('page-command-center');
     const pageContent = document.querySelector('.page-content');
     
+    console.log('📱 MobileNav: Setting active tab to', tab);
+    console.log('📱 Elements found:', {
+      ccTab: !!ccTab,
+      atlasTab: !!atlasTab,
+      mobileAtlasChat: !!mobileAtlasChat,
+      pageContent: !!pageContent
+    });
+    
     if (tab === 'command-center') {
       // Activate Command Center
       if (ccTab) ccTab.classList.add('active');
       if (atlasTab) atlasTab.classList.remove('active');
-      if (mobileAtlasChat) mobileAtlasChat.classList.remove('active');
-      if (pageContent) pageContent.style.display = '';
+      if (mobileAtlasChat) {
+        mobileAtlasChat.classList.remove('active');
+        mobileAtlasChat.style.display = 'none';
+      }
+      if (pageContent) {
+        pageContent.style.display = '';
+        pageContent.style.visibility = 'visible';
+      }
     } else if (tab === 'atlas') {
       // Activate Atlas
       if (atlasTab) atlasTab.classList.add('active');
       if (ccTab) ccTab.classList.remove('active');
-      if (mobileAtlasChat) mobileAtlasChat.classList.add('active');
-      if (pageContent) pageContent.style.display = 'none';
+      if (mobileAtlasChat) {
+        mobileAtlasChat.classList.add('active');
+        mobileAtlasChat.style.display = 'flex';
+        // Focus input after a small delay for smoother transition
+        setTimeout(() => {
+          const input = document.getElementById('mobile-atlas-input');
+          if (input && this.isMobile()) {
+            // Don't auto-focus on mobile to prevent keyboard popup
+          }
+        }, 100);
+      }
+      if (pageContent) {
+        pageContent.style.display = 'none';
+        pageContent.style.visibility = 'hidden';
+      }
+      
+      // Scroll messages to bottom
+      const messagesContainer = document.getElementById('mobile-atlas-messages');
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }
     }
     
     // Refresh icons
     if (window.lucide) {
-      lucide.createIcons();
+      setTimeout(() => lucide.createIcons(), 50);
     }
   },
   
@@ -262,10 +301,15 @@ const MobileNav = {
     const input = document.getElementById('mobile-atlas-input');
     const messagesContainer = document.getElementById('mobile-atlas-messages');
     
-    if (!input || !messagesContainer) return;
+    if (!input || !messagesContainer) {
+      console.error('📱 Mobile Atlas: Input or messages container not found');
+      return;
+    }
     
     const message = input.value.trim();
     if (!message) return;
+    
+    console.log('📱 Mobile Atlas: Sending message:', message);
     
     // Add user message
     this.addMobileMessage('user', message);
@@ -273,27 +317,57 @@ const MobileNav = {
     input.style.height = 'auto';
     
     // Show loading
-    const loadingId = this.addMobileMessage('assistant', '<div class="mobile-atlas-loading">Atlas denkt...</div>');
+    const loadingId = this.addMobileMessage('assistant', '<div class="mobile-atlas-loading"><i data-lucide="loader-2" style="animation: spin 1s linear infinite;"></i> Atlas denkt...</div>');
+    
+    // Refresh icons for loading spinner
+    if (window.lucide) lucide.createIcons();
     
     try {
-      // Use the AI Service
-      if (window.AIService) {
-        const response = await AIService.sendMessage(message);
+      // Use the Atlas AI Service
+      if (window.AtlasAI && AtlasAI.isConfigured()) {
+        console.log('📱 Mobile Atlas: Using AtlasAI...');
+        const response = await AtlasAI.sendMessage(message);
+        console.log('📱 Mobile Atlas: Got response');
+        
         // Remove loading and add response
         const loadingEl = document.getElementById(loadingId);
         if (loadingEl) loadingEl.remove();
-        this.addMobileMessage('assistant', response);
-      } else {
+        
+        // Format response with markdown support
+        const formattedResponse = this.formatResponse(response);
+        this.addMobileMessage('assistant', formattedResponse);
+      } else if (window.AtlasAI && !AtlasAI.isConfigured()) {
+        console.error('📱 Mobile Atlas: AtlasAI not configured (no API key)');
         const loadingEl = document.getElementById(loadingId);
         if (loadingEl) loadingEl.remove();
-        this.addMobileMessage('assistant', 'AI Service nicht verfügbar. Bitte lade die Seite neu.');
+        this.addMobileMessage('assistant', '⚠️ Kein API Key konfiguriert. Gehe zu <strong>Einstellungen → Atlas AI</strong> und füge deinen OpenAI API Key hinzu.');
+      } else {
+        console.error('📱 Mobile Atlas: AtlasAI not available');
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+        this.addMobileMessage('assistant', '❌ AI Service nicht verfügbar. Bitte lade die Seite neu.');
       }
     } catch (error) {
-      console.error('Mobile Atlas error:', error);
+      console.error('📱 Mobile Atlas error:', error);
       const loadingEl = document.getElementById(loadingId);
       if (loadingEl) loadingEl.remove();
-      this.addMobileMessage('assistant', 'Fehler: ' + error.message);
+      this.addMobileMessage('assistant', '❌ Fehler: ' + (error.message || 'Unbekannter Fehler'));
     }
+  },
+  
+  formatResponse(text) {
+    // Basic markdown formatting for mobile
+    let formatted = text
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Italic
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Line breaks
+      .replace(/\n/g, '<br>')
+      // Lists
+      .replace(/^- (.*?)(<br>|$)/gm, '• $1$2');
+    
+    return formatted;
   },
   
   addMobileMessage(role, content) {

@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
    NEXUS ULTRA - Habits Module
-   Full habit tracking view
+   Full habit tracking view with advanced frequency cycles
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 const HabitsModule = {
@@ -9,6 +9,18 @@ const HabitsModule = {
   selectedHabits: [], // For month view multi-select
   monthOffset: 0, // 0 = current month, -1 = last month
   _listenersInitialized: false,
+  
+  // Available frequency types
+  FREQUENCY_TYPES: {
+    daily: { label: '📅 Täglich', description: 'Jeden Tag' },
+    weekdays: { label: '💼 Werktags', description: 'Montag bis Freitag' },
+    weekends: { label: '🌴 Wochenende', description: 'Samstag und Sonntag' },
+    weekly: { label: '📆 Bestimmte Tage', description: 'An ausgewählten Wochentagen' },
+    everyXDays: { label: '🔄 Alle X Tage', description: 'z.B. alle 2, 3 Tage' },
+    xTimesPerWeek: { label: '🎯 X mal pro Woche', description: 'Flexible Tage wählen' },
+    xTimesPerMonth: { label: '📊 X mal pro Monat', description: 'Monatliches Ziel' },
+    monthlyDays: { label: '📅 Bestimmte Monatstage', description: 'z.B. 1., 15. des Monats' }
+  },
   
   // Initialize
   init() {
@@ -180,10 +192,28 @@ const HabitsModule = {
   
   // Render habit card
   renderHabitCard(habit, isCompleted) {
+    const today = new Date().toISOString().split('T')[0];
+    const isDueToday = this.isHabitDueOnDate(habit, today);
+    const flexProgress = this.getFlexibleProgress(habit);
+    
+    // For everyXDays, show when next due
+    let nextDueInfo = '';
+    if (habit.frequency === 'everyXDays' && !isDueToday) {
+      const nextDue = this.getNextDueDate(habit);
+      if (nextDue) {
+        const daysUntil = Math.ceil((nextDue - new Date()) / (1000 * 60 * 60 * 24));
+        if (daysUntil === 1) {
+          nextDueInfo = '⏰ Morgen fällig';
+        } else if (daysUntil > 1) {
+          nextDueInfo = `⏰ In ${daysUntil} Tagen`;
+        }
+      }
+    }
+    
     return `
-      <div class="habit-card ${isCompleted ? 'completed' : ''}" data-habit-id="${habit.id}">
+      <div class="habit-card ${isCompleted ? 'completed' : ''} ${!isDueToday && !flexProgress ? 'not-due' : ''}" data-habit-id="${habit.id}">
         <div class="flex items-center gap-4">
-          <button class="habit-check ${isCompleted ? 'checked' : ''}" data-action="toggle">
+          <button class="habit-check ${isCompleted ? 'checked' : ''}" data-action="toggle" ${!isDueToday && habit.frequency === 'everyXDays' ? 'disabled title="Heute nicht fällig"' : ''}>
             ${isCompleted ? '✓' : ''}
           </button>
           
@@ -192,9 +222,21 @@ const HabitsModule = {
           <div class="flex-1 min-w-0">
             <div class="habit-name font-medium ${isCompleted ? 'text-tertiary' : ''}">${habit.name}</div>
             <div class="flex items-center gap-3 text-xs text-tertiary mt-1">
-              <span>${this.getFrequencyLabel(habit.frequency, habit.scheduledDays)}</span>
+              <span>${this.getFrequencyLabel(habit)}</span>
               ${habit.streak > 0 ? `<span class="text-warning">🔥 ${habit.streak} Tage</span>` : ''}
+              ${nextDueInfo ? `<span class="text-info">${nextDueInfo}</span>` : ''}
             </div>
+            ${flexProgress ? `
+              <div class="flex items-center gap-2 mt-1">
+                <div class="progress-bar-mini" style="width: 80px;">
+                  <div class="progress-fill ${flexProgress.isOnTrack ? 'on-track' : 'behind'}" 
+                       style="width: ${Math.min(100, (flexProgress.completed / flexProgress.target) * 100)}%"></div>
+                </div>
+                <span class="text-xs ${flexProgress.isOnTrack ? 'text-success' : 'text-warning'}">
+                  ${flexProgress.completed}/${flexProgress.target} diese ${flexProgress.period}
+                </span>
+              </div>
+            ` : ''}
           </div>
           
           ${habit.sphere ? `
@@ -229,12 +271,21 @@ const HabitsModule = {
       d.setDate(d.getDate() - i);
       const dateStr = d.toISOString().split('T')[0];
       const isCompleted = habit.completionLog?.includes(dateStr);
+      const isDue = this.isHabitDueOnDate(habit, dateStr);
       const dayName = d.toLocaleDateString('de-DE', { weekday: 'narrow' });
       
+      let dotClass = '';
+      if (isCompleted) {
+        dotClass = 'filled';
+      } else if (!isDue) {
+        dotClass = 'not-due';
+      }
+      
       days.push(`
-        <div class="habit-day ${isCompleted ? 'completed' : ''}" title="${d.toLocaleDateString('de-DE')}">
+        <div class="habit-day ${isCompleted ? 'completed' : ''} ${!isDue ? 'not-due' : ''}" 
+             title="${d.toLocaleDateString('de-DE')}${!isDue ? ' (nicht fällig)' : ''}">
           <div class="habit-day-name">${dayName}</div>
-          <div class="habit-day-dot ${isCompleted ? 'filled' : ''}"></div>
+          <div class="habit-day-dot ${dotClass}"></div>
         </div>
       `);
     }
@@ -448,7 +499,7 @@ const HabitsModule = {
                       <div class="font-medium text-lg">${habit.name}</div>
                       <div class="text-secondary text-sm mb-2">${habit.description || 'Keine Beschreibung'}</div>
                       <div class="flex items-center gap-4 text-sm">
-                        <span>${this.getFrequencyLabel(habit.frequency, habit.scheduledDays)}</span>
+                        <span>${this.getFrequencyLabel(habit)}</span>
                         ${habit.sphere ? `<span class="badge" style="background: var(--color-sphere-${habit.sphere})">${habit.sphere}</span>` : ''}
                       </div>
                     </div>
@@ -495,52 +546,202 @@ const HabitsModule = {
   },
   
   // Get frequency label
-  getFrequencyLabel(frequency, scheduledDays = null) {
-    if (frequency === 'weekly' && scheduledDays && scheduledDays.length > 0) {
-      const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-      const days = scheduledDays.map(d => dayNames[d]).join(', ');
-      return `📆 Wöchentlich (${days})`;
-    }
+  getFrequencyLabel(habit) {
+    const frequency = habit.frequency || 'daily';
+    const scheduledDays = habit.scheduledDays;
     
-    const labels = {
-      daily: '📅 Täglich',
-      weekly: '📆 Wöchentlich',
-      weekdays: '💼 Werktags',
-      custom: '⚙️ Benutzerdefiniert'
-    };
-    return labels[frequency] || frequency || '📅 Täglich';
+    switch (frequency) {
+      case 'daily':
+        return '📅 Täglich';
+        
+      case 'weekdays':
+        return '💼 Werktags (Mo-Fr)';
+        
+      case 'weekends':
+        return '🌴 Wochenende (Sa-So)';
+        
+      case 'weekly':
+        if (scheduledDays && scheduledDays.length > 0) {
+          const dayNames = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+          const days = scheduledDays.map(d => dayNames[d]).join(', ');
+          return `📆 ${days}`;
+        }
+        return '📆 Wöchentlich';
+        
+      case 'everyXDays':
+        const interval = habit.intervalDays || 2;
+        return `🔄 Alle ${interval} Tage`;
+        
+      case 'xTimesPerWeek':
+        const timesWeek = habit.timesPerPeriod || 3;
+        return `🎯 ${timesWeek}x pro Woche`;
+        
+      case 'xTimesPerMonth':
+        const timesMonth = habit.timesPerPeriod || 10;
+        return `📊 ${timesMonth}x pro Monat`;
+        
+      case 'monthlyDays':
+        if (habit.monthDays && habit.monthDays.length > 0) {
+          const days = habit.monthDays.slice(0, 3).join('., ') + '.';
+          const more = habit.monthDays.length > 3 ? ` +${habit.monthDays.length - 3}` : '';
+          return `📅 ${days}${more}`;
+        }
+        return '📅 Monatstage';
+        
+      default:
+        return '📅 Täglich';
+    }
   },
   
   // Check if a habit is due on a specific date
   isHabitDueOnDate(habit, dateStr) {
     const date = new Date(dateStr);
     const dayOfWeek = date.getDay(); // 0=Sunday, 1=Monday, etc.
+    const dayOfMonth = date.getDate();
+    const frequency = habit.frequency || 'daily';
     
-    // Daily habits are always due
-    if (habit.frequency === 'daily') return true;
-    
-    // Weekdays (Mon-Fri)
-    if (habit.frequency === 'weekdays') {
-      return dayOfWeek >= 1 && dayOfWeek <= 5;
+    switch (frequency) {
+      case 'daily':
+        return true;
+        
+      case 'weekdays':
+        return dayOfWeek >= 1 && dayOfWeek <= 5;
+        
+      case 'weekends':
+        return dayOfWeek === 0 || dayOfWeek === 6;
+        
+      case 'weekly':
+        if (habit.scheduledDays && habit.scheduledDays.length > 0) {
+          return habit.scheduledDays.includes(dayOfWeek);
+        }
+        return true; // Fallback: every day if no days selected
+        
+      case 'everyXDays':
+        if (!habit.startDate) return true;
+        const startDate = new Date(habit.startDate);
+        startDate.setHours(0, 0, 0, 0);
+        const currentDate = new Date(dateStr);
+        currentDate.setHours(0, 0, 0, 0);
+        const diffDays = Math.floor((currentDate - startDate) / (1000 * 60 * 60 * 24));
+        const interval = habit.intervalDays || 2;
+        return diffDays >= 0 && diffDays % interval === 0;
+        
+      case 'xTimesPerWeek':
+        // For xTimesPerWeek, every day is "eligible" but we track against goal
+        return true;
+        
+      case 'xTimesPerMonth':
+        // For xTimesPerMonth, every day is "eligible" but we track against goal
+        return true;
+        
+      case 'monthlyDays':
+        if (habit.monthDays && habit.monthDays.length > 0) {
+          return habit.monthDays.includes(dayOfMonth);
+        }
+        return true;
+        
+      default:
+        return true;
     }
-    
-    // Weekends (Sat-Sun)
-    if (habit.frequency === 'weekends') {
-      return dayOfWeek === 0 || dayOfWeek === 6;
-    }
-    
-    // Weekly with specific days
-    if (habit.frequency === 'weekly' && habit.scheduledDays && habit.scheduledDays.length > 0) {
-      return habit.scheduledDays.includes(dayOfWeek);
-    }
-    
-    // Default: assume daily if no specific frequency
-    return true;
   },
   
-  // Get success rate (accounting for scheduled days)
+  // Check if habit meets its flexible goal (for xTimesPerWeek/Month)
+  getFlexibleProgress(habit) {
+    const frequency = habit.frequency;
+    if (frequency !== 'xTimesPerWeek' && frequency !== 'xTimesPerMonth') {
+      return null;
+    }
+    
+    const completionLog = habit.completionLog || [];
+    const target = habit.timesPerPeriod || 3;
+    const now = new Date();
+    
+    if (frequency === 'xTimesPerWeek') {
+      // Get start of current week (Monday)
+      const weekStart = new Date(now);
+      const day = weekStart.getDay();
+      const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+      weekStart.setDate(diff);
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      
+      const completedThisWeek = completionLog.filter(d => {
+        const date = new Date(d);
+        return date >= weekStart && date <= weekEnd;
+      }).length;
+      
+      const daysLeftInWeek = 7 - now.getDay();
+      const remaining = Math.max(0, target - completedThisWeek);
+      
+      return {
+        completed: completedThisWeek,
+        target,
+        remaining,
+        period: 'Woche',
+        daysLeft: daysLeftInWeek,
+        isOnTrack: completedThisWeek >= target || remaining <= daysLeftInWeek
+      };
+    }
+    
+    if (frequency === 'xTimesPerMonth') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      
+      const completedThisMonth = completionLog.filter(d => {
+        const date = new Date(d);
+        return date >= monthStart && date <= monthEnd;
+      }).length;
+      
+      const daysLeftInMonth = monthEnd.getDate() - now.getDate() + 1;
+      const remaining = Math.max(0, target - completedThisMonth);
+      
+      return {
+        completed: completedThisMonth,
+        target,
+        remaining,
+        period: 'Monat',
+        daysLeft: daysLeftInMonth,
+        isOnTrack: completedThisMonth >= target || remaining <= daysLeftInMonth
+      };
+    }
+    
+    return null;
+  },
+  
+  // Get next due date for everyXDays habits
+  getNextDueDate(habit) {
+    if (habit.frequency !== 'everyXDays' || !habit.startDate) return null;
+    
+    const interval = habit.intervalDays || 2;
+    const startDate = new Date(habit.startDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    startDate.setHours(0, 0, 0, 0);
+    
+    const diffDays = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+    const daysSinceLastDue = diffDays % interval;
+    const daysUntilNextDue = daysSinceLastDue === 0 ? 0 : interval - daysSinceLastDue;
+    
+    const nextDue = new Date(today);
+    nextDue.setDate(nextDue.getDate() + daysUntilNextDue);
+    
+    return nextDue;
+  },
+  
+  // Get success rate (accounting for scheduled days and frequency type)
   getSuccessRate(habit) {
     if (!habit.createdAt) return 0;
+    
+    const frequency = habit.frequency || 'daily';
+    const completionLog = habit.completionLog || [];
+    const completed = completionLog.length;
+    
+    // For flexible habits, calculate differently
+    if (frequency === 'xTimesPerWeek' || frequency === 'xTimesPerMonth') {
+      return this.getFlexibleSuccessRate(habit);
+    }
     
     const start = new Date(habit.createdAt);
     const now = new Date();
@@ -560,8 +761,241 @@ const HabitsModule = {
     
     if (dueDays === 0) return 100;
     
-    const completed = habit.completionLog?.length || 0;
     return Math.round((completed / dueDays) * 100);
+  },
+  
+  // Get success rate for flexible habits (xTimesPerWeek/Month)
+  getFlexibleSuccessRate(habit) {
+    const frequency = habit.frequency;
+    const completionLog = habit.completionLog || [];
+    const target = habit.timesPerPeriod || 3;
+    const createdAt = new Date(habit.createdAt);
+    const now = new Date();
+    
+    let totalPeriods = 0;
+    let successfulPeriods = 0;
+    
+    if (frequency === 'xTimesPerWeek') {
+      // Count completed weeks
+      let currentWeekStart = new Date(createdAt);
+      const day = currentWeekStart.getDay();
+      const diff = currentWeekStart.getDate() - day + (day === 0 ? -6 : 1);
+      currentWeekStart.setDate(diff);
+      currentWeekStart.setHours(0, 0, 0, 0);
+      
+      while (currentWeekStart <= now) {
+        const weekEnd = new Date(currentWeekStart);
+        weekEnd.setDate(weekEnd.getDate() + 6);
+        
+        // Skip future incomplete weeks
+        if (weekEnd > now && currentWeekStart.getTime() === this.getWeekStart(now).getTime()) {
+          break; // Don't count current incomplete week
+        }
+        
+        const completedInWeek = completionLog.filter(d => {
+          const date = new Date(d);
+          return date >= currentWeekStart && date <= weekEnd;
+        }).length;
+        
+        totalPeriods++;
+        if (completedInWeek >= target) successfulPeriods++;
+        
+        currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+      }
+    } else if (frequency === 'xTimesPerMonth') {
+      // Count completed months
+      let currentMonth = new Date(createdAt.getFullYear(), createdAt.getMonth(), 1);
+      
+      while (currentMonth <= now) {
+        const monthEnd = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+        
+        // Skip current incomplete month
+        if (currentMonth.getMonth() === now.getMonth() && currentMonth.getFullYear() === now.getFullYear()) {
+          break;
+        }
+        
+        const completedInMonth = completionLog.filter(d => {
+          const date = new Date(d);
+          return date >= currentMonth && date <= monthEnd;
+        }).length;
+        
+        totalPeriods++;
+        if (completedInMonth >= target) successfulPeriods++;
+        
+        currentMonth.setMonth(currentMonth.getMonth() + 1);
+      }
+    }
+    
+    if (totalPeriods === 0) return 100;
+    return Math.round((successfulPeriods / totalPeriods) * 100);
+  },
+  
+  // Helper: Get start of week (Monday)
+  getWeekStart(date) {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  },
+  
+  // Calculate streak considering frequency type
+  calculateStreak(habit) {
+    const frequency = habit.frequency || 'daily';
+    const completionLog = habit.completionLog || [];
+    
+    if (completionLog.length === 0) return 0;
+    
+    // For flexible habits, calculate period-based streak
+    if (frequency === 'xTimesPerWeek') {
+      return this.calculateWeeklyStreak(habit);
+    }
+    if (frequency === 'xTimesPerMonth') {
+      return this.calculateMonthlyStreak(habit);
+    }
+    
+    // For fixed schedule habits, calculate day-based streak
+    const sortedDates = [...completionLog].sort((a, b) => new Date(b) - new Date(a));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let streak = 0;
+    let checkDate = new Date(today);
+    
+    // Check if today or yesterday should be starting point
+    const todayStr = today.toISOString().split('T')[0];
+    const isDueToday = this.isHabitDueOnDate(habit, todayStr);
+    const completedToday = completionLog.includes(todayStr);
+    
+    // If due today but not completed, streak might still be valid from yesterday
+    if (isDueToday && !completedToday) {
+      // Check if we're early in the day - be lenient
+      const now = new Date();
+      if (now.getHours() >= 0) {
+        // Start counting from yesterday
+        checkDate.setDate(checkDate.getDate() - 1);
+      }
+    }
+    
+    // Count streak backwards
+    while (true) {
+      const dateStr = checkDate.toISOString().split('T')[0];
+      const wasDue = this.isHabitDueOnDate(habit, dateStr);
+      const wasCompleted = completionLog.includes(dateStr);
+      
+      if (wasDue) {
+        if (wasCompleted) {
+          streak++;
+        } else {
+          break; // Streak broken
+        }
+      }
+      // If not due, just skip that day (don't break streak)
+      
+      checkDate.setDate(checkDate.getDate() - 1);
+      
+      // Safety: don't go back more than a year
+      if (today - checkDate > 365 * 24 * 60 * 60 * 1000) break;
+    }
+    
+    return streak;
+  },
+  
+  // Calculate streak for xTimesPerWeek habits
+  calculateWeeklyStreak(habit) {
+    const target = habit.timesPerPeriod || 3;
+    const completionLog = habit.completionLog || [];
+    
+    let streak = 0;
+    let checkWeekStart = this.getWeekStart(new Date());
+    
+    // Check current week progress
+    const now = new Date();
+    const currentWeekEnd = new Date(checkWeekStart);
+    currentWeekEnd.setDate(currentWeekEnd.getDate() + 6);
+    
+    const completedThisWeek = completionLog.filter(d => {
+      const date = new Date(d);
+      return date >= checkWeekStart && date <= currentWeekEnd;
+    }).length;
+    
+    // If current week is already successful, count it
+    if (completedThisWeek >= target) {
+      streak++;
+    }
+    
+    // Go back through previous weeks
+    checkWeekStart.setDate(checkWeekStart.getDate() - 7);
+    
+    while (true) {
+      const weekEnd = new Date(checkWeekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      
+      const completedInWeek = completionLog.filter(d => {
+        const date = new Date(d);
+        return date >= checkWeekStart && date <= weekEnd;
+      }).length;
+      
+      if (completedInWeek >= target) {
+        streak++;
+      } else {
+        break;
+      }
+      
+      checkWeekStart.setDate(checkWeekStart.getDate() - 7);
+      
+      // Safety: don't go back more than a year
+      if (streak > 52) break;
+    }
+    
+    return streak;
+  },
+  
+  // Calculate streak for xTimesPerMonth habits  
+  calculateMonthlyStreak(habit) {
+    const target = habit.timesPerPeriod || 10;
+    const completionLog = habit.completionLog || [];
+    
+    let streak = 0;
+    const now = new Date();
+    let checkMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Check current month progress
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const completedThisMonth = completionLog.filter(d => {
+      const date = new Date(d);
+      return date >= checkMonth && date <= currentMonthEnd;
+    }).length;
+    
+    if (completedThisMonth >= target) {
+      streak++;
+    }
+    
+    // Go back through previous months
+    checkMonth.setMonth(checkMonth.getMonth() - 1);
+    
+    while (true) {
+      const monthEnd = new Date(checkMonth.getFullYear(), checkMonth.getMonth() + 1, 0);
+      
+      const completedInMonth = completionLog.filter(d => {
+        const date = new Date(d);
+        return date >= checkMonth && date <= monthEnd;
+      }).length;
+      
+      if (completedInMonth >= target) {
+        streak++;
+      } else {
+        break;
+      }
+      
+      checkMonth.setMonth(checkMonth.getMonth() - 1);
+      
+      // Safety: don't go back more than 2 years
+      if (streak > 24) break;
+    }
+    
+    return streak;
   },
   
   // Toggle habit for today
@@ -572,15 +1006,31 @@ const HabitsModule = {
     const today = new Date().toISOString().split('T')[0];
     const isCompleted = habit.completionLog?.includes(today);
     
+    // For everyXDays habits, check if actually due today
+    if (habit.frequency === 'everyXDays' && !this.isHabitDueOnDate(habit, today)) {
+      NexusUI.showToast('Dieser Habit ist heute nicht fällig', 'info');
+      return;
+    }
+    
     if (isCompleted) {
       // Remove completion
+      const newLog = habit.completionLog.filter(d => d !== today);
+      const updatedHabit = { ...habit, completionLog: newLog };
       NexusStore.updateHabit(habitId, {
-        completionLog: habit.completionLog.filter(d => d !== today),
-        streak: Math.max(0, (habit.streak || 0) - 1)
+        completionLog: newLog,
+        streak: this.calculateStreak(updatedHabit)
       });
     } else {
       // Add completion
-      NexusStore.completeHabit(habitId);
+      const newLog = [...(habit.completionLog || []), today];
+      const updatedHabit = { ...habit, completionLog: newLog };
+      const newStreak = this.calculateStreak(updatedHabit);
+      
+      NexusStore.updateHabit(habitId, {
+        completionLog: newLog,
+        streak: newStreak,
+        bestStreak: Math.max(habit.bestStreak || 0, newStreak)
+      });
     }
     
     this.render();
@@ -594,15 +1044,21 @@ const HabitsModule = {
     const completionLog = habit.completionLog || [];
     const isCompleted = completionLog.includes(dateStr);
     
+    let newLog;
     if (isCompleted) {
-      NexusStore.updateHabit(habitId, {
-        completionLog: completionLog.filter(d => d !== dateStr)
-      });
+      newLog = completionLog.filter(d => d !== dateStr);
     } else {
-      NexusStore.updateHabit(habitId, {
-        completionLog: [...completionLog, dateStr]
-      });
+      newLog = [...completionLog, dateStr];
     }
+    
+    const updatedHabit = { ...habit, completionLog: newLog };
+    const newStreak = this.calculateStreak(updatedHabit);
+    
+    NexusStore.updateHabit(habitId, {
+      completionLog: newLog,
+      streak: newStreak,
+      bestStreak: Math.max(habit.bestStreak || 0, newStreak)
+    });
     
     this.render();
   },
@@ -627,9 +1083,14 @@ const HabitsModule = {
           <div>
             <label class="input-label">Frequenz</label>
             <select class="input" id="new-habit-frequency">
-              <option value="daily">Täglich</option>
-              <option value="weekdays">Werktags</option>
-              <option value="weekly">Wöchentlich</option>
+              <option value="daily">📅 Täglich</option>
+              <option value="weekdays">💼 Werktags (Mo-Fr)</option>
+              <option value="weekends">🌴 Wochenende (Sa-So)</option>
+              <option value="weekly">📆 Bestimmte Wochentage</option>
+              <option value="everyXDays">🔄 Alle X Tage</option>
+              <option value="xTimesPerWeek">🎯 X mal pro Woche</option>
+              <option value="xTimesPerMonth">📊 X mal pro Monat</option>
+              <option value="monthlyDays">📅 Bestimmte Monatstage</option>
             </select>
           </div>
           <div>
@@ -644,32 +1105,66 @@ const HabitsModule = {
             </select>
           </div>
         </div>
-        <div class="mb-4" id="weekly-days-container" style="display: none; margin-top: 16px;">
+        
+        <!-- Weekly days selection -->
+        <div class="mb-4 frequency-options" id="weekly-days-container" style="display: none; margin-top: 16px;">
           <label class="input-label">Wochentage auswählen</label>
           <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
-            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
-              <input type="checkbox" class="weekday-check" value="1"> Mo
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
-              <input type="checkbox" class="weekday-check" value="2"> Di
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
-              <input type="checkbox" class="weekday-check" value="3"> Mi
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
-              <input type="checkbox" class="weekday-check" value="4"> Do
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
-              <input type="checkbox" class="weekday-check" value="5"> Fr
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
-              <input type="checkbox" class="weekday-check" value="6"> Sa
-            </label>
-            <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
-              <input type="checkbox" class="weekday-check" value="0"> So
-            </label>
+            ${['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((day, i) => {
+              const value = i === 6 ? 0 : i + 1; // Convert to JS day index (So=0, Mo=1, etc.)
+              return `
+                <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+                  <input type="checkbox" class="weekday-check" value="${value}"> ${day}
+                </label>
+              `;
+            }).join('')}
           </div>
         </div>
+        
+        <!-- Every X days -->
+        <div class="mb-4 frequency-options" id="every-x-days-container" style="display: none; margin-top: 16px;">
+          <label class="input-label">Alle wie viele Tage?</label>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+            <span>Alle</span>
+            <input type="number" class="input" id="new-habit-interval-days" value="2" min="2" max="30" style="width: 80px;">
+            <span>Tage</span>
+          </div>
+          <p class="text-xs text-tertiary mt-2">Der Zyklus startet ab dem Erstellungsdatum</p>
+        </div>
+        
+        <!-- X times per week -->
+        <div class="mb-4 frequency-options" id="x-times-week-container" style="display: none; margin-top: 16px;">
+          <label class="input-label">Wie oft pro Woche?</label>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+            <input type="number" class="input" id="new-habit-times-week" value="3" min="1" max="7" style="width: 80px;">
+            <span>mal pro Woche</span>
+          </div>
+          <p class="text-xs text-tertiary mt-2">Du kannst selbst wählen an welchen Tagen</p>
+        </div>
+        
+        <!-- X times per month -->
+        <div class="mb-4 frequency-options" id="x-times-month-container" style="display: none; margin-top: 16px;">
+          <label class="input-label">Wie oft pro Monat?</label>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+            <input type="number" class="input" id="new-habit-times-month" value="10" min="1" max="31" style="width: 80px;">
+            <span>mal pro Monat</span>
+          </div>
+          <p class="text-xs text-tertiary mt-2">Flexible Verteilung über den Monat</p>
+        </div>
+        
+        <!-- Monthly days selection -->
+        <div class="mb-4 frequency-options" id="monthly-days-container" style="display: none; margin-top: 16px;">
+          <label class="input-label">Monatstage auswählen</label>
+          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 8px;">
+            ${Array.from({length: 31}, (_, i) => i + 1).map(day => `
+              <label style="display: flex; align-items: center; justify-content: center; padding: 8px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+                <input type="checkbox" class="monthday-check" value="${day}" style="display: none;">
+                <span class="monthday-label">${day}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        
         <div class="flex gap-2 justify-end mt-6">
           <button class="btn btn-secondary" onclick="NexusUI.closeModal()">Abbrechen</button>
           <button class="btn btn-primary" onclick="HabitsModule.createHabit()">Erstellen</button>
@@ -681,14 +1176,57 @@ const HabitsModule = {
     
     // Add event listener for frequency change
     setTimeout(() => {
-      const frequencySelect = document.getElementById('new-habit-frequency');
-      const weeklyDaysContainer = document.getElementById('weekly-days-container');
-      if (frequencySelect && weeklyDaysContainer) {
-        frequencySelect.addEventListener('change', (e) => {
-          weeklyDaysContainer.style.display = e.target.value === 'weekly' ? 'block' : 'none';
-        });
-      }
+      this.setupFrequencyOptionsListeners('new');
     }, 100);
+  },
+  
+  // Setup frequency options listeners
+  setupFrequencyOptionsListeners(prefix) {
+    const frequencySelect = document.getElementById(`${prefix}-habit-frequency`);
+    if (!frequencySelect) return;
+    
+    const updateVisibility = () => {
+      // Hide all option containers
+      document.querySelectorAll('.frequency-options').forEach(el => el.style.display = 'none');
+      
+      const frequency = frequencySelect.value;
+      
+      // Show relevant container
+      switch (frequency) {
+        case 'weekly':
+          document.getElementById('weekly-days-container').style.display = 'block';
+          break;
+        case 'everyXDays':
+          document.getElementById('every-x-days-container').style.display = 'block';
+          break;
+        case 'xTimesPerWeek':
+          document.getElementById('x-times-week-container').style.display = 'block';
+          break;
+        case 'xTimesPerMonth':
+          document.getElementById('x-times-month-container').style.display = 'block';
+          break;
+        case 'monthlyDays':
+          document.getElementById('monthly-days-container').style.display = 'block';
+          break;
+      }
+    };
+    
+    frequencySelect.addEventListener('change', updateVisibility);
+    updateVisibility(); // Initial update
+    
+    // Setup monthly days toggle styling
+    document.querySelectorAll('.monthday-check').forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        const label = checkbox.closest('label');
+        if (checkbox.checked) {
+          label.style.background = 'var(--color-primary)';
+          label.style.color = 'white';
+        } else {
+          label.style.background = 'var(--color-surface-2)';
+          label.style.color = '';
+        }
+      });
+    });
   },
   
   // Create habit
@@ -701,27 +1239,65 @@ const HabitsModule = {
     
     const frequency = document.getElementById('new-habit-frequency')?.value || 'daily';
     
-    // Get selected weekdays for weekly habits
-    let scheduledDays = null;
-    if (frequency === 'weekly') {
-      const checkedBoxes = document.querySelectorAll('.weekday-check:checked');
-      scheduledDays = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
-      if (scheduledDays.length === 0) {
-        NexusUI.showToast('Bitte mindestens einen Wochentag auswählen', 'error');
-        return;
-      }
-    }
-    
+    // Build habit object based on frequency
     const habit = {
       name,
       icon: document.getElementById('new-habit-icon')?.value || '🔄',
       description: document.getElementById('new-habit-description')?.value || '',
       frequency,
-      scheduledDays,
       sphere: document.getElementById('new-habit-sphere')?.value || null,
       streak: 0,
-      completionLog: []
+      completionLog: [],
+      startDate: new Date().toISOString().split('T')[0]
     };
+    
+    // Handle frequency-specific options
+    switch (frequency) {
+      case 'weekly':
+        const weekdayChecks = document.querySelectorAll('.weekday-check:checked');
+        habit.scheduledDays = Array.from(weekdayChecks).map(cb => parseInt(cb.value));
+        if (habit.scheduledDays.length === 0) {
+          NexusUI.showToast('Bitte mindestens einen Wochentag auswählen', 'error');
+          return;
+        }
+        break;
+        
+      case 'everyXDays':
+        const intervalDays = parseInt(document.getElementById('new-habit-interval-days')?.value) || 2;
+        if (intervalDays < 2 || intervalDays > 30) {
+          NexusUI.showToast('Intervall muss zwischen 2 und 30 Tagen liegen', 'error');
+          return;
+        }
+        habit.intervalDays = intervalDays;
+        break;
+        
+      case 'xTimesPerWeek':
+        const timesWeek = parseInt(document.getElementById('new-habit-times-week')?.value) || 3;
+        if (timesWeek < 1 || timesWeek > 7) {
+          NexusUI.showToast('Muss zwischen 1 und 7 mal pro Woche sein', 'error');
+          return;
+        }
+        habit.timesPerPeriod = timesWeek;
+        break;
+        
+      case 'xTimesPerMonth':
+        const timesMonth = parseInt(document.getElementById('new-habit-times-month')?.value) || 10;
+        if (timesMonth < 1 || timesMonth > 31) {
+          NexusUI.showToast('Muss zwischen 1 und 31 mal pro Monat sein', 'error');
+          return;
+        }
+        habit.timesPerPeriod = timesMonth;
+        break;
+        
+      case 'monthlyDays':
+        const monthDayChecks = document.querySelectorAll('.monthday-check:checked');
+        habit.monthDays = Array.from(monthDayChecks).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
+        if (habit.monthDays.length === 0) {
+          NexusUI.showToast('Bitte mindestens einen Monatstag auswählen', 'error');
+          return;
+        }
+        break;
+    }
     
     NexusStore.addHabit(habit);
     NexusUI.closeModal();
@@ -733,6 +1309,13 @@ const HabitsModule = {
   editHabit(habitId) {
     const habit = NexusStore.getHabits().find(h => h.id === habitId);
     if (!habit) return;
+    
+    // Check which weekdays are selected
+    const weekdayChecked = (day) => habit.scheduledDays?.includes(day) ? 'checked' : '';
+    const monthdayChecked = (day) => habit.monthDays?.includes(day) ? 'checked' : '';
+    const monthdayStyle = (day) => habit.monthDays?.includes(day) ? 
+      'background: var(--color-primary); color: white;' : 
+      'background: var(--color-surface-2);';
     
     const content = `
       <div class="p-4">
@@ -752,9 +1335,14 @@ const HabitsModule = {
           <div>
             <label class="input-label">Frequenz</label>
             <select class="input" id="edit-habit-frequency">
-              <option value="daily" ${habit.frequency === 'daily' ? 'selected' : ''}>Täglich</option>
-              <option value="weekdays" ${habit.frequency === 'weekdays' ? 'selected' : ''}>Werktags</option>
-              <option value="weekly" ${habit.frequency === 'weekly' ? 'selected' : ''}>Wöchentlich</option>
+              <option value="daily" ${habit.frequency === 'daily' ? 'selected' : ''}>📅 Täglich</option>
+              <option value="weekdays" ${habit.frequency === 'weekdays' ? 'selected' : ''}>💼 Werktags (Mo-Fr)</option>
+              <option value="weekends" ${habit.frequency === 'weekends' ? 'selected' : ''}>🌴 Wochenende (Sa-So)</option>
+              <option value="weekly" ${habit.frequency === 'weekly' ? 'selected' : ''}>📆 Bestimmte Wochentage</option>
+              <option value="everyXDays" ${habit.frequency === 'everyXDays' ? 'selected' : ''}>🔄 Alle X Tage</option>
+              <option value="xTimesPerWeek" ${habit.frequency === 'xTimesPerWeek' ? 'selected' : ''}>🎯 X mal pro Woche</option>
+              <option value="xTimesPerMonth" ${habit.frequency === 'xTimesPerMonth' ? 'selected' : ''}>📊 X mal pro Monat</option>
+              <option value="monthlyDays" ${habit.frequency === 'monthlyDays' ? 'selected' : ''}>📅 Bestimmte Monatstage</option>
             </select>
           </div>
           <div>
@@ -769,6 +1357,64 @@ const HabitsModule = {
             </select>
           </div>
         </div>
+        
+        <!-- Weekly days selection -->
+        <div class="mb-4 frequency-options" id="weekly-days-container" style="display: ${habit.frequency === 'weekly' ? 'block' : 'none'}; margin-top: 16px;">
+          <label class="input-label">Wochentage auswählen</label>
+          <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;">
+            ${['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map((day, i) => {
+              const value = i === 6 ? 0 : i + 1;
+              return `
+                <label style="display: flex; align-items: center; gap: 4px; padding: 8px 12px; background: var(--color-surface-2); border-radius: 8px; cursor: pointer;">
+                  <input type="checkbox" class="weekday-check" value="${value}" ${weekdayChecked(value)}> ${day}
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+        
+        <!-- Every X days -->
+        <div class="mb-4 frequency-options" id="every-x-days-container" style="display: ${habit.frequency === 'everyXDays' ? 'block' : 'none'}; margin-top: 16px;">
+          <label class="input-label">Alle wie viele Tage?</label>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+            <span>Alle</span>
+            <input type="number" class="input" id="edit-habit-interval-days" value="${habit.intervalDays || 2}" min="2" max="30" style="width: 80px;">
+            <span>Tage</span>
+          </div>
+          <p class="text-xs text-tertiary mt-2">Startdatum: ${habit.startDate || 'Heute'}</p>
+        </div>
+        
+        <!-- X times per week -->
+        <div class="mb-4 frequency-options" id="x-times-week-container" style="display: ${habit.frequency === 'xTimesPerWeek' ? 'block' : 'none'}; margin-top: 16px;">
+          <label class="input-label">Wie oft pro Woche?</label>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+            <input type="number" class="input" id="edit-habit-times-week" value="${habit.timesPerPeriod || 3}" min="1" max="7" style="width: 80px;">
+            <span>mal pro Woche</span>
+          </div>
+        </div>
+        
+        <!-- X times per month -->
+        <div class="mb-4 frequency-options" id="x-times-month-container" style="display: ${habit.frequency === 'xTimesPerMonth' ? 'block' : 'none'}; margin-top: 16px;">
+          <label class="input-label">Wie oft pro Monat?</label>
+          <div style="display: flex; align-items: center; gap: 12px; margin-top: 8px;">
+            <input type="number" class="input" id="edit-habit-times-month" value="${habit.timesPerPeriod || 10}" min="1" max="31" style="width: 80px;">
+            <span>mal pro Monat</span>
+          </div>
+        </div>
+        
+        <!-- Monthly days selection -->
+        <div class="mb-4 frequency-options" id="monthly-days-container" style="display: ${habit.frequency === 'monthlyDays' ? 'block' : 'none'}; margin-top: 16px;">
+          <label class="input-label">Monatstage auswählen</label>
+          <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 8px;">
+            ${Array.from({length: 31}, (_, i) => i + 1).map(day => `
+              <label style="display: flex; align-items: center; justify-content: center; padding: 8px; ${monthdayStyle(day)} border-radius: 8px; cursor: pointer;">
+                <input type="checkbox" class="monthday-check" value="${day}" ${monthdayChecked(day)} style="display: none;">
+                <span class="monthday-label">${day}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+        
         <div class="flex gap-2 justify-end mt-6">
           <button class="btn btn-secondary" onclick="NexusUI.closeModal()">Abbrechen</button>
           <button class="btn btn-primary" onclick="HabitsModule.saveHabit('${habitId}')">Speichern</button>
@@ -777,6 +1423,11 @@ const HabitsModule = {
     `;
     
     NexusUI.openModal('Habit bearbeiten', content);
+    
+    // Setup listeners
+    setTimeout(() => {
+      this.setupFrequencyOptionsListeners('edit');
+    }, 100);
   },
   
   // Save habit
@@ -787,14 +1438,56 @@ const HabitsModule = {
       return;
     }
     
-    NexusStore.updateHabit(habitId, {
+    const frequency = document.getElementById('edit-habit-frequency')?.value || 'daily';
+    const habit = NexusStore.getHabits().find(h => h.id === habitId);
+    
+    // Build update object
+    const updates = {
       name,
       icon: document.getElementById('edit-habit-icon')?.value || '🔄',
       description: document.getElementById('edit-habit-description')?.value || '',
-      frequency: document.getElementById('edit-habit-frequency')?.value || 'daily',
+      frequency,
       sphere: document.getElementById('edit-habit-sphere')?.value || null
-    });
+    };
     
+    // Handle frequency-specific options
+    switch (frequency) {
+      case 'weekly':
+        const weekdayChecks = document.querySelectorAll('.weekday-check:checked');
+        updates.scheduledDays = Array.from(weekdayChecks).map(cb => parseInt(cb.value));
+        if (updates.scheduledDays.length === 0) {
+          NexusUI.showToast('Bitte mindestens einen Wochentag auswählen', 'error');
+          return;
+        }
+        break;
+        
+      case 'everyXDays':
+        updates.intervalDays = parseInt(document.getElementById('edit-habit-interval-days')?.value) || 2;
+        // Keep original startDate if already set
+        if (!habit.startDate) {
+          updates.startDate = new Date().toISOString().split('T')[0];
+        }
+        break;
+        
+      case 'xTimesPerWeek':
+        updates.timesPerPeriod = parseInt(document.getElementById('edit-habit-times-week')?.value) || 3;
+        break;
+        
+      case 'xTimesPerMonth':
+        updates.timesPerPeriod = parseInt(document.getElementById('edit-habit-times-month')?.value) || 10;
+        break;
+        
+      case 'monthlyDays':
+        const monthDayChecks = document.querySelectorAll('.monthday-check:checked');
+        updates.monthDays = Array.from(monthDayChecks).map(cb => parseInt(cb.value)).sort((a, b) => a - b);
+        if (updates.monthDays.length === 0) {
+          NexusUI.showToast('Bitte mindestens einen Monatstag auswählen', 'error');
+          return;
+        }
+        break;
+    }
+    
+    NexusStore.updateHabit(habitId, updates);
     NexusUI.closeModal();
     NexusUI.showToast('Habit gespeichert!', 'success');
     this.render();
