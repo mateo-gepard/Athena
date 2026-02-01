@@ -477,35 +477,30 @@ const TemporalEngine = {
       `;
     });
     
-    // Render habits (if layer enabled)
+    // Render habits (if layer enabled) - NUR mit bevorzugter Uhrzeit
     if (this.layers.habits && todayHabits.length > 0) {
-      todayHabits.forEach((habit, idx) => {
-        const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
-        
-        // Position based on preferredTime if available, otherwise stack at top
-        let top, height;
-        if (habit.preferredTime) {
+      todayHabits
+        .filter(habit => habit.preferredTime) // Nur Habits mit Uhrzeit im Kalender
+        .forEach((habit) => {
+          const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
+          
+          // Position based on preferredTime
           const [hours, minutes] = habit.preferredTime.split(':').map(Number);
-          top = (hours - 6) * 60 + (minutes || 0);
-          height = 45; // Standard height for habits
-        } else {
-          // Stack habits without time at the top
-          top = 10 + idx * 32;
-          height = 28;
-        }
-        
-        html += `
-          <div class="calendar-event habit ${isCompleted ? 'completed' : ''}" 
-               style="top: ${top}px; height: ${height}px; ${habit.preferredTime ? 'left: 8px; right: 8px; width: auto;' : 'left: 4px; width: 140px; max-width: 45%;'}"
-               data-habit-id="${habit.id}">
-            <div class="event-title text-xs">
-              ${habit.preferredTime ? `<span class="event-time">${habit.preferredTime}</span>` : ''}
-              ${habit.icon || '🔄'} ${habit.name}
-              ${isCompleted ? '<span class="text-success ml-1">✓</span>' : ''}
+          const top = (hours - 6) * 60 + (minutes || 0);
+          const height = 45; // Standard height for habits
+          
+          html += `
+            <div class="calendar-event habit ${isCompleted ? 'completed' : ''}" 
+                 style="top: ${top}px; height: ${height}px; left: 8px; right: 8px; width: auto;"
+                 data-habit-id="${habit.id}">
+              <div class="event-title text-xs">
+                <span class="event-time">${habit.preferredTime}</span>
+                ${habit.icon || '🔄'} ${habit.name}
+                ${isCompleted ? '<span class="text-success ml-1">✓</span>' : ''}
+              </div>
             </div>
-          </div>
-        `;
-      });
+          `;
+        });
     }
     
     // Render tasks WITHOUT time as deadline banners (DEADLINE type at top)
@@ -518,7 +513,7 @@ const TemporalEngine = {
         
         html += `
           <div class="calendar-event deadline" 
-               style="top: ${5 + idx * 32}px; right: 4px; left: auto; width: auto; max-width: 50%; min-width: 120px; height: 28px; border-left: 3px solid var(--color-sphere-${sphere});"
+               style="top: ${5 + idx * 32}px; left: 4px; right: 4px; width: auto; height: 28px; border-left: 3px solid var(--color-sphere-${sphere});"
                data-task-id="${task.id}">
             <div class="deadline-content">
               <span class="deadline-icon">📅</span>
