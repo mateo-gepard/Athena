@@ -17,6 +17,7 @@ const TasksModule = {
   
   // Initialize
   init() {
+    this.setupEventListeners();
     this.render();
   },
   
