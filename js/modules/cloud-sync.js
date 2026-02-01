@@ -286,27 +286,44 @@ const CloudSync = {
     const userRef = this.database.ref(`users/${this.userId}/data`);
     
     let isFirstLoad = true;
+    let listenerCount = 0;
     
     userRef.on('value', (snapshot) => {
+      listenerCount++;
+      console.log(`☁️ Firebase 'value' event #${listenerCount} triggered`);
+      
       const data = snapshot.val();
       
       // Skip the first load (already loaded in reload())
       if (isFirstLoad) {
         isFirstLoad = false;
-        console.log('☁️ Skipping first real-time load (already loaded)');
+        console.log('☁️ Skipping first real-time load (already loaded), data exists:', !!data);
         return;
       }
       
-      console.log('☁️ Real-time update received:', data ? 'has data' : 'no data');
+      console.log('☁️ Real-time update received, has data:', !!data, 'version:', data?._version);
+      
       if (data && onDataChange) {
         // Create a copy to avoid mutation
         const cloudData = JSON.parse(JSON.stringify(data));
+        // Store version before deleting
+        const cloudVersion = cloudData._version;
         // Remove metadata
         delete cloudData._lastUpdated;
         delete cloudData._version;
+        
+        console.log('☁️ Calling onDataChange callback with version:', cloudVersion);
         onDataChange(cloudData);
+      } else if (!data) {
+        console.warn('⚠️ Real-time update has no data');
+      } else if (!onDataChange) {
+        console.warn('⚠️ No onDataChange callback provided');
       }
+    }, (error) => {
+      console.error('❌ Firebase listener error:', error);
     });
+    
+    console.log('✅ Real-time sync listener attached successfully');
   },
   
   // Force sync now

@@ -96,6 +96,7 @@ const NexusStore = {
   
   // Reload data from localStorage and cloud (call after auth is ready)
   async reload() {
+    console.log('🔄 NexusStore.reload() called');
     await this.load();
     
     // Setup real-time sync listener after initial load
@@ -108,13 +109,15 @@ const NexusStore = {
         
         // Get versions
         const localVersion = this.state._version || 0;
-        const cloudVersion = cloudData._version || 0;
+        const cloudVersion = cloudData._version || Date.now(); // Fallback if version missing
         
         console.log('📊 Version check - Local:', localVersion, 'Cloud:', cloudVersion);
         
-        // Only merge if cloud data is newer
-        if (cloudVersion > localVersion) {
-          console.log('☁️ Cloud data is newer, merging...');
+        // Only merge if cloud data is different (not just newer, since version might be missing)
+        const isDifferent = cloudVersion !== localVersion;
+        
+        if (isDifferent) {
+          console.log('☁️ Cloud data differs, merging...');
           
           // Preserve current user info
           const currentUser = { ...this.state.user };
@@ -122,6 +125,7 @@ const NexusStore = {
           // Merge cloud data into state
           this.state = { ...this.state, ...cloudData };
           this.state.user = currentUser;
+          this.state._version = cloudVersion; // Update version
           
           // Save to localStorage
           const storageKey = this.getStorageKey();
@@ -136,13 +140,15 @@ const NexusStore = {
           if (typeof NexusUI !== 'undefined') {
             NexusUI.showToast({
               type: 'info',
-              title: 'Synchronisiert',
+              title: '☁️ Synchronisiert',
               message: 'Daten von anderem Gerät empfangen'
             });
           }
           
           // Refresh current view
           const currentPage = window.location.hash.replace('#', '') || 'command-center';
+          console.log('🔄 Refreshing page:', currentPage);
+          
           if (typeof CommandCenter !== 'undefined' && currentPage === 'command-center') {
             CommandCenter.render();
           }
@@ -150,8 +156,16 @@ const NexusStore = {
             TasksModule.render();
           }
         } else {
-          console.log('⏭️ Skipping update - local version is newer or equal');
+          console.log('⏭️ Skipping update - versions match');
         }
+      });
+      
+      console.log('✅ Real-time sync callback registered');
+    } else {
+      console.log('⚠️ Real-time sync NOT setup:', {
+        cloudSyncExists: typeof CloudSync !== 'undefined',
+        isInitialized: CloudSync?.isInitialized,
+        alreadySetup: this._realtimeSyncSetup
       });
     }
     
