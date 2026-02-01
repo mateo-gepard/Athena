@@ -10,7 +10,7 @@ const NexusApp = {
   isCaptureOpen: false,
   
   // Initialize the application
-  init() {
+  async init() {
     console.log('Athena Ultra initializing...');
     
     // Initialize Lucide icons
@@ -20,9 +20,9 @@ const NexusApp = {
     
     // Initialize Authentication
     if (typeof AuthService !== 'undefined') {
-      AuthService.init();
+      const isAuthenticated = await AuthService.init();
       // If not authenticated, AuthService will show login screen
-      if (!AuthService.isAuthenticated) {
+      if (!isAuthenticated) {
         return; // Wait for authentication
       }
     }

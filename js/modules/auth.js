@@ -6,28 +6,34 @@
 const AuthService = {
   user: null,
   isAuthenticated: false,
+  _initialized: false,
   
   // Initialize Firebase Auth
   init() {
+    if (this._initialized) return Promise.resolve(this.isAuthenticated);
+    this._initialized = true;
+    
     if (typeof firebase === 'undefined' || !firebase.auth) {
       console.warn('⚠️ Firebase Auth not loaded');
-      return false;
+      return Promise.resolve(false);
     }
     
-    // Listen to auth state changes
-    firebase.auth().onAuthStateChanged((user) => {
-      if (user) {
-        this.user = user;
-        this.isAuthenticated = true;
-        this.onAuthSuccess(user);
-      } else {
-        this.user = null;
-        this.isAuthenticated = false;
-        this.showLoginScreen();
-      }
+    return new Promise((resolve) => {
+      // Listen to auth state changes
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) {
+          this.user = user;
+          this.isAuthenticated = true;
+          this.onAuthSuccess(user);
+          resolve(true);
+        } else {
+          this.user = null;
+          this.isAuthenticated = false;
+          this.showLoginScreen();
+          resolve(false);
+        }
+      });
     });
-    
-    return true;
   },
   
   // Show login screen
@@ -213,8 +219,10 @@ const AuthService = {
       CloudSync.userId = user.uid;
     }
     
-    // Reload main app
-    window.location.reload();
+    // Initialize main app (instead of reload)
+    if (window.NexusApp && typeof NexusApp.init === 'function') {
+      NexusApp.init();
+    }
   },
   
   // Get user-friendly error messages
