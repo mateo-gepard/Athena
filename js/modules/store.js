@@ -679,7 +679,13 @@ const NexusStore = {
   // ═══ HABITS ═══
   
   getHabits() {
-    return this.state.habits;
+    // Ensure all habits have completionLog array
+    return this.state.habits.map(habit => {
+      if (!habit.completionLog || !Array.isArray(habit.completionLog)) {
+        habit.completionLog = [];
+      }
+      return habit;
+    });
   },
   
   getHabitById(id) {
@@ -802,6 +808,10 @@ const NexusStore = {
   getHabitCompletionsInRange(id, startDate, endDate) {
     const habit = this.getHabitById(id);
     if (!habit) return [];
+    if (!habit.completionLog || !Array.isArray(habit.completionLog)) {
+      habit.completionLog = [];
+      return [];
+    }
     
     const start = typeof startDate === 'string' ? startDate : startDate.toISOString().split('T')[0];
     const end = typeof endDate === 'string' ? endDate : endDate.toISOString().split('T')[0];
@@ -810,6 +820,11 @@ const NexusStore = {
   },
   
   calculateStreak(habit) {
+    if (!habit.completionLog || !Array.isArray(habit.completionLog)) {
+      habit.completionLog = [];
+      return 0;
+    }
+    
     const log = habit.completionLog.sort().reverse();
     if (log.length === 0) return 0;
     
@@ -834,6 +849,11 @@ const NexusStore = {
   isHabitCompletedToday(id) {
     const habit = this.getHabitById(id);
     if (!habit) return false;
+    if (!habit.completionLog || !Array.isArray(habit.completionLog)) {
+      // Fallback: initialize completionLog if missing
+      habit.completionLog = [];
+      return false;
+    }
     const today = new Date().toISOString().split('T')[0];
     return habit.completionLog.includes(today);
   },
