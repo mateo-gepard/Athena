@@ -171,12 +171,14 @@ const TemporalEngine = {
             const hasMarked = markedDays.length > 0;
             const markedStyle = hasMarked ? `--marked-color: ${markedDays[0].color}` : '';
             const deadlines = this.getDeadlinesForDate(d);
+            const habitsWithoutTime = this.getHabitsWithoutTimeForDate(d);
             return `
             <div class="day-header ${d.toDateString() === today ? 'today' : ''} ${hasMarked ? 'has-marked-day' : ''}" style="${markedStyle}">
               <div class="day-name">${dayNames[i]}</div>
               <div class="day-number">${d.getDate()}</div>
               ${hasMarked ? `<span class="marked-day-icon" title="${markedDays[0].title}">${markedDays[0].icon}</span>` : ''}
               ${deadlines.length > 0 ? `<div class="day-deadlines">${deadlines.map(dl => `<div class="deadline-badge" title="${dl.title}">📅 ${dl.title}</div>`).join('')}</div>` : ''}
+              ${habitsWithoutTime.length > 0 ? `<div class="day-habits">${habitsWithoutTime.map(h => `<div class="habit-badge" title="${h.name}">${h.icon || '🔄'} ${h.name}</div>`).join('')}</div>` : ''}
             </div>
           `}).join('')}
         </div>
@@ -355,6 +357,28 @@ const TemporalEngine = {
     return tasks.filter(t => {
       const taskDate = t.scheduledDate || t.deadline;
       return taskDate === dateStr && !t.scheduledTime && (t.taskType === 'deadline' || t.deadline);
+    });
+  },
+  
+  // Get habits without time for a specific date
+  getHabitsWithoutTimeForDate(date) {
+    const dateStr = date.toISOString().split('T')[0];
+    const dayOfWeek = date.getDay() === 0 ? 6 : date.getDay() - 1; // Mo=0, So=6
+    const allHabits = NexusStore.getHabits();
+    
+    return allHabits.filter(h => {
+      // Nur Habits ohne preferredTime
+      if (h.preferredTime) return false;
+      
+      // Daily habits
+      if (h.frequency === 'daily') return this.isPositiveHabit(h);
+      
+      // Weekly habits - check scheduled days
+      if (h.frequency === 'weekly' && h.scheduledDays) {
+        return h.scheduledDays.includes(dayOfWeek) && this.isPositiveHabit(h);
+      }
+      
+      return false;
     });
   },
   
