@@ -273,6 +273,21 @@ const MobileNav = {
     if (sendBtn && input) {
       sendBtn.addEventListener('click', () => this.sendMobileMessage());
       
+      // Prevent scrolling when input is focused (WhatsApp-like behavior)
+      input.addEventListener('focus', (e) => {
+        // Prevent default scroll behavior
+        e.preventDefault();
+        // Scroll to make input visible without moving the whole UI
+        setTimeout(() => {
+          input.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'nearest' });
+        }, 100);
+      });
+      
+      // Prevent page scroll when typing
+      input.addEventListener('touchstart', (e) => {
+        e.stopPropagation();
+      });
+      
       // Enter to send
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
