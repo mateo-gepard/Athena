@@ -143,22 +143,29 @@ const CloudSync = {
   
   // Update visual status indicator
   updateStatusIndicator() {
-    const indicator = document.getElementById('cloud-sync-status');
-    if (!indicator) return;
+    // Update both desktop and mobile indicators
+    const indicators = [
+      document.getElementById('cloud-sync-status'),
+      document.getElementById('cloud-sync-status-mobile')
+    ].filter(el => el);
     
-    if (this.isSyncing) {
-      indicator.className = 'cloud-status syncing';
-      indicator.title = 'Synchronisiere...';
-      indicator.innerHTML = '<i data-lucide="cloud-upload"></i>';
-    } else if (this.isOnline) {
-      indicator.className = 'cloud-status online';
-      indicator.title = `Cloud verbunden. Letzte Sync: ${this.lastSyncTime ? new Date(this.lastSyncTime).toLocaleTimeString('de-DE') : 'nie'}`;
-      indicator.innerHTML = '<i data-lucide="cloud"></i>';
-    } else {
-      indicator.className = 'cloud-status offline';
-      indicator.title = 'Offline - Daten werden lokal gespeichert';
-      indicator.innerHTML = '<i data-lucide="cloud-off"></i>';
-    }
+    if (indicators.length === 0) return;
+    
+    indicators.forEach(indicator => {
+      if (this.isSyncing) {
+        indicator.className = 'cloud-status syncing';
+        indicator.title = 'Synchronisiere...';
+        indicator.innerHTML = '<i data-lucide="cloud-upload"></i>';
+      } else if (this.isOnline) {
+        indicator.className = 'cloud-status online';
+        indicator.title = `Cloud verbunden. Letzte Sync: ${this.lastSyncTime ? new Date(this.lastSyncTime).toLocaleTimeString('de-DE') : 'nie'}`;
+        indicator.innerHTML = '<i data-lucide="cloud"></i>';
+      } else {
+        indicator.className = 'cloud-status offline';
+        indicator.title = 'Offline - Daten werden lokal gespeichert';
+        indicator.innerHTML = '<i data-lucide="cloud-off"></i>';
+      }
+    });
     
     // Refresh Lucide icons
     if (window.lucide) {
