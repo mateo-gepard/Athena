@@ -26,8 +26,16 @@ function getStorage() {
 const storage = getStorage();
 
 const NexusStore = {
-  // Store key for localStorage
-  STORAGE_KEY: 'nexus_ultra_data',
+  // Store key for localStorage (base key)
+  STORAGE_KEY_BASE: 'nexus_ultra_data',
+  
+  // Get user-specific storage key
+  getStorageKey() {
+    if (window.AuthService && AuthService.user) {
+      return `nexus_ultra_data_${AuthService.user.uid}`;
+    }
+    return this.STORAGE_KEY_BASE;
+  },
   
   // Current state
   state: {
@@ -87,11 +95,19 @@ const NexusStore = {
   // Load from localStorage (and cloud if available)
   async load() {
     try {
+      const storageKey = this.getStorageKey();
+      
       // First load from localStorage (fast)
-      const saved = storage.getItem(this.STORAGE_KEY);
+      const saved = storage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         this.state = { ...this.state, ...parsed };
+      }
+      
+      // Sync user info from AuthService
+      if (window.AuthService && AuthService.user) {
+        this.state.user.name = AuthService.user.displayName || AuthService.user.email.split('@')[0];
+        this.state.user.email = AuthService.user.email;
       }
       
       // Then try cloud sync (if initialized)
@@ -104,8 +120,13 @@ const NexusStore = {
           if (cloudVersion > localVersion) {
             console.log('☁️ Cloud data is newer, syncing...');
             this.state = { ...this.state, ...cloudData };
+            // Preserve user info from Auth
+            if (window.AuthService && AuthService.user) {
+              this.state.user.name = AuthService.user.displayName || AuthService.user.email.split('@')[0];
+              this.state.user.email = AuthService.user.email;
+            }
             // Update localStorage with cloud data
-            storage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+            storage.setItem(storageKey, JSON.stringify(this.state));
           }
         }
       }
@@ -128,11 +149,13 @@ const NexusStore = {
   // Save to localStorage (and cloud)
   save() {
     try {
+      const storageKey = this.getStorageKey();
+      
       // Add version for conflict resolution
       this.state._version = Date.now();
       
       // Always save to localStorage first (instant, offline-capable)
-      storage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+      storage.setItem(storageKey, JSON.stringify(this.state));
       
       // Sync to cloud (debounced)
       if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized) {
@@ -1382,7 +1405,7 @@ const NexusStore = {
     // Clear localStorage completely (not just nexus keys, to be thorough)
     try {
       // First, remove known keys explicitly
-      localStorage.removeItem(this.STORAGE_KEY);
+      localStorage.removeItem(this.getStorageKey());
       localStorage.removeItem('nexus_onboarding_complete');
       localStorage.removeItem('nexus_atlas_api_key');
       localStorage.removeItem('nexus_atlas_model');
@@ -1573,7 +1596,7 @@ const NexusStore = {
   
   // Storage info
   getStorageInfo() {
-    const data = localStorage.getItem(this.STORAGE_KEY) || '';
+    const data = localStorage.getItem(this.getStorageKey()) || '';
     const bytes = new Blob([data]).size;
     const kb = (bytes / 1024).toFixed(1);
     const maxKb = 5120; // 5MB localStorage limit
