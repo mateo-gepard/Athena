@@ -274,31 +274,30 @@ const MobileNav = {
     // Handle keyboard opening/closing with Visual Viewport API
     if (window.visualViewport && chatContainer && inputArea) {
       const resizeHandler = () => {
-        // Calculate how much the viewport has shrunk (keyboard height)
+        // Get viewport height and calculate keyboard height
         const viewportHeight = window.visualViewport.height;
         const windowHeight = window.innerHeight;
-        const keyboardHeight = windowHeight - viewportHeight;
+        const keyboardHeight = Math.max(0, windowHeight - viewportHeight);
         
-        if (keyboardHeight > 150) {
-          // Keyboard is open - shrink the chat container and position input above keyboard
-          chatContainer.style.height = `${viewportHeight - 104}px`;
-          chatContainer.style.transition = 'height 0.3s ease';
-          
-          // Position input area at the bottom of the visible viewport
-          inputArea.style.position = 'fixed';
-          inputArea.style.bottom = '0';
-          inputArea.style.transform = 'translateY(0)';
+        console.log('Keyboard height:', keyboardHeight);
+        
+        if (keyboardHeight > 100) {
+          // Keyboard is open - move input area up above keyboard
+          inputArea.style.bottom = `${keyboardHeight}px`;
+          // Also adjust messages padding to account for moved input
+          messagesContainer.style.paddingBottom = `${keyboardHeight + 100}px`;
         } else {
-          // Keyboard is closed - restore full height
-          chatContainer.style.height = `calc(100vh - 104px)`;
-          inputArea.style.position = 'fixed';
-          inputArea.style.bottom = '0';
-          inputArea.style.transform = 'translateY(0)';
+          // Keyboard is closed - restore to bottom
+          inputArea.style.bottom = '0px';
+          messagesContainer.style.paddingBottom = '100px';
         }
       };
       
       window.visualViewport.addEventListener('resize', resizeHandler);
       window.visualViewport.addEventListener('scroll', resizeHandler);
+      
+      // Initial call
+      resizeHandler();
     }
     
     // Send button click
