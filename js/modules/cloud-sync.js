@@ -69,6 +69,8 @@ const CloudSync = {
       // Set up online/offline detection
       this.setupConnectivityListener();
       
+      // Assume online initially - we have database access
+      this.isOnline = true;
       this.isInitialized = true;
       console.log('☁️ Cloud Sync initialized for user:', this.userId);
       

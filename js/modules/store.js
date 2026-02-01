@@ -213,11 +213,12 @@ const NexusStore = {
         console.log('👤 User info synced:', this.state.user.name);
       }
       
-      // Then try cloud sync (if initialized)
-      if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized && CloudSync.isOnline) {
-        console.log('☁️ Attempting to load from cloud...');
-        const cloudData = await CloudSync.loadFromCloud();
-        if (cloudData) {
+      // Then try cloud sync (if initialized) - always try, don't wait for online confirmation
+      if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized) {
+        console.log('☁️ Attempting to load from cloud (isOnline:', CloudSync.isOnline, ')...');
+        try {
+          const cloudData = await CloudSync.loadFromCloud();
+          if (cloudData) {
           // Cloud data is newer, use it
           const localVersion = this.state._version || 0;
           const cloudVersion = cloudData._version || 0;
@@ -249,8 +250,11 @@ const NexusStore = {
           } else {
             console.log('⏭️ Local data is up to date, skipping cloud sync');
           }
-        } else {
-          console.log('⚠️ No cloud data available');
+          } else {
+            console.log('⚠️ No cloud data available');
+          }
+        } catch (cloudError) {
+          console.warn('☁️ Cloud load failed:', cloudError);
         }
       } else {
         console.log('⚠️ Cloud sync not available:', {
