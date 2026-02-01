@@ -101,18 +101,25 @@ const NexusStore = {
     // Setup real-time sync listener after initial load
     if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized && !this._realtimeSyncSetup) {
       this._realtimeSyncSetup = true;
+      console.log('🔄 Setting up real-time sync listener...');
+      
       CloudSync.setupRealtimeSync((cloudData) => {
-        // Only merge if cloud data is newer
+        console.log('🔄 Processing real-time cloud update...');
+        
+        // Get versions
         const localVersion = this.state._version || 0;
         const cloudVersion = cloudData._version || 0;
         
+        console.log('📊 Version check - Local:', localVersion, 'Cloud:', cloudVersion);
+        
+        // Only merge if cloud data is newer
         if (cloudVersion > localVersion) {
-          console.log('☁️ Real-time update from cloud (version:', cloudVersion, ')');
+          console.log('☁️ Cloud data is newer, merging...');
           
           // Preserve current user info
           const currentUser = { ...this.state.user };
           
-          // Merge cloud data
+          // Merge cloud data into state
           this.state = { ...this.state, ...cloudData };
           this.state.user = currentUser;
           
@@ -120,13 +127,30 @@ const NexusStore = {
           const storageKey = this.getStorageKey();
           storage.setItem(storageKey, JSON.stringify(this.state));
           
+          console.log('✅ Real-time sync complete!');
+          
           // Notify all listeners
           this.notify('store:cloud-sync', cloudData);
           
-          // Refresh UI
-          if (typeof CommandCenter !== 'undefined' && window.location.hash === '#command-center') {
+          // Show toast notification
+          if (typeof NexusUI !== 'undefined') {
+            NexusUI.showToast({
+              type: 'info',
+              title: 'Synchronisiert',
+              message: 'Daten von anderem Gerät empfangen'
+            });
+          }
+          
+          // Refresh current view
+          const currentPage = window.location.hash.replace('#', '') || 'command-center';
+          if (typeof CommandCenter !== 'undefined' && currentPage === 'command-center') {
             CommandCenter.render();
           }
+          if (typeof TasksModule !== 'undefined' && currentPage === 'tasks') {
+            TasksModule.render();
+          }
+        } else {
+          console.log('⏭️ Skipping update - local version is newer or equal');
         }
       });
     }

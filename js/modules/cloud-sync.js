@@ -285,14 +285,26 @@ const CloudSync = {
     
     const userRef = this.database.ref(`users/${this.userId}/data`);
     
+    let isFirstLoad = true;
+    
     userRef.on('value', (snapshot) => {
       const data = snapshot.val();
+      
+      // Skip the first load (already loaded in reload())
+      if (isFirstLoad) {
+        isFirstLoad = false;
+        console.log('☁️ Skipping first real-time load (already loaded)');
+        return;
+      }
+      
       console.log('☁️ Real-time update received:', data ? 'has data' : 'no data');
       if (data && onDataChange) {
+        // Create a copy to avoid mutation
+        const cloudData = JSON.parse(JSON.stringify(data));
         // Remove metadata
-        delete data._lastUpdated;
-        delete data._version;
-        onDataChange(data);
+        delete cloudData._lastUpdated;
+        delete cloudData._version;
+        onDataChange(cloudData);
       }
     });
   },
