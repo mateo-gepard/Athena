@@ -7,6 +7,7 @@ const AuthService = {
   user: null,
   isAuthenticated: false,
   _initialized: false,
+  _isFirstAuth: true,
   
   // Initialize Firebase Auth
   init() {
@@ -24,7 +25,13 @@ const AuthService = {
         if (user) {
           this.user = user;
           this.isAuthenticated = true;
-          this.onAuthSuccess(user);
+          
+          // Only call onAuthSuccess on first authentication (after login)
+          if (this._isFirstAuth) {
+            this._isFirstAuth = false;
+            this.onAuthSuccess(user);
+          }
+          
           resolve(true);
         } else {
           this.user = null;
@@ -222,16 +229,8 @@ const AuthService = {
       CloudSync.userId = user.uid;
     }
     
-    // Remove auth screen
-    const authScreen = document.querySelector('.auth-screen');
-    if (authScreen) {
-      authScreen.remove();
-    }
-    
-    // Initialize main app (instead of reload)
-    if (window.NexusApp && typeof NexusApp.init === 'function') {
-      NexusApp.init();
-    }
+    // Reload page to restore app structure
+    window.location.reload();
   },
   
   // Get user-friendly error messages
