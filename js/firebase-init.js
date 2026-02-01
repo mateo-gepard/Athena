@@ -2,13 +2,14 @@
 // This must be loaded after Firebase SDK but before any modules that use Firebase
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBuEp1bvLIZdBlkPMb5rKOWgQFElmvE8Bw",
-  authDomain: "athena-ultra-5cb84.firebaseapp.com",
-  databaseURL: "https://athena-ultra-5cb84-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "athena-ultra-5cb84",
-  storageBucket: "athena-ultra-5cb84.firebasestorage.app",
-  messagingSenderId: "624163803330",
-  appId: "1:624163803330:web:7e3f90c3eab42f2fc5cbed"
+  apiKey: "AIzaSyBR0ecmgOa-rUVEzWi2SiUXEuyfoLRJRPw",
+  authDomain: "athena-1df6d.firebaseapp.com",
+  databaseURL: "https://athena-1df6d-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "athena-1df6d",
+  storageBucket: "athena-1df6d.firebasestorage.app",
+  messagingSenderId: "687796502304",
+  appId: "1:687796502304:web:7097f4cd395af831b46145",
+  measurementId: "G-E3WSL6SJ6T"
 };
 
 // Initialize Firebase
