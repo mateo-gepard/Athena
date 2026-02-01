@@ -548,6 +548,35 @@
   text-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
 }
 
+/* Deadline badges unter dem Tag-Header */
+.day-deadlines {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 60px;
+  overflow-y: auto;
+}
+
+.deadline-badge {
+  font-size: 10px;
+  padding: 3px 6px;
+  background: rgba(255, 100, 100, 0.15);
+  border-left: 2px solid rgba(255, 100, 100, 0.6);
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deadline-badge:hover {
+  background: rgba(255, 100, 100, 0.25);
+  transform: translateX(-2px);
+}
+
 .time-gutter {
   width: 60px;
 }

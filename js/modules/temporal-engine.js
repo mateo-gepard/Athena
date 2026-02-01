@@ -170,11 +170,13 @@ const TemporalEngine = {
             const markedDays = this.getMarkedDaysForDate(d);
             const hasMarked = markedDays.length > 0;
             const markedStyle = hasMarked ? `--marked-color: ${markedDays[0].color}` : '';
+            const deadlines = this.getDeadlinesForDate(d);
             return `
             <div class="day-header ${d.toDateString() === today ? 'today' : ''} ${hasMarked ? 'has-marked-day' : ''}" style="${markedStyle}">
               <div class="day-name">${dayNames[i]}</div>
               <div class="day-number">${d.getDate()}</div>
               ${hasMarked ? `<span class="marked-day-icon" title="${markedDays[0].title}">${markedDays[0].icon}</span>` : ''}
+              ${deadlines.length > 0 ? `<div class="day-deadlines">${deadlines.map(dl => `<div class="deadline-badge" title="${dl.title}">📅 ${dl.title}</div>`).join('')}</div>` : ''}
             </div>
           `}).join('')}
         </div>
@@ -345,6 +347,17 @@ const TemporalEngine = {
     });
   },
   
+  // Get deadlines for a specific date
+  getDeadlinesForDate(date) {
+    const dateStr = date.toISOString().split('T')[0];
+    const tasks = NexusStore.getTasks();
+    
+    return tasks.filter(t => {
+      const taskDate = t.scheduledDate || t.deadline;
+      return taskDate === dateStr && !t.scheduledTime && (t.taskType === 'deadline' || t.deadline);
+    });
+  },
+  
   // Render events for a specific day
   renderDayEvents(date, dayIndex) {
     const dateStr = date.toISOString().split('T')[0];
@@ -477,17 +490,16 @@ const TemporalEngine = {
       `;
     });
     
-    // Render habits (if layer enabled) - NUR mit bevorzugter Uhrzeit
+    // Render habits (if layer enabled)
     if (this.layers.habits && todayHabits.length > 0) {
-      todayHabits
-        .filter(habit => habit.preferredTime) // Nur Habits mit Uhrzeit im Kalender
-        .forEach((habit) => {
-          const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
-          
-          // Position based on preferredTime
+      todayHabits.forEach((habit, idx) => {
+        const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
+        
+        // Position based on preferredTime if available, otherwise skip (shown elsewhere)
+        if (habit.preferredTime) {
           const [hours, minutes] = habit.preferredTime.split(':').map(Number);
           const top = (hours - 6) * 60 + (minutes || 0);
-          const height = 45; // Standard height for habits
+          const height = 45;
           
           html += `
             <div class="calendar-event habit ${isCompleted ? 'completed' : ''}" 
@@ -500,30 +512,11 @@ const TemporalEngine = {
               </div>
             </div>
           `;
-        });
-    }
-    
-    // Render tasks WITHOUT time as deadline banners (DEADLINE type at top)
-    if (this.layers.deadlines && tasksWithoutTime.length > 0) {
-      const deadlineTasks = tasksWithoutTime.filter(t => t.taskType === 'deadline' || t.deadline);
-      deadlineTasks.forEach((task, idx) => {
-        const sphere = task.spheres && task.spheres.length > 0 ? task.spheres[0] : 'freizeit';
-        const durationText = task.timeEstimate ? 
-          (task.timeEstimate >= 60 ? `${(task.timeEstimate / 60).toFixed(1)}h` : `${task.timeEstimate}min`) : '';
-        
-        html += `
-          <div class="calendar-event deadline" 
-               style="top: ${5 + idx * 32}px; left: 4px; right: 4px; width: auto; height: 28px; border-left: 3px solid var(--color-sphere-${sphere});"
-               data-task-id="${task.id}">
-            <div class="deadline-content">
-              <span class="deadline-icon">📅</span>
-              <span class="event-title">${task.title}</span>
-              ${durationText ? `<span class="deadline-duration">${durationText}</span>` : ''}
-            </div>
-          </div>
-        `;
+        }
       });
     }
+    
+    // Deadlines werden jetzt unter dem Day-Header angezeigt, nicht mehr im Grid
     
     return html;
   },
