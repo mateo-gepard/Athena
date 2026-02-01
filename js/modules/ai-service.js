@@ -2198,14 +2198,32 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
       case 'ADD_EVENT':
         if (d.title && d.dateTime) {
           const events = NexusStore.state.events || [];
+          
+          // Parse dateTime to separate date and time for calendar rendering
+          const dt = new Date(d.dateTime);
+          const date = d.dateTime.split('T')[0]; // YYYY-MM-DD
+          const hours = dt.getHours().toString().padStart(2, '0');
+          const minutes = dt.getMinutes().toString().padStart(2, '0');
+          const startTime = `${hours}:${minutes}`;
+          
+          // Calculate end time based on duration
+          const endDt = new Date(dt.getTime() + (d.duration || 60) * 60000);
+          const endHours = endDt.getHours().toString().padStart(2, '0');
+          const endMinutes = endDt.getMinutes().toString().padStart(2, '0');
+          const endTime = `${endHours}:${endMinutes}`;
+          
           const event = {
             id: NexusStore.generateId(),
             title: d.title,
             dateTime: d.dateTime,
+            date: date,
+            startTime: startTime,
+            endTime: endTime,
             duration: d.duration || 60,
             location: d.location || '',
             attendees: d.attendees || [],
             recurrence: d.recurrence || null,
+            type: 'event',
             createdAt: new Date().toISOString()
           };
           events.push(event);
