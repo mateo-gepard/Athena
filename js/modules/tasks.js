@@ -5,7 +5,7 @@
 
 const TasksModule = {
   
-  view: 'list', // list | kanban | map
+  view: 'map', // list | kanban | map
   filter: 'all', // all | today | week | overdue | completed
   sphereFilter: null,
   sortBy: 'dueDate', // dueDate | priority | createdAt
@@ -522,12 +522,16 @@ const TasksModule = {
     const outerRadius = 280;
     const placedPositions = [];
     
+    // Adaptive scaling: reduce size if too many tasks
+    const scaleFactor = tasks.length > 50 ? 0.6 : tasks.length > 30 ? 0.75 : tasks.length > 20 ? 0.85 : 1;
+    
     return tasks.map((task, index) => {
       const sphere = task.spheres && task.spheres[0] ? task.spheres[0] : 'freizeit';
       const priority = NexusStore.getEffectivePriority(task);
       
-      // Task circle size based on priority (8-24px radius)
-      const taskRadius = 8 + (priority / 10) * 16;
+      // Task circle size based on priority (8-24px radius) with adaptive scaling
+      const baseRadius = 8 + (priority / 10) * 16;
+      const taskRadius = baseRadius * scaleFactor;
       
       // Get sphere center
       let center = sphereCenters[sphere] || sphereCenters.freizeit;
@@ -655,8 +659,9 @@ const TasksModule = {
       <g class="task-node ${isSelected ? 'selected' : ''} ${priorityClass}" 
          data-task-id="${task.id}"
          data-map-task="true"
+         draggable="true"
          transform="translate(${task.mapX}, ${task.mapY})"
-         style="cursor: pointer;">
+         style="cursor: grab;">
         <!-- Task circle -->
         <circle r="${task.mapRadius}" 
                 fill="${color}" 
@@ -1014,6 +1019,57 @@ const TasksModule = {
   setupEventListeners() {
     if (this._listenersInitialized) return;
     this._listenersInitialized = true;
+    
+    // Drag & Drop support for SVG task nodes
+    let draggedTaskId = null;
+    
+    document.addEventListener('mousedown', (e) => {
+      const taskNode = e.target.closest('[data-map-task]');
+      if (taskNode && e.target.closest('#page-tasks')) {
+        draggedTaskId = taskNode.dataset.taskId;
+        taskNode.style.cursor = 'grabbing';
+        taskNode.style.opacity = '0.6';
+      }
+    });
+    
+    document.addEventListener('mouseup', (e) => {
+      if (draggedTaskId) {
+        const taskNode = document.querySelector(`[data-task-id="${draggedTaskId}"][data-map-task]`);
+        if (taskNode) {
+          taskNode.style.cursor = 'grab';
+          taskNode.style.opacity = '1';
+        }
+        
+        // Check if dropped on a time block button
+        const timeBlockBtn = e.target.closest('[data-map-action^="add-to-"]');
+        if (timeBlockBtn) {
+          const action = timeBlockBtn.dataset.mapAction;
+          const block = action.replace('add-to-', '');
+          
+          // Add this task to the time block
+          const task = NexusStore.getTaskById(draggedTaskId);
+          if (task) {
+            const today = new Date().toISOString().split('T')[0];
+            NexusStore.updateTask(draggedTaskId, {
+              commandCenterBlock: block,
+              scheduledDate: today
+            });
+            
+            NexusUI.showToast({
+              type: 'success',
+              title: 'Task hinzugefügt!',
+              message: `"${task.title}" zu ${block === 'morning' ? 'Morgen' : block === 'afternoon' ? 'Nachmittag' : 'Abend'} hinzugefügt`
+            });
+            
+            // Remove from map selection if selected
+            this.mapSelectedTasks.delete(draggedTaskId);
+            this.render();
+          }
+        }
+        
+        draggedTaskId = null;
+      }
+    });
     
     document.addEventListener('click', (e) => {
       // Debug: log all clicks

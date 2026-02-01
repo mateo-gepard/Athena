@@ -386,7 +386,8 @@ const CommandCenter = {
     return `
       <div class="cc-task-card ${isCompleted ? 'completed' : ''} ${urgentClass}" 
            style="--sphere-color: ${sphereColor}"
-           data-task-id="${task.id}">
+           data-task-id="${task.id}"
+           draggable="true">
         <div class="cc-task-checkbox ${isCompleted ? 'checked' : ''}" data-action="toggle-task"></div>
         <div class="cc-task-content">
           <div class="cc-task-title">${isUrgent ? '⚠️ ' : ''}${typeIcon} ${task.title}</div>
@@ -726,6 +727,79 @@ const CommandCenter = {
   
   // Setup Event Listeners
   setupEventListeners() {
+    // Drag & Drop support for task reordering between blocks
+    let draggedTaskId = null;
+    let draggedFromBlock = null;
+    
+    document.addEventListener('dragstart', (e) => {
+      const taskCard = e.target.closest('[data-task-id]');
+      if (taskCard && e.target.closest('#page-command-center')) {
+        draggedTaskId = taskCard.dataset.taskId;
+        const task = NexusStore.getTaskById(draggedTaskId);
+        draggedFromBlock = task?.commandCenterBlock || null;
+        taskCard.style.opacity = '0.5';
+      }
+    });
+    
+    document.addEventListener('dragend', (e) => {
+      const taskCard = e.target.closest('[data-task-id]');
+      if (taskCard) {
+        taskCard.style.opacity = '1';
+      }
+    });
+    
+    document.addEventListener('dragover', (e) => {
+      const blockContainer = e.target.closest('.cc-time-block-tasks, .cc-needs-attention-tasks');
+      if (blockContainer && draggedTaskId) {
+        e.preventDefault(); // Allow drop
+      }
+    });
+    
+    document.addEventListener('drop', (e) => {
+      const blockContainer = e.target.closest('.cc-time-block-tasks, .cc-needs-attention-tasks');
+      if (blockContainer && draggedTaskId) {
+        e.preventDefault();
+        
+        // Determine which block this is
+        const timeBlock = e.target.closest('.cc-time-block');
+        const needsAttention = e.target.closest('.cc-needs-attention');
+        
+        let newBlock = null;
+        if (timeBlock) {
+          const header = timeBlock.querySelector('.cc-block-header-title');
+          if (header) {
+            const title = header.textContent.trim();
+            if (title.includes('Morgen')) newBlock = 'morning';
+            else if (title.includes('Nachmittag')) newBlock = 'afternoon';
+            else if (title.includes('Abend')) newBlock = 'evening';
+          }
+        } else if (needsAttention) {
+          newBlock = null; // Remove from command center
+        }
+        
+        // Update task
+        if (newBlock !== draggedFromBlock) {
+          NexusStore.updateTask(draggedTaskId, {
+            commandCenterBlock: newBlock
+          });
+          
+          const task = NexusStore.getTaskById(draggedTaskId);
+          NexusUI.showToast({
+            type: 'success',
+            title: 'Task verschoben',
+            message: newBlock 
+              ? `"${task.title}" zu ${newBlock === 'morning' ? 'Morgen' : newBlock === 'afternoon' ? 'Nachmittag' : 'Abend'} verschoben`
+              : `"${task.title}" aus Zeitblock entfernt`
+          });
+          
+          this.render();
+        }
+        
+        draggedTaskId = null;
+        draggedFromBlock = null;
+      }
+    });
+    
     // Delegate event handling for dynamic elements
     document.addEventListener('click', (e) => {
       // Atlas Briefing Action Button
