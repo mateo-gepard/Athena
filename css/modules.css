@@ -639,28 +639,28 @@
 
 /* Sphere-colored backgrounds for calendar tasks */
 .calendar-event.time-block.sphere-geschaeft {
-  background: var(--color-sphere-geschaeft-bg);
-  border-left-color: var(--color-sphere-geschaeft);
+  background: rgba(74, 124, 148, 0.15);
+  border-left-color: #4A7C94;
 }
 
 .calendar-event.time-block.sphere-projekte {
-  background: var(--color-sphere-projekte-bg);
-  border-left-color: var(--color-sphere-projekte);
+  background: rgba(124, 106, 148, 0.15);
+  border-left-color: #7C6A94;
 }
 
 .calendar-event.time-block.sphere-schule {
-  background: var(--color-sphere-schule-bg);
-  border-left-color: var(--color-sphere-schule);
+  background: rgba(148, 133, 74, 0.15);
+  border-left-color: #94854A;
 }
 
 .calendar-event.time-block.sphere-sport {
-  background: var(--color-sphere-sport-bg);
-  border-left-color: var(--color-sphere-sport);
+  background: rgba(74, 148, 106, 0.15);
+  border-left-color: #4A946A;
 }
 
 .calendar-event.time-block.sphere-freizeit {
-  background: var(--color-sphere-freizeit-bg);
-  border-left-color: var(--color-sphere-freizeit);
+  background: rgba(107, 104, 98, 0.15);
+  border-left-color: #6B6862;
 }
 
 .calendar-event.time-block.type-focus {
