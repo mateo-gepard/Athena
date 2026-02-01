@@ -187,8 +187,15 @@ const CloudSync = {
   // Save to cloud (debounced)
   saveToCloud(data) {
     if (!this.isInitialized || !this.isOnline || !this.database) {
+      console.warn('☁️ Cannot save to cloud:', {
+        initialized: this.isInitialized,
+        online: this.isOnline,
+        hasDatabase: !!this.database
+      });
       return Promise.resolve(false);
     }
+    
+    console.log('☁️ Scheduling cloud save for user:', this.userId);
     
     // Clear existing timeout
     if (this.saveTimeout) {
@@ -207,6 +214,8 @@ const CloudSync = {
           // Sanitize data to remove undefined values
           const cleanData = this.sanitizeData(data);
           
+          console.log('☁️ Writing to Firebase at users/' + this.userId + '/data');
+          
           // Save with timestamp
           await userRef.set({
             ...cleanData,
@@ -218,7 +227,7 @@ const CloudSync = {
           this.isSyncing = false;
           this.notifyStatus();
           
-          console.log('☁️ Saved to cloud at', new Date().toLocaleTimeString());
+          console.log('✅ Saved to cloud at', new Date().toLocaleTimeString());
           resolve(true);
         } catch (error) {
           console.error('❌ Cloud save failed:', error);
@@ -267,12 +276,18 @@ const CloudSync = {
   
   // Setup real-time sync listener
   setupRealtimeSync(onDataChange) {
-    if (!this.isInitialized || !this.database) return;
+    if (!this.isInitialized || !this.database) {
+      console.warn('☁️ Cannot setup realtime sync - not initialized');
+      return;
+    }
+    
+    console.log('☁️ Setting up real-time sync listener for user:', this.userId);
     
     const userRef = this.database.ref(`users/${this.userId}/data`);
     
     userRef.on('value', (snapshot) => {
       const data = snapshot.val();
+      console.log('☁️ Real-time update received:', data ? 'has data' : 'no data');
       if (data && onDataChange) {
         // Remove metadata
         delete data._lastUpdated;

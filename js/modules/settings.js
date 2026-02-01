@@ -411,7 +411,43 @@ const SettingsModule = {
   
   // Data Settings
   renderDataSettings(settings) {
+    const cloudStatus = typeof CloudSync !== 'undefined' && CloudSync.isInitialized && CloudSync.isOnline;
+    const userId = AuthService?.user?.uid || 'Nicht angemeldet';
+    
     return `
+      <div class="panel mb-6">
+        <div class="panel-header">
+          <span class="panel-title">Cloud Synchronisierung</span>
+        </div>
+        <div class="panel-body">
+          <div class="mb-4">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="${cloudStatus ? 'text-success' : 'text-warning'}">
+                ${cloudStatus ? '●' : '○'}
+              </span>
+              <span class="font-medium">Status: ${cloudStatus ? 'Online' : 'Offline'}</span>
+            </div>
+            <div class="text-sm text-tertiary mb-1">User ID: ${userId.substring(0, 20)}...</div>
+            ${CloudSync?.lastSyncTime ? `
+              <div class="text-sm text-tertiary">
+                Letzte Sync: ${new Date(CloudSync.lastSyncTime).toLocaleString('de-DE')}
+              </div>
+            ` : ''}
+          </div>
+          
+          <div class="flex gap-3">
+            <button class="btn btn-primary" id="force-sync-now">
+              ${NexusUI.icon('refresh-cw', 16)}
+              Jetzt synchronisieren
+            </button>
+            <button class="btn btn-secondary" id="download-cloud-data">
+              ${NexusUI.icon('cloud-download', 16)}
+              Aus Cloud laden
+            </button>
+          </div>
+        </div>
+      </div>
+      
       <div class="panel mb-6">
         <div class="panel-header">
           <span class="panel-title">Daten Export</span>
@@ -809,6 +845,59 @@ const SettingsModule = {
     }
   },
   
+  // Force sync now
+  async forceSyncNow() {
+    if (typeof CloudSync === 'undefined' || !CloudSync.isInitialized) {
+      NexusUI.showToast('Cloud Sync ist nicht verfügbar', 'error');
+      return;
+    }
+    
+    NexusUI.showToast('Synchronisiere...', 'info');
+    
+    const success = await CloudSync.forceSync(NexusStore.state);
+    
+    if (success) {
+      NexusUI.showToast('✅ Erfolgreich synchronisiert!', 'success');
+    } else {
+      NexusUI.showToast('❌ Synchronisierung fehlgeschlagen', 'error');
+    }
+    
+    this.render();
+  },
+  
+  // Download from cloud
+  async downloadCloudData() {
+    if (typeof CloudSync === 'undefined' || !CloudSync.isInitialized) {
+      NexusUI.showToast('Cloud Sync ist nicht verfügbar', 'error');
+      return;
+    }
+    
+    NexusUI.showToast('Lade Daten aus Cloud...', 'info');
+    
+    const cloudData = await CloudSync.loadFromCloud();
+    
+    if (cloudData) {
+      // Preserve user info
+      const currentUser = { ...NexusStore.state.user };
+      
+      // Merge with current state
+      NexusStore.state = { ...NexusStore.state, ...cloudData };
+      NexusStore.state.user = currentUser;
+      
+      // Save to localStorage
+      NexusStore.save();
+      
+      NexusUI.showToast('✅ Daten aus Cloud geladen!', 'success');
+      
+      // Refresh page to show new data
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } else {
+      NexusUI.showToast('❌ Keine Cloud-Daten gefunden', 'error');
+    }
+  },
+  
   // Setup event listeners
   setupEventListeners() {
     if (this._listenersInitialized) return;
@@ -863,6 +952,18 @@ const SettingsModule = {
       // Save AI settings
       if (e.target.id === 'save-ai-settings') {
         this.saveAISettings();
+        return;
+      }
+      
+      // Force sync
+      if (e.target.id === 'force-sync-now' || e.target.closest('#force-sync-now')) {
+        this.forceSyncNow();
+        return;
+      }
+      
+      // Download cloud data
+      if (e.target.id === 'download-cloud-data' || e.target.closest('#download-cloud-data')) {
+        this.downloadCloudData();
         return;
       }
       

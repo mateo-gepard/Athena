@@ -198,10 +198,17 @@ const NexusStore = {
       
       // Always save to localStorage first (instant, offline-capable)
       storage.setItem(storageKey, JSON.stringify(this.state));
+      console.log('💾 Saved to localStorage (key:', storageKey, ')');
       
       // Sync to cloud (debounced)
       if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized) {
+        console.log('☁️ Triggering cloud save...');
         CloudSync.saveToCloud(this.state);
+      } else {
+        console.warn('⚠️ CloudSync not available:', {
+          exists: typeof CloudSync !== 'undefined',
+          initialized: CloudSync?.isInitialized
+        });
       }
     } catch (e) {
       console.warn('Failed to save state:', e);
