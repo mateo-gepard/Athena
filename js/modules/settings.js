@@ -294,8 +294,8 @@ const SettingsModule = {
             <div class="flex items-start gap-2">
               <span>⚠️</span>
               <div class="text-sm">
-                <strong>Sicherheitshinweis:</strong> Der API Key wird lokal in deinem Browser gespeichert.
-                Teile diesen Key niemals und nutze für Produktion einen Backend-Proxy.
+                <strong>Sicherheitshinweis:</strong> Der API Key wird user-spezifisch in deinem Browser gespeichert.
+                Jeder User benötigt seinen eigenen API Key. Teile diesen Key niemals.
               </div>
             </div>
           </div>
@@ -318,8 +318,10 @@ const SettingsModule = {
               </div>
               <div class="setting-control">
                 <select class="input" id="setting-ai-model">
-                  <option value="gpt-4o-mini" ${settings.aiModel === 'gpt-4o-mini' ? 'selected' : ''}>GPT-4o-mini (Schnell & Günstig)</option>
+                  <option value="gpt-4o-mini" ${settings.aiModel === 'gpt-4o-mini' ? 'selected' : ''}>GPT-4o Mini (Schnell & Günstig)</option>
                   <option value="gpt-4o" ${settings.aiModel === 'gpt-4o' ? 'selected' : ''}>GPT-4o (Beste Qualität)</option>
+                  <option value="gpt-5-mini" ${settings.aiModel === 'gpt-5-mini' ? 'selected' : ''}>GPT-5 Mini (Neueste Generation)</option>
+                  <option value="o1-mini" ${settings.aiModel === 'o1-mini' ? 'selected' : ''}>o1 Mini (Optimiert)</option>
                   <option value="gpt-3.5-turbo" ${settings.aiModel === 'gpt-3.5-turbo' ? 'selected' : ''}>GPT-3.5 Turbo (Legacy)</option>
                 </select>
               </div>

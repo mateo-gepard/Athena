@@ -12,6 +12,14 @@ const AtlasAI = {
     temperature: 0.7
   },
   
+  // Available models
+  availableModels: [
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Schnell und kosteng\u00fcnstig' },
+    { id: 'gpt-4o', name: 'GPT-4o', description: 'Fortgeschrittene Reasoning' },
+    { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Neueste Generation - Mini' },
+    { id: 'o1-mini', name: 'o1 Mini', description: 'Optimiert f\u00fcr komplexe Tasks' }
+  ],
+  
   // Convert legacy priority strings to scores
   legacyPriorityToScore(priority) {
     const map = { critical: 9, high: 7, medium: 5, normal: 5, low: 3 };
@@ -1021,26 +1029,67 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
     return this.isConfigured();
   },
   
-  // Get API key from settings
+  // Get API key from user-specific storage
   getApiKey() {
-    console.log('🔍 getApiKey: Calling NexusStore.getSettings()...');
-    const settings = NexusStore.getSettings();
-    console.log('🔍 getApiKey: Got settings object:', settings);
-    const apiKey = settings.apiKey || null;
-    console.log('🔑 AtlasAI.getApiKey():', { apiKey: apiKey ? '***' + apiKey.slice(-4) : 'null', settings });
+    console.log('🔍 getApiKey: Getting user-specific API key...');
+    
+    // Get user ID
+    let userId = null;
+    if (window.AuthService && AuthService.user) {
+      userId = AuthService.user.uid;
+    }
+    
+    if (!userId) {
+      console.warn('⚠️ No user logged in, cannot get API key');
+      return null;
+    }
+    
+    const storageKey = `nexus_atlas_api_key_${userId}`;
+    const apiKey = storage.getItem(storageKey) || null;
+    console.log('🔑 AtlasAI.getApiKey():', { 
+      userId, 
+      apiKey: apiKey ? '***' + apiKey.slice(-4) : 'null' 
+    });
     return apiKey;
   },
   
-  // Save API key
+  // Save API key (user-specific)
   setApiKey(key) {
     console.log('💾 AtlasAI.setApiKey():', { key: key ? '***' + key.slice(-4) : 'null' });
-    NexusStore.updateSettings('apiKey', key);
-    console.log('💾 After updateSettings, stored value:', localStorage.getItem('nexus_atlas_api_key') ? '***' + localStorage.getItem('nexus_atlas_api_key').slice(-4) : 'null');
+    
+    // Get user ID
+    let userId = null;
+    if (window.AuthService && AuthService.user) {
+      userId = AuthService.user.uid;
+    }
+    
+    if (!userId) {
+      console.error('❌ Cannot save API key: No user logged in');
+      return false;
+    }
+    
+    const storageKey = `nexus_atlas_api_key_${userId}`;
+    storage.setItem(storageKey, key);
+    console.log('💾 Saved API key for user:', userId);
+    return true;
   },
   
-  // Remove API key
+  // Remove API key (user-specific)
   removeApiKey() {
-    NexusStore.updateSettings('apiKey', '');
+    let userId = null;
+    if (window.AuthService && AuthService.user) {
+      userId = AuthService.user.uid;
+    }
+    
+    if (!userId) {
+      console.error('❌ Cannot remove API key: No user logged in');
+      return false;
+    }
+    
+    const storageKey = `nexus_atlas_api_key_${userId}`;
+    storage.removeItem(storageKey);
+    console.log('🗑️ Removed API key for user:', userId);
+    return true;
   },
   
   // Test API connection
