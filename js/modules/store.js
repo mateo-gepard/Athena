@@ -97,6 +97,13 @@ const NexusStore = {
   // Reload data from localStorage and cloud (call after auth is ready)
   async reload() {
     console.log('🔄 NexusStore.reload() called');
+    
+    // Wait a bit for CloudSync to fully initialize if needed
+    if (typeof CloudSync !== 'undefined' && !CloudSync.isInitialized) {
+      console.log('⏳ Waiting for CloudSync to initialize...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
     await this.load();
     
     // Setup real-time sync listener after initial load
@@ -225,9 +232,11 @@ const NexusStore = {
             version: cloudVersion
           });
           
-          // Use cloud data if: it's newer OR we have no local data but cloud has data
-          if (cloudVersion > localVersion || (!hasLocalData && hasCloudData)) {
-            console.log('☁️ Cloud data is newer, syncing...');
+          // Use cloud data if: it's newer OR we have no local data but cloud has data OR it's a fresh page load
+          const shouldUseCloudData = cloudVersion > localVersion || (!hasLocalData && hasCloudData) || cloudVersion >= localVersion;
+          
+          if (shouldUseCloudData) {
+            console.log('☁️ Using cloud data (newer or has more data)...');
             this.state = { ...this.state, ...cloudData };
             // Preserve user info from Auth
             if (window.AuthService && AuthService.user) {
