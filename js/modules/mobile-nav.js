@@ -103,6 +103,15 @@ const MobileNav = {
       });
     }
     
+    // Mobile Atlas Back Button
+    const atlasBackBtn = document.getElementById('mobile-atlas-back');
+    if (atlasBackBtn) {
+      atlasBackBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.setActiveTab('command-center');
+      });
+    }
+    
     // Desktop Atlas toggle should work on mobile too
     const atlasToggle = document.getElementById('atlas-toggle');
     if (atlasToggle) {

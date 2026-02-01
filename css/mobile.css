@@ -302,10 +302,12 @@
   .mobile-atlas-chat {
     display: none !important;
     position: fixed;
-    top: 104px; /* Header + Tab bar */
+    top: 0;
     left: 0;
     right: 0;
     bottom: 0;
+    height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height for better mobile support */
     flex-direction: column;
     background: var(--color-surface-1);
     z-index: 500;
@@ -317,18 +319,77 @@
     visibility: visible !important;
   }
   
+  .mobile-atlas-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    padding-top: max(16px, env(safe-area-inset-top));
+    background: var(--color-surface-1);
+    border-bottom: 1px solid var(--color-border);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    height: 60px;
+  }
+  
+  .mobile-atlas-back {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .mobile-atlas-back:active {
+    background: var(--color-surface-2);
+  }
+  
+  .mobile-atlas-back i {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .mobile-atlas-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+  
+  .mobile-atlas-header-title i {
+    width: 20px;
+    height: 20px;
+    color: var(--color-primary);
+  }
+  
+  .mobile-atlas-header-spacer {
+    flex: 1;
+  }
+  
   .mobile-atlas-messages {
     flex: 1;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 16px;
-    padding-bottom: 90px; /* Space for fixed input area */
+    padding-top: 76px; /* Space for fixed header */
+    padding-bottom: 90px; /* Space for fixed input area at bottom */
     display: flex;
     flex-direction: column;
     gap: 12px;
     -webkit-overflow-scrolling: touch;
     min-height: 0; /* Important for flex scroll */
-    overscroll-behavior: contain; /* Prevent page scroll when scrolling messages */
+    overscroll-behavior: contain;
   }
   
   .mobile-atlas-message {
@@ -395,7 +456,7 @@
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 501;
+    z-index: 10;
   }
   
   .mobile-atlas-input {
