@@ -3,12 +3,19 @@
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 .auth-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--color-background);
   padding: var(--space-6);
+  z-index: 9999;
 }
 
 .auth-container {
@@ -19,6 +26,7 @@
   border-radius: 20px;
   padding: var(--space-10);
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  margin: 0 auto;
 }
 
 @media (min-width: 768px) {
@@ -29,6 +37,7 @@
     display: flex;
     gap: 3rem;
     align-items: center;
+    margin: 0;
   }
 }
 
