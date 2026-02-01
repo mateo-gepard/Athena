@@ -162,6 +162,24 @@ const CloudSync = {
     }
   },
   
+  // Sanitize data - remove undefined values (Firebase doesn't accept them)
+  sanitizeData(obj) {
+    if (obj === null || obj === undefined) return null;
+    if (typeof obj !== 'object') return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.sanitizeData(item));
+    }
+    
+    const cleaned = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key) && obj[key] !== undefined) {
+        cleaned[key] = this.sanitizeData(obj[key]);
+      }
+    }
+    return cleaned;
+  },
+  
   // Save to cloud (debounced)
   saveToCloud(data) {
     if (!this.isInitialized || !this.isOnline || !this.database) {
@@ -182,9 +200,12 @@ const CloudSync = {
           
           const userRef = this.database.ref(`users/${this.userId}/data`);
           
+          // Sanitize data to remove undefined values
+          const cleanData = this.sanitizeData(data);
+          
           // Save with timestamp
           await userRef.set({
-            ...data,
+            ...cleanData,
             _lastUpdated: firebase.database.ServerValue.TIMESTAMP,
             _version: Date.now()
           });
