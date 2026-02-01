@@ -858,6 +858,45 @@ const NexusStore = {
     return habit.completionLog.includes(today);
   },
   
+  // Prüft ob ein Habit heute fällig ist (basierend auf frequency und scheduledDays)
+  isHabitDueToday(habit) {
+    if (!habit) return false;
+    
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    
+    // Wenn scheduledDays definiert ist, prüfe ob heute dabei ist
+    if (habit.scheduledDays && Array.isArray(habit.scheduledDays)) {
+      return habit.scheduledDays.includes(dayOfWeek);
+    }
+    
+    // Fallback auf frequency/interval
+    const frequency = habit.frequency || habit.interval || 'daily';
+    
+    switch (frequency) {
+      case 'daily':
+        return true;
+      case 'weekdays':
+        return dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
+      case 'weekends':
+        return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+      case 'weekly':
+        // Für weekly ohne scheduledDays: nur am gleichen Wochentag wie createdAt
+        if (habit.createdAt) {
+          const createdDay = new Date(habit.createdAt).getDay();
+          return dayOfWeek === createdDay;
+        }
+        return true; // Fallback: täglich
+      default:
+        return true; // Fallback: täglich
+    }
+  },
+  
+  // Gibt alle Habits zurück, die heute fällig sind
+  getHabitsDueToday() {
+    return this.getHabits().filter(h => this.isHabitDueToday(h));
+  },
+  
   updateHabit(id, updates) {
     const index = this.state.habits.findIndex(h => h.id === id);
     if (index !== -1) {

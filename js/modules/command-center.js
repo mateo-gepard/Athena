@@ -150,8 +150,8 @@ const CommandCenter = {
     const todayTasks = NexusStore.getTasksForDate(today);
     const completedToday = todayTasks.filter(t => t.status === 'completed');
     const openTasks = todayTasks.filter(t => t.status !== 'completed');
-    const habits = NexusStore.getHabits();
-    const completedHabits = habits.filter(h => NexusStore.isHabitCompletedToday(h.id));
+    const habitsDueToday = NexusStore.getHabitsDueToday();
+    const completedHabits = habitsDueToday.filter(h => NexusStore.isHabitCompletedToday(h.id));
     const totalMinutes = todayTasks.reduce((sum, t) => sum + (t.timeEstimate || 0), 0);
     
     const completionRate = todayTasks.length > 0 ? Math.round((completedToday.length / todayTasks.length) * 100) : 0;
@@ -168,7 +168,7 @@ const CommandCenter = {
     
     const statHabits = document.getElementById('cc-stat-habits');
     if (statHabits) {
-      statHabits.querySelector('.cc-stat-value').textContent = `${completedHabits.length}/${habits.length}`;
+      statHabits.querySelector('.cc-stat-value').textContent = `${completedHabits.length}/${habitsDueToday.length}`;
     }
     
     const statFocus = document.getElementById('cc-stat-focus');
@@ -514,23 +514,23 @@ const CommandCenter = {
     const badgeEl = document.getElementById('cc-habits-badge');
     if (!container) return;
     
-    const habits = NexusStore.getHabits();
-    const completedHabits = habits.filter(h => NexusStore.isHabitCompletedToday(h.id));
+    const habitsDueToday = NexusStore.getHabitsDueToday();
+    const completedHabits = habitsDueToday.filter(h => NexusStore.isHabitCompletedToday(h.id));
     
     if (badgeEl) {
-      badgeEl.textContent = `${completedHabits.length}/${habits.length}`;
+      badgeEl.textContent = `${completedHabits.length}/${habitsDueToday.length}`;
     }
     
-    if (habits.length === 0) {
+    if (habitsDueToday.length === 0) {
       container.innerHTML = `
         <div class="cc-habits-empty">
-          Keine Habits definiert
+          Heute keine Habits fällig
         </div>
       `;
       return;
     }
     
-    container.innerHTML = habits.map(habit => {
+    container.innerHTML = habitsDueToday.map(habit => {
       const isCompleted = NexusStore.isHabitCompletedToday(habit.id);
       return `
         <div class="cc-habit-item ${isCompleted ? 'completed' : ''}" data-habit-id="${habit.id}">
