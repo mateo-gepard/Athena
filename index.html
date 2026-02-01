@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Athena Ultra - Your Life, Intelligently Orchestrated</title>
   
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,9 +32,35 @@
   <link rel="stylesheet" href="css/analytics.css">
   <link rel="stylesheet" href="css/atlas.css">
   <link rel="stylesheet" href="css/auth.css">
+  <link rel="stylesheet" href="css/mobile.css">
 </head>
 <body>
   <div class="app" id="app">
+    
+    <!-- ═══════════════════════════════════════════════════════════════════════════
+         MOBILE HEADER
+         ═══════════════════════════════════════════════════════════════════════════ -->
+    <header class="mobile-header">
+      <div class="mobile-header-left">
+        <button class="hamburger-btn" id="mobile-menu-toggle">
+          <i data-lucide="menu"></i>
+        </button>
+        <div class="mobile-logo">
+          <div class="mobile-logo-icon">
+            <i data-lucide="brain"></i>
+          </div>
+          <span>Athena</span>
+        </div>
+      </div>
+      <div class="mobile-header-actions">
+        <div id="cloud-sync-status-mobile" class="cloud-status offline" title="Cloud Status">
+          <i data-lucide="cloud-off"></i>
+        </div>
+      </div>
+    </header>
+    
+    <!-- Sidebar Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
     
     <!-- ═══════════════════════════════════════════════════════════════════════════
          SIDEBAR NAVIGATION
@@ -170,6 +200,18 @@
           </button>
         </div>
       </header>
+      
+      <!-- Mobile Tab Bar (Command Center / Atlas Toggle) -->
+      <div class="mobile-tab-bar">
+        <button class="mobile-tab active" id="mobile-tab-command-center">
+          <i data-lucide="zap"></i>
+          <span>Command Center</span>
+        </button>
+        <button class="mobile-tab" id="mobile-tab-atlas">
+          <i data-lucide="sparkles"></i>
+          <span>Atlas AI</span>
+        </button>
+      </div>
       
       <!-- Page Content -->
       <div class="page-content">
@@ -820,6 +862,7 @@
   <script src="js/modules/inbox.js"></script>
     <script src="js/modules/settings.js?v=3"></script>
   <script src="js/modules/onboarding.js"></script>
+  <script src="js/modules/mobile-nav.js"></script>
   
   <!-- Scripts (App) -->
   <script src="js/app.js"></script>
