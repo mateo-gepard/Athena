@@ -745,6 +745,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof InboxModule !== 'undefined') { InboxModule.setupEventListeners(); console.log('  ✓ InboxModule'); }
   if (typeof SettingsModule !== 'undefined') { SettingsModule.setupEventListeners(); console.log('  ✓ SettingsModule'); }
   console.log('✅ All module listeners initialized');
+  
+  // Logout button in sidebar
+  document.addEventListener('click', (e) => {
+    if (e.target.id === 'logout-btn-sidebar' || e.target.closest('#logout-btn-sidebar')) {
+      if (window.AuthService && typeof AuthService.logout === 'function') {
+        AuthService.logout();
+      }
+    }
+  });
 });
 
 // Export
