@@ -496,7 +496,7 @@ const TemporalEngine = {
         
         html += `
           <div class="calendar-event habit ${isCompleted ? 'completed' : ''}" 
-               style="top: ${top}px; height: ${height}px; ${habit.preferredTime ? 'left: 8px; right: 8px; width: auto;' : 'left: 4px; width: 120px;'}"
+               style="top: ${top}px; height: ${height}px; ${habit.preferredTime ? 'left: 8px; right: 8px; width: auto;' : 'left: 4px; width: 140px; max-width: 45%;'}"
                data-habit-id="${habit.id}">
             <div class="event-title text-xs">
               ${habit.preferredTime ? `<span class="event-time">${habit.preferredTime}</span>` : ''}
@@ -518,7 +518,7 @@ const TemporalEngine = {
         
         html += `
           <div class="calendar-event deadline" 
-               style="top: ${5 + idx * 32}px; right: 4px; left: auto; width: auto; max-width: 180px; height: 28px; border-left: 3px solid var(--color-sphere-${sphere});"
+               style="top: ${5 + idx * 32}px; right: 4px; left: auto; width: auto; max-width: 50%; min-width: 120px; height: 28px; border-left: 3px solid var(--color-sphere-${sphere});"
                data-task-id="${task.id}">
             <div class="deadline-content">
               <span class="deadline-icon">📅</span>
