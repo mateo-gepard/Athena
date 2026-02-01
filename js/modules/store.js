@@ -1784,8 +1784,8 @@ const NexusStore = {
         t.completedAt && t.completedAt.split('T')[0] === today
       );
       
-      const habits = this.getHabits();
-      const completedHabits = habits.filter(h => 
+      const habitsDueToday = this.getHabitsDueToday();
+      const completedHabits = habitsDueToday.filter(h => 
         this.isHabitCompletedToday(h.id)
       );
       
@@ -1810,7 +1810,7 @@ const NexusStore = {
         tasksCompleted: completedToday.length,
         tasksScheduled: todayTasks.length,
         habitCompletions: completedHabits.length,
-        totalHabits: habits.length,
+        totalHabits: habitsDueToday.length,
         sphereMinutes,
         overdueTasks: overdueTasks.length,
         overdueTasksHistorical, // Max overdue seen today (for burnout tracking)
