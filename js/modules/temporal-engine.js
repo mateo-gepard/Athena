@@ -397,14 +397,57 @@ const TemporalEngine = {
     }
     
     // Render tasks WITH scheduled time as time blocks (SCHEDULED type)
-    tasksWithTime.forEach(task => {
+    // First, detect overlaps and calculate column layout
+    const timeBlocks = tasksWithTime.map(task => {
       const [hours, minutes] = task.scheduledTime.split(':').map(Number);
-      const top = (hours - 6) * 60 + (minutes || 0);
+      const startMinutes = hours * 60 + (minutes || 0);
       const duration = task.timeEstimate || 30;
+      return {
+        task,
+        startMinutes,
+        endMinutes: startMinutes + duration,
+        column: 0,
+        totalColumns: 1
+      };
+    });
+    
+    // Detect overlaps and assign columns
+    for (let i = 0; i < timeBlocks.length; i++) {
+      const currentBlock = timeBlocks[i];
+      const overlapping = [];
+      
+      for (let j = 0; j < timeBlocks.length; j++) {
+        if (i === j) continue;
+        const otherBlock = timeBlocks[j];
+        
+        // Check if blocks overlap
+        if (currentBlock.startMinutes < otherBlock.endMinutes && 
+            currentBlock.endMinutes > otherBlock.startMinutes) {
+          overlapping.push(otherBlock);
+        }
+      }
+      
+      if (overlapping.length > 0) {
+        // Find the smallest available column
+        const usedColumns = overlapping.map(b => b.column);
+        let column = 0;
+        while (usedColumns.includes(column)) column++;
+        currentBlock.column = column;
+        currentBlock.totalColumns = Math.max(...overlapping.map(b => b.totalColumns), column + 1);
+        
+        // Update totalColumns for all overlapping blocks
+        [...overlapping, currentBlock].forEach(b => {
+          b.totalColumns = currentBlock.totalColumns;
+        });
+      }
+    }
+    
+    // Render each block with calculated column positions
+    timeBlocks.forEach(({ task, startMinutes, endMinutes, column, totalColumns }) => {
+      const top = startMinutes - (6 * 60);
+      const duration = endMinutes - startMinutes;
       const height = Math.max(duration, 30);
       
-      // Calculate end time
-      const endMinutes = (hours * 60 + (minutes || 0)) + duration;
       const endHour = Math.floor(endMinutes / 60);
       const endMin = endMinutes % 60;
       const endTimeStr = `${String(endHour).padStart(2, '0')}:${String(endMin).padStart(2, '0')}`;
@@ -416,9 +459,14 @@ const TemporalEngine = {
       const sphere = task.spheres && task.spheres.length > 0 ? task.spheres[0] : 'freizeit';
       const durationText = duration >= 60 ? `${(duration / 60).toFixed(1)}h` : `${duration}min`;
       
+      // Calculate left and width based on column
+      const columnWidth = 100 / totalColumns;
+      const left = column * columnWidth;
+      const width = columnWidth;
+      
       html += `
         <div class="calendar-event time-block sphere-${sphere} ${priorityClass}" 
-             style="top: ${top}px; height: ${height}px;"
+             style="top: ${top}px; height: ${height}px; left: ${left}%; width: calc(${width}% - 8px);"
              data-task-id="${task.id}">
           <div class="event-header">
             <span class="event-time">${task.scheduledTime} - ${endTimeStr}</span>
