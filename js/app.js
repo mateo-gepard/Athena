@@ -42,11 +42,13 @@ const NexusApp = {
     // Initialize cloud sync
     if (typeof CloudSync !== 'undefined') {
       await CloudSync.init();
+      console.log('☁️ CloudSync initialized on app start');
     }
     
     // Reload store with user-specific data (after auth is ready)
     if (typeof NexusStore !== 'undefined') {
       await NexusStore.reload();
+      console.log('📦 Store reloaded with user data');
     }
     
     // Setup event listeners
