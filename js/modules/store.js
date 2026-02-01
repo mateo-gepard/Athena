@@ -149,11 +149,18 @@ const NexusStore = {
           const currentPage = window.location.hash.replace('#', '') || 'command-center';
           console.log('🔄 Refreshing page:', currentPage);
           
-          if (typeof CommandCenter !== 'undefined' && currentPage === 'command-center') {
+          // Always refresh Command Center (it's the default/main page)
+          if (typeof CommandCenter !== 'undefined') {
             CommandCenter.render();
+            console.log('✅ CommandCenter refreshed');
           }
+          
+          // Refresh other modules if on their pages
           if (typeof TasksModule !== 'undefined' && currentPage === 'tasks') {
             TasksModule.render();
+          }
+          if (typeof HabitsModule !== 'undefined' && currentPage === 'habits') {
+            HabitsModule.render();
           }
         } else {
           console.log('⏭️ Skipping update - versions match');
