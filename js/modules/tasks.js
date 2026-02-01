@@ -729,13 +729,97 @@ const TasksModule = {
     } else {
       this.mapSelectedTasks.add(taskId);
     }
-    this.render();
+    // Only update the SVG nodes, don't re-render everything
+    this.updateMapSelectionUI();
+  },
+  
+  // Update only the selection UI without re-rendering
+  updateMapSelectionUI() {
+    const container = document.getElementById('task-map-container');
+    if (!container) return;
+    
+    // Update selected actions bar
+    const hasSelectedTasks = this.mapSelectedTasks.size > 0;
+    const actionsBar = container.querySelector('.task-map-actions');
+    if (actionsBar) {
+      actionsBar.innerHTML = `
+        <div class="task-map-legend">
+          <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-geschaeft)"></span> Geschäft</div>
+          <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-schule)"></span> Schule</div>
+          <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-sport)"></span> Sport</div>
+          <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-projekte)"></span> Projekte</div>
+          <div class="legend-item"><span class="legend-dot" style="background: var(--color-sphere-freizeit)"></span> Freizeit</div>
+        </div>
+        ${hasSelectedTasks ? `
+          <div class="task-map-selected-actions">
+            <span class="text-sm text-secondary">${this.mapSelectedTasks.size} ausgewählt</span>
+            <button class="btn btn-sm btn-ghost" data-map-action="clear-selection">
+              ${NexusUI.icon('x', 14)} Auswahl aufheben
+            </button>
+            <div class="task-map-block-selector">
+              <button class="btn btn-sm btn-primary" data-map-action="add-to-morning">
+                🌅 Morgen
+              </button>
+              <button class="btn btn-sm btn-primary" data-map-action="add-to-afternoon">
+                ☀️ Nachmittag
+              </button>
+              <button class="btn btn-sm btn-primary" data-map-action="add-to-evening">
+                🌙 Abend
+              </button>
+            </div>
+          </div>
+        ` : `
+          <div class="task-map-hint">
+            <span class="text-sm text-tertiary">Klicke auf Tasks um sie für deinen Tag auszuwählen</span>
+          </div>
+        `}
+      `;
+      NexusUI.refreshIcons();
+    }
+    
+    // Update task node classes
+    this.mapPlacedTasks.forEach(task => {
+      const node = document.querySelector(`[data-task-id="${task.id}"][data-map-task]`);
+      if (node) {
+        const isSelected = this.mapSelectedTasks.has(task.id);
+        if (isSelected) {
+          node.classList.add('selected');
+        } else {
+          node.classList.remove('selected');
+        }
+        
+        // Update circle attributes
+        const circle = node.querySelector('circle:first-child');
+        if (circle) {
+          circle.setAttribute('fill-opacity', isSelected ? '1' : '0.8');
+          circle.setAttribute('stroke', isSelected ? '#fff' : this.getSphereColorForTask(task));
+          circle.setAttribute('stroke-width', isSelected ? '3' : '1');
+          if (isSelected) {
+            circle.setAttribute('filter', 'url(#glow-selected)');
+          } else {
+            circle.removeAttribute('filter');
+          }
+        }
+      }
+    });
+  },
+  
+  // Get sphere color for a task
+  getSphereColorForTask(task) {
+    const sphereColors = {
+      geschaeft: '#4A7C94',
+      schule: '#94854A',
+      sport: '#4A946A',
+      projekte: '#7C6A94',
+      freizeit: '#6B6862'
+    };
+    return sphereColors[task.sphere] || sphereColors.freizeit;
   },
   
   // Clear map selection
   clearMapSelection() {
     this.mapSelectedTasks.clear();
-    this.render();
+    this.updateMapSelectionUI();
   },
   
   // Get project name
