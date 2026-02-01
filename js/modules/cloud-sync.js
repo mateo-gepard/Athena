@@ -29,21 +29,22 @@ const CloudSync = {
   saveTimeout: null,
   SAVE_DEBOUNCE_MS: 1000,
   
+  // Delete all cloud data for current user
+  async deleteAll() {
+    if (!this.isInitialized || !this.database || !this.userId) return false;
+    try {
+      await this.database.ref(`users/${this.userId}`).remove();
+      return true;
+    } catch (e) {
+      console.error('Cloud delete failed:', e);
+      return false;
+    }
+  },
+  
   // Initialize Firebase
   async init() {
     try {
       // Check if Firebase is loaded
-    // Delete all cloud data for current user
-    async deleteAll() {
-      if (!this.isInitialized || !this.database || !this.userId) return false;
-      try {
-        await this.database.ref(`users/${this.userId}`).remove();
-        return true;
-      } catch (e) {
-        console.error('Cloud delete failed:', e);
-        return false;
-      }
-    },
       if (typeof firebase === 'undefined') {
         console.warn('⚠️ Firebase SDK not loaded, falling back to localStorage only');
         this.isOnline = false;
