@@ -545,14 +545,20 @@ const NexusStore = {
       description: habitData.description || '',
       icon: habitData.icon || '⚡',
       frequency: habitData.frequency || habitData.interval || 'daily',
-      scheduledDays: habitData.scheduledDays || null, // For weekly habits: [0-6] (0=Sunday)
+      // Complex schedule support:
+      // - scheduledDays: [0-6] for weekly (0=Sunday, 1=Monday, etc.)
+      // - e.g., [1,3,5] = Monday, Wednesday, Friday
+      // - e.g., [2,4] = Tuesday, Thursday
+      scheduledDays: habitData.scheduledDays || null,
+      // Schedule pattern for future: 'daily', 'weekdays', 'weekends', 'custom'
+      schedulePattern: habitData.schedulePattern || null,
       preferredTime: habitData.preferredTime || null,
       flexibility: habitData.flexibility || 30,
       spheres: habitData.spheres || (habitData.sphere ? [habitData.sphere] : ['freizeit']),
       sphere: habitData.sphere || 'freizeit',
       streak: 0,
       bestStreak: 0,
-      completionLog: [],
+      completionLog: [], // Array of date strings: ['2026-02-01', '2026-02-02']
       linkedGoals: habitData.linkedGoals || [],
       createdAt: now,
       updatedAt: now,
@@ -572,10 +578,11 @@ const NexusStore = {
   completeHabit(id, date = new Date().toISOString()) {
     const habit = this.getHabitById(id);
     if (habit) {
-      const dateStr = date.split('T')[0];
+      const dateStr = typeof date === 'string' ? date.split('T')[0] : date.toISOString().split('T')[0];
       if (!habit.completionLog.includes(dateStr)) {
         const oldStreak = habit.streak;
         habit.completionLog.push(dateStr);
+        habit.completionLog.sort(); // Keep sorted
         habit.streak = this.calculateStreak(habit);
         if (habit.streak > habit.bestStreak) {
           habit.bestStreak = habit.streak;
@@ -597,6 +604,60 @@ const NexusStore = {
       return habit;
     }
     return null;
+  },
+  
+  // Backfill multiple habit completions (for "I ran every day last week")
+  backfillHabitCompletions(id, dates) {
+    const habit = this.getHabitById(id);
+    if (!habit) return null;
+    
+    const addedDates = [];
+    dates.forEach(date => {
+      const dateStr = typeof date === 'string' ? date.split('T')[0] : date.toISOString().split('T')[0];
+      if (!habit.completionLog.includes(dateStr)) {
+        habit.completionLog.push(dateStr);
+        addedDates.push(dateStr);
+      }
+    });
+    
+    if (addedDates.length > 0) {
+      habit.completionLog.sort();
+      habit.streak = this.calculateStreak(habit);
+      if (habit.streak > habit.bestStreak) {
+        habit.bestStreak = habit.streak;
+      }
+      habit.updatedAt = new Date().toISOString();
+      this.save();
+      
+      // Log backfill
+      this.logActivity('habit:backfilled', 'habit', id, {
+        dates: { new: addedDates },
+        streak: { new: habit.streak }
+      });
+      
+      this.notify('habit:updated', habit);
+    }
+    
+    return { habit, addedDates };
+  },
+  
+  // Check if habit was completed on a specific date
+  isHabitCompletedOnDate(id, date) {
+    const habit = this.getHabitById(id);
+    if (!habit) return false;
+    const dateStr = typeof date === 'string' ? date.split('T')[0] : date.toISOString().split('T')[0];
+    return habit.completionLog.includes(dateStr);
+  },
+  
+  // Get habit completions for a date range
+  getHabitCompletionsInRange(id, startDate, endDate) {
+    const habit = this.getHabitById(id);
+    if (!habit) return [];
+    
+    const start = typeof startDate === 'string' ? startDate : startDate.toISOString().split('T')[0];
+    const end = typeof endDate === 'string' ? endDate : endDate.toISOString().split('T')[0];
+    
+    return habit.completionLog.filter(d => d >= start && d <= end);
   },
   
   calculateStreak(habit) {
@@ -631,12 +692,25 @@ const NexusStore = {
   updateHabit(id, updates) {
     const index = this.state.habits.findIndex(h => h.id === id);
     if (index !== -1) {
+      const oldHabit = { ...this.state.habits[index] };
       this.state.habits[index] = {
         ...this.state.habits[index],
         ...updates,
         updatedAt: new Date().toISOString()
       };
       this.save();
+      
+      // Log changes
+      const changes = {};
+      Object.keys(updates).forEach(key => {
+        if (oldHabit[key] !== updates[key]) {
+          changes[key] = { old: oldHabit[key], new: updates[key] };
+        }
+      });
+      if (Object.keys(changes).length > 0) {
+        this.logActivity('habit:updated', 'habit', id, changes);
+      }
+      
       this.notify('habit:updated', this.state.habits[index]);
       return this.state.habits[index];
     }
@@ -648,6 +722,7 @@ const NexusStore = {
     if (index !== -1) {
       const habit = this.state.habits.splice(index, 1)[0];
       this.save();
+      this.logActivity('habit:deleted', 'habit', id, { deleted: { old: habit } });
       this.notify('habit:deleted', habit);
       return habit;
     }
@@ -732,6 +807,7 @@ const NexusStore = {
     if (index !== -1) {
       const project = this.state.projects.splice(index, 1)[0];
       this.save();
+      this.logActivity('project:deleted', 'project', id, { deleted: { old: project } });
       this.notify('project:deleted', project);
       return project;
     }
@@ -822,6 +898,7 @@ const NexusStore = {
     if (index !== -1) {
       const venture = this.state.ventures.splice(index, 1)[0];
       this.save();
+      this.logActivity('venture:deleted', 'venture', id, { deleted: { old: venture } });
       this.notify('venture:deleted', venture);
       return venture;
     }
@@ -852,6 +929,7 @@ const NexusStore = {
     
     this.state.goals.push(goal);
     this.save();
+    this.logActivity('goal:created', 'goal', goal.id, { created: { new: goal } });
     this.notify('goal:added', goal);
     return goal;
   },
@@ -859,12 +937,25 @@ const NexusStore = {
   updateGoal(id, updates) {
     const index = this.state.goals.findIndex(g => g.id === id);
     if (index !== -1) {
+      const oldGoal = { ...this.state.goals[index] };
       this.state.goals[index] = {
         ...this.state.goals[index],
         ...updates,
         updatedAt: new Date().toISOString()
       };
       this.save();
+      
+      // Log changes
+      const changes = {};
+      Object.keys(updates).forEach(key => {
+        if (JSON.stringify(oldGoal[key]) !== JSON.stringify(updates[key])) {
+          changes[key] = { old: oldGoal[key], new: updates[key] };
+        }
+      });
+      if (Object.keys(changes).length > 0) {
+        this.logActivity('goal:updated', 'goal', id, changes);
+      }
+      
       this.notify('goal:updated', this.state.goals[index]);
       return this.state.goals[index];
     }
@@ -876,6 +967,7 @@ const NexusStore = {
     if (index !== -1) {
       const goal = this.state.goals.splice(index, 1)[0];
       this.save();
+      this.logActivity('goal:deleted', 'goal', id, { deleted: { old: goal } });
       this.notify('goal:deleted', goal);
       return goal;
     }
@@ -961,6 +1053,7 @@ const NexusStore = {
     if (index !== -1) {
       const note = this.state.notes.splice(index, 1)[0];
       this.save();
+      this.logActivity('note:deleted', 'note', id, { deleted: { old: note } });
       this.notify('note:deleted', note);
       return note;
     }
@@ -1001,6 +1094,7 @@ const NexusStore = {
     
     this.state.contacts.push(contact);
     this.save();
+    this.logActivity('contact:created', 'contact', contact.id, { created: { new: contact } });
     this.notify('contact:added', contact);
     return contact;
   },
@@ -1008,12 +1102,25 @@ const NexusStore = {
   updateContact(id, updates) {
     const index = this.state.contacts.findIndex(c => c.id === id);
     if (index !== -1) {
+      const oldContact = { ...this.state.contacts[index] };
       this.state.contacts[index] = {
         ...this.state.contacts[index],
         ...updates,
         updatedAt: new Date().toISOString()
       };
       this.save();
+      
+      // Log changes
+      const changes = {};
+      Object.keys(updates).forEach(key => {
+        if (JSON.stringify(oldContact[key]) !== JSON.stringify(updates[key])) {
+          changes[key] = { old: oldContact[key], new: updates[key] };
+        }
+      });
+      if (Object.keys(changes).length > 0) {
+        this.logActivity('contact:updated', 'contact', id, changes);
+      }
+      
       this.notify('contact:updated', this.state.contacts[index]);
       return this.state.contacts[index];
     }
@@ -1025,6 +1132,7 @@ const NexusStore = {
     if (index !== -1) {
       const contact = this.state.contacts.splice(index, 1)[0];
       this.save();
+      this.logActivity('contact:deleted', 'contact', id, { deleted: { old: contact } });
       this.notify('contact:deleted', contact);
       return contact;
     }
@@ -1062,6 +1170,7 @@ const NexusStore = {
     if (!this.state.markedDays) this.state.markedDays = [];
     this.state.markedDays.push(markedDay);
     this.save();
+    this.logActivity('markedDay:created', 'markedDay', markedDay.id, { created: { new: markedDay } });
     this.notify('markedDay:added', markedDay);
     return markedDay;
   },
@@ -1093,11 +1202,24 @@ const NexusStore = {
   updateMarkedDay(id, updates) {
     const index = this.state.markedDays.findIndex(d => d.id === id);
     if (index !== -1) {
+      const oldMarkedDay = { ...this.state.markedDays[index] };
       this.state.markedDays[index] = {
         ...this.state.markedDays[index],
         ...updates
       };
       this.save();
+      
+      // Log changes
+      const changes = {};
+      Object.keys(updates).forEach(key => {
+        if (oldMarkedDay[key] !== updates[key]) {
+          changes[key] = { old: oldMarkedDay[key], new: updates[key] };
+        }
+      });
+      if (Object.keys(changes).length > 0) {
+        this.logActivity('markedDay:updated', 'markedDay', id, changes);
+      }
+      
       this.notify('markedDay:updated', this.state.markedDays[index]);
       return this.state.markedDays[index];
     }
@@ -1109,6 +1231,7 @@ const NexusStore = {
     if (index !== -1) {
       const markedDay = this.state.markedDays.splice(index, 1)[0];
       this.save();
+      this.logActivity('markedDay:deleted', 'markedDay', id, { deleted: { old: markedDay } });
       this.notify('markedDay:deleted', markedDay);
       return markedDay;
     }

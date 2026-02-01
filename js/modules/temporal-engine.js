@@ -417,8 +417,8 @@ const TemporalEngine = {
       const durationText = duration >= 60 ? `${(duration / 60).toFixed(1)}h` : `${duration}min`;
       
       html += `
-        <div class="calendar-event time-block ${priorityClass}" 
-             style="top: ${top}px; height: ${height}px; border-left: 3px solid var(--color-sphere-${sphere});"
+        <div class="calendar-event time-block sphere-${sphere} ${priorityClass}" 
+             style="top: ${top}px; height: ${height}px;"
              data-task-id="${task.id}">
           <div class="event-header">
             <span class="event-time">${task.scheduledTime} - ${endTimeStr}</span>

@@ -479,6 +479,88 @@ const NexusUI = {
     if (window.lucide) {
       lucide.createIcons({ icons: lucide.icons, nameAttr: 'data-lucide' });
     }
+  },
+  
+  // Show Project Suggestion Modal - for smart project detection
+  showProjectSuggestion(suggestedName, relatedTasks, sphere, callback) {
+    const taskList = relatedTasks.map(t => `
+      <div class="suggestion-task-item">
+        <span class="task-check">✓</span>
+        <span class="task-title">${t.title}</span>
+      </div>
+    `).join('');
+    
+    const sphereLabel = {
+      'geschaeft': 'Geschäft',
+      'projekte': 'Projekte', 
+      'schule': 'Schule',
+      'sport': 'Sport',
+      'freizeit': 'Freizeit'
+    }[sphere] || sphere;
+    
+    const content = `
+      <div class="project-suggestion-modal">
+        <div class="suggestion-header">
+          <div class="suggestion-icon">💡</div>
+          <h3>Projekt-Vorschlag</h3>
+          <p>Atlas hat ${relatedTasks.length} verwandte Tasks erkannt. Möchtest du ein Projekt erstellen?</p>
+        </div>
+        
+        <div class="suggestion-form">
+          <div class="form-group">
+            <label>Projektname</label>
+            <input type="text" id="suggestion-project-name" value="${suggestedName}" class="form-control">
+          </div>
+          
+          <div class="form-group">
+            <label>Sphäre: ${sphereLabel}</label>
+          </div>
+          
+          <div class="suggestion-tasks">
+            <label>Tasks die hinzugefügt werden:</label>
+            <div class="suggestion-task-list">
+              ${taskList}
+            </div>
+          </div>
+        </div>
+        
+        <div class="suggestion-actions">
+          <button type="button" class="btn btn-secondary" id="suggestion-cancel">
+            Nicht jetzt
+          </button>
+          <button type="button" class="btn btn-primary" id="suggestion-accept">
+            <i data-lucide="folder-plus"></i>
+            Projekt erstellen
+          </button>
+        </div>
+      </div>
+    `;
+    
+    this.showModal('Smarte Projekt-Erkennung', content);
+    
+    // Setup event listeners
+    setTimeout(() => {
+      const acceptBtn = document.getElementById('suggestion-accept');
+      const cancelBtn = document.getElementById('suggestion-cancel');
+      const nameInput = document.getElementById('suggestion-project-name');
+      
+      if (acceptBtn) {
+        acceptBtn.addEventListener('click', () => {
+          const customName = nameInput?.value?.trim() || suggestedName;
+          this.closeModal();
+          callback(true, customName);
+        });
+      }
+      
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          this.closeModal();
+          callback(false);
+        });
+      }
+      
+      this.refreshIcons();
+    }, 100);
   }
 };
 

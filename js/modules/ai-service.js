@@ -176,6 +176,22 @@ WICHTIG: Wenn User sagt "ich habe X erledigt/gemacht" → COMPLETE_TASK nutzen!
 
 ━━━ HABITS ━━━
 [ACTION:ADD_HABIT:{"name":"*","icon":"🔄","frequency":"daily","scheduledDays":null,"preferredTime":null,"sphere":"freizeit","habitType":"positive","linkedGoals":["goal_123"]}]
+
+WICHTIG - KOMPLEXE HABIT-ZYKLEN:
+- frequency: "daily" (jeden Tag), "weekly" (an bestimmten Tagen), "weekdays", "weekends"
+- scheduledDays: Array mit Wochentagen [0-6] (0=Sonntag, 1=Montag, ... 6=Samstag)
+  - "Jeden Mittwoch und Donnerstag" → scheduledDays: [3, 4]
+  - "Montag, Mittwoch, Freitag" → scheduledDays: [1, 3, 5]
+  - "Täglich" → frequency: "daily", scheduledDays: null
+  - "Wochenenden" → scheduledDays: [0, 6]
+
+BEISPIELE:
+User: "Ich will jeden Mittwoch und Donnerstag Yoga machen"
+→ [ACTION:ADD_HABIT:{"name":"Yoga","icon":"🧘","frequency":"weekly","scheduledDays":[3,4],"sphere":"sport"}]
+
+User: "3x pro Woche laufen gehen"
+→ [ACTION:ADD_HABIT:{"name":"Laufen","icon":"🏃","frequency":"weekly","scheduledDays":[1,3,5],"sphere":"sport"}]
+
 TIPP: Mit Goal verknüpfen → linkedGoals array DIREKT beim Erstellen!
 [ACTION:UPDATE_HABIT:{"id":"*","updates":{...}}]
 [ACTION:COMPLETE_HABIT:{"id":"*"}] oder [ACTION:COMPLETE_HABIT:{"name":"*"}]
@@ -184,6 +200,17 @@ WICHTIG: Wenn User sagt "ich habe X erledigt/gemacht" → COMPLETE_HABIT nutzen!
 - Der Streak wird AUTOMATISCH berechnet aus den completion-Daten
 - NIEMALS versuchen currentStreak oder streak manuell zu setzen!
 - Kann per id ODER name (fuzzy matching) aufgerufen werden
+
+[ACTION:BACKFILL_HABIT:{"name":"*","dates":["2026-01-25","2026-01-26","2026-01-27"]}]
+WICHTIG - RÜCKWIRKENDE HABIT-EINTRÄGE:
+Wenn User sagt "ich war letzte Woche jeden Tag laufen" oder "hab Montag bis Freitag meditiert":
+→ Berechne die Daten und nutze BACKFILL_HABIT!
+→ dates: Array mit allen Datumsstrings die nachgetragen werden sollen
+
+BEISPIEL:
+User: "Ich war letzte Woche jeden Tag laufen"
+→ [ACTION:BACKFILL_HABIT:{"name":"Laufen","dates":["2026-01-25","2026-01-26","2026-01-27","2026-01-28","2026-01-29","2026-01-30","2026-01-31"]}]
+
 [ACTION:DELETE_HABIT:{"id":"*"}]
 
 ━━━ PROJEKTE ━━━
@@ -1151,6 +1178,103 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
     return { cleanResponse: cleanResponse.trim(), actions };
   },
   
+  // Smart Project Detection - suggests creating a project when 4+ related tasks exist
+  detectProjectOpportunity(newTask) {
+    const THRESHOLD = 4; // Minimum related tasks to trigger suggestion
+    const MAX_AGE_DAYS = 90; // Only consider tasks from last 3 months
+    
+    // Skip if task already belongs to a project
+    if (newTask.projectId) return null;
+    
+    const tasks = NexusStore.getTasks().filter(t => 
+      t.status !== 'completed' && 
+      !t.projectId && 
+      t.id !== newTask.id
+    );
+    
+    // Get keywords from new task title
+    const stopWords = ['der', 'die', 'das', 'und', 'oder', 'für', 'mit', 'von', 'zu', 'am', 'im', 'um', 'auf', 'an', 'in', 'bei', 'nach', 'über', 'aus', 'ein', 'eine', 'einen', 'meine', 'mein', 'the', 'a', 'an', 'for', 'with', 'to', 'at', 'on'];
+    const titleWords = (newTask.title || '').toLowerCase()
+      .replace(/[^a-zäöüß0-9\s]/gi, '')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.includes(w));
+    
+    if (titleWords.length === 0) return null;
+    
+    // Find tasks with matching keywords or same sphere
+    const relatedTasks = [];
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - MAX_AGE_DAYS);
+    
+    tasks.forEach(task => {
+      if (!task.createdAt || new Date(task.createdAt) < cutoffDate) return;
+      
+      const taskTitleWords = (task.title || '').toLowerCase()
+        .replace(/[^a-zäöüß0-9\s]/gi, '')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !stopWords.includes(w));
+      
+      // Check for keyword overlap
+      const overlap = titleWords.filter(w => taskTitleWords.includes(w));
+      
+      // Score: keyword matches + same sphere bonus
+      let score = overlap.length * 2;
+      if (newTask.spheres && task.spheres && 
+          newTask.spheres.some(s => task.spheres.includes(s))) {
+        score += 1;
+      }
+      
+      if (score >= 2) {
+        relatedTasks.push({
+          task,
+          score,
+          matchingKeywords: overlap
+        });
+      }
+    });
+    
+    // Need at least THRESHOLD - 1 related tasks (plus the new one = THRESHOLD)
+    if (relatedTasks.length < THRESHOLD - 1) return null;
+    
+    // Sort by score and get top related
+    relatedTasks.sort((a, b) => b.score - a.score);
+    
+    // Find common keywords
+    const keywordCounts = {};
+    [newTask, ...relatedTasks.map(r => r.task)].forEach(task => {
+      const words = (task.title || '').toLowerCase()
+        .replace(/[^a-zäöüß0-9\s]/gi, '')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !stopWords.includes(w));
+      words.forEach(w => {
+        keywordCounts[w] = (keywordCounts[w] || 0) + 1;
+      });
+    });
+    
+    const commonKeywords = Object.entries(keywordCounts)
+      .filter(([_, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([word]) => word);
+    
+    // Generate suggested project name
+    let suggestedName = '';
+    if (commonKeywords.length > 0) {
+      suggestedName = commonKeywords.map(w => 
+        w.charAt(0).toUpperCase() + w.slice(1)
+      ).join(' ');
+    } else {
+      suggestedName = 'Neues Projekt';
+    }
+    
+    return {
+      suggestedName,
+      relatedTasks: [newTask, ...relatedTasks.slice(0, THRESHOLD).map(r => r.task)],
+      commonKeywords,
+      sphere: newTask.spheres?.[0] || 'freizeit'
+    };
+  },
+  
   // OMNISCIENT Execute - kann ALLES im System steuern
   async executeAction(action) {
     console.log('🔮 Atlas OMNISCIENT executing:', action.type);
@@ -1218,6 +1342,43 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
               tags: d.tags || []
             });
             console.log('✅ Task created:', task.title, '| Type:', taskType, '| Sphere:', task.spheres[0], '| Priority:', task.priorityScore);
+            
+            // Smart Project Detection - suggest project if 4+ related tasks
+            if (!task.projectId) {
+              const opportunity = this.detectProjectOpportunity(task);
+              if (opportunity) {
+                console.log('💡 Project opportunity detected:', opportunity.suggestedName, '| Related tasks:', opportunity.relatedTasks.length);
+                this._pendingProjectSuggestion = opportunity;
+                // Show suggestion to user via toast or modal
+                setTimeout(() => {
+                  if (typeof NexusUI !== 'undefined' && this._pendingProjectSuggestion) {
+                    const opp = this._pendingProjectSuggestion;
+                    NexusUI.showProjectSuggestion(
+                      opp.suggestedName,
+                      opp.relatedTasks,
+                      opp.sphere,
+                      (accepted, customName) => {
+                        if (accepted) {
+                          const projectName = customName || opp.suggestedName;
+                          const project = NexusStore.addProject({
+                            name: projectName,
+                            description: `Automatisch erstellt aus ${opp.relatedTasks.length} verwandten Tasks`,
+                            spheres: [opp.sphere],
+                            status: 'active'
+                          });
+                          opp.relatedTasks.forEach(t => {
+                            NexusStore.updateTask(t.id, { projectId: project.id });
+                          });
+                          NexusUI.showToast(`Projekt "${projectName}" erstellt mit ${opp.relatedTasks.length} Tasks!`, 'success');
+                          refreshUI();
+                        }
+                        this._pendingProjectSuggestion = null;
+                      }
+                    );
+                  }
+                }, 500);
+              }
+            }
           }
           refreshUI();
         }
@@ -1331,6 +1492,27 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
           }
         }
         break;
+        
+      case 'BACKFILL_HABIT':
+        // Backfill multiple habit completions (e.g., "I ran every day last week")
+        if (d.dates && (d.id || d.name)) {
+          let habit = null;
+          if (d.id) {
+            habit = NexusStore.getHabitById(d.id);
+          } else if (d.name) {
+            const name = d.name.toString().toLowerCase();
+            habit = NexusStore.getHabits().find(h => (h.name || '').toLowerCase().includes(name));
+          }
+          
+          if (habit) {
+            const result = NexusStore.backfillHabitCompletions(habit.id, d.dates);
+            console.log('✅ Habit backfilled:', habit.name, '| Dates added:', result.addedDates.length);
+            refreshUI();
+          } else {
+            console.warn('⚠️ BACKFILL_HABIT: no habit found for:', d.name || d.id);
+          }
+        }
+        break;
       
       // ═══ PROJEKTE ═══
       case 'ADD_PROJECT':
@@ -1345,6 +1527,35 @@ Beispiel: "Du hast '{Projektname}' seit {X} Tagen nicht mehr bearbeitet. Willst 
             targetEnd: d.targetEnd || null
           });
           console.log('✅ Project created:', project.name);
+          
+          // If taskIds provided, migrate them to the new project
+          if (d.taskIds && Array.isArray(d.taskIds) && d.taskIds.length > 0) {
+            d.taskIds.forEach(taskId => {
+              NexusStore.updateTask(taskId, { projectId: project.id });
+            });
+            console.log('   📦 Migrated', d.taskIds.length, 'tasks to project');
+          }
+          
+          refreshUI();
+        }
+        break;
+      
+      case 'CREATE_PROJECT_FROM_TASKS':
+        // Smart project creation - creates project and migrates related tasks
+        if (d.name && d.taskIds && Array.isArray(d.taskIds)) {
+          const project = NexusStore.addProject({
+            name: d.name,
+            description: d.description || `Projekt automatisch erstellt aus ${d.taskIds.length} verwandten Tasks`,
+            spheres: d.sphere ? [d.sphere] : ['projekte'],
+            status: 'active'
+          });
+          
+          // Migrate all related tasks to the new project
+          d.taskIds.forEach(taskId => {
+            NexusStore.updateTask(taskId, { projectId: project.id });
+          });
+          
+          console.log('✅ Smart Project created:', project.name, '| Migrated', d.taskIds.length, 'tasks');
           refreshUI();
         }
         break;

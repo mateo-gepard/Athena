@@ -5,7 +5,9 @@
 
 const HabitsModule = {
   
-  view: 'today', // today | week | all
+  view: 'today', // today | week | month | all
+  selectedHabits: [], // For month view multi-select
+  monthOffset: 0, // 0 = current month, -1 = last month
   _listenersInitialized: false,
   
   // Initialize
@@ -61,12 +63,14 @@ const HabitsModule = {
       <div class="tabs mb-6">
         <button class="tab ${this.view === 'today' ? 'active' : ''}" data-view="today">Heute</button>
         <button class="tab ${this.view === 'week' ? 'active' : ''}" data-view="week">Woche</button>
+        <button class="tab ${this.view === 'month' ? 'active' : ''}" data-view="month">Monat</button>
         <button class="tab ${this.view === 'all' ? 'active' : ''}" data-view="all">Alle Habits</button>
       </div>
       
       <!-- Content -->
       ${this.view === 'today' ? this.renderTodayView(habits) :
         this.view === 'week' ? this.renderWeekView(habits) :
+        this.view === 'month' ? this.renderMonthView(habits) :
         this.renderAllView(habits)}
     `;
     
@@ -280,6 +284,130 @@ const HabitsModule = {
                          data-date="${d.dateStr}"
                          data-action="toggle-date">
                       ${isCompleted ? '✓' : ''}
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+  
+  // Render month view - track multiple habits on calendar
+  renderMonthView(habits) {
+    const now = new Date();
+    now.setMonth(now.getMonth() + this.monthOffset);
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const monthName = now.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+    
+    // Get first and last day of month
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = (firstDay.getDay() + 6) % 7; // Monday = 0
+    
+    // Build weeks array
+    const weeks = [];
+    let currentWeek = new Array(startDayOfWeek).fill(null);
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      currentWeek.push(day);
+      if (currentWeek.length === 7) {
+        weeks.push(currentWeek);
+        currentWeek = [];
+      }
+    }
+    if (currentWeek.length > 0) {
+      while (currentWeek.length < 7) currentWeek.push(null);
+      weeks.push(currentWeek);
+    }
+    
+    // Selected habits for display
+    const displayHabits = this.selectedHabits.length > 0 
+      ? habits.filter(h => this.selectedHabits.includes(h.id))
+      : habits;
+    
+    return `
+      <div class="panel mb-4">
+        <div class="panel-header">
+          <div class="flex items-center gap-3">
+            <button class="btn btn-sm btn-ghost" data-action="prev-month">
+              ${NexusUI.icon('chevron-left', 16)}
+            </button>
+            <span class="panel-title">${monthName}</span>
+            <button class="btn btn-sm btn-ghost" data-action="next-month">
+              ${NexusUI.icon('chevron-right', 16)}
+            </button>
+          </div>
+          <div class="text-sm text-tertiary">
+            ${displayHabits.length} Habit${displayHabits.length !== 1 ? 's' : ''} ausgewählt
+          </div>
+        </div>
+      </div>
+      
+      <!-- Habit selector -->
+      <div class="panel mb-4">
+        <div class="panel-body">
+          <div class="flex flex-wrap gap-2">
+            ${habits.map(h => `
+              <button class="btn btn-sm ${this.selectedHabits.includes(h.id) ? 'btn-primary' : 'btn-ghost'}"
+                      data-action="toggle-habit-select" data-habit-id="${h.id}">
+                ${h.icon || '🔄'} ${h.name}
+              </button>
+            `).join('')}
+            ${habits.length > 0 ? `
+              <button class="btn btn-sm btn-ghost" data-action="select-all-habits">
+                Alle ${this.selectedHabits.length === habits.length ? 'abwählen' : 'auswählen'}
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Month calendar grid -->
+      <div class="panel">
+        <div class="panel-body p-0">
+          <div class="habit-month-grid">
+            <div class="habit-month-header">
+              ${['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(d => `
+                <div class="habit-month-day-name">${d}</div>
+              `).join('')}
+            </div>
+            ${weeks.map(week => `
+              <div class="habit-month-week">
+                ${week.map(day => {
+                  if (!day) return '<div class="habit-month-cell empty"></div>';
+                  
+                  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const isToday = dateStr === new Date().toISOString().split('T')[0];
+                  
+                  // Count completions for this day
+                  const completions = displayHabits.map(h => ({
+                    habit: h,
+                    completed: h.completionLog?.includes(dateStr)
+                  }));
+                  const completedCount = completions.filter(c => c.completed).length;
+                  const allCompleted = displayHabits.length > 0 && completedCount === displayHabits.length;
+                  
+                  return `
+                    <div class="habit-month-cell ${isToday ? 'today' : ''} ${allCompleted ? 'all-completed' : ''}"
+                         data-date="${dateStr}">
+                      <div class="cell-day">${day}</div>
+                      <div class="cell-dots">
+                        ${completions.slice(0, 5).map(c => `
+                          <div class="habit-dot ${c.completed ? 'completed' : ''}" 
+                               title="${c.habit.name}"
+                               style="${c.completed ? `background: var(--color-sphere-${c.habit.sphere || 'sport'})` : ''}">
+                          </div>
+                        `).join('')}
+                        ${completions.length > 5 ? `<span class="text-xs">+${completions.length - 5}</span>` : ''}
+                      </div>
+                      ${displayHabits.length > 0 ? `
+                        <div class="cell-count ${allCompleted ? 'complete' : ''}">${completedCount}/${displayHabits.length}</div>
+                      ` : ''}
                     </div>
                   `;
                 }).join('')}
@@ -654,11 +782,60 @@ const HabitsModule = {
         return;
       }
       
+      // Month view navigation
+      const action = e.target.closest('[data-action]')?.dataset.action;
+      if (action === 'prev-month' && e.target.closest('#page-habits')) {
+        this.monthOffset--;
+        this.render();
+        return;
+      }
+      if (action === 'next-month' && e.target.closest('#page-habits')) {
+        this.monthOffset++;
+        this.render();
+        return;
+      }
+      
+      // Month view habit selection
+      if (action === 'toggle-habit-select' && e.target.closest('#page-habits')) {
+        const habitId = e.target.closest('[data-habit-id]')?.dataset.habitId;
+        if (habitId) {
+          const idx = this.selectedHabits.indexOf(habitId);
+          if (idx >= 0) {
+            this.selectedHabits.splice(idx, 1);
+          } else {
+            this.selectedHabits.push(habitId);
+          }
+          this.render();
+        }
+        return;
+      }
+      if (action === 'select-all-habits' && e.target.closest('#page-habits')) {
+        const habits = NexusStore.getHabits();
+        if (this.selectedHabits.length === habits.length) {
+          this.selectedHabits = [];
+        } else {
+          this.selectedHabits = habits.map(h => h.id);
+        }
+        this.render();
+        return;
+      }
+      
+      // Month view day click - toggle habits for that day
+      if (action === 'toggle-day' && e.target.closest('#page-habits')) {
+        const dateStr = e.target.closest('[data-date]')?.dataset.date;
+        if (dateStr && this.selectedHabits.length > 0) {
+          // Toggle all selected habits for this date
+          this.selectedHabits.forEach(habitId => {
+            this.toggleHabitDate(habitId, dateStr);
+          });
+        }
+        return;
+      }
+      
       // Habit card actions
       const habitCard = e.target.closest('[data-habit-id]');
       if (habitCard && e.target.closest('#page-habits')) {
         const habitId = habitCard.dataset.habitId;
-        const action = e.target.closest('[data-action]')?.dataset.action;
         
         if (action === 'toggle') {
           this.toggleHabit(habitId);
