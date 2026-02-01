@@ -44,70 +44,73 @@ const AuthService = {
     app.innerHTML = `
       <div class="auth-screen">
         <div class="auth-container">
-          <div class="auth-header">
-            <div class="auth-logo">
-              <i data-lucide="brain" style="width: 48px; height: 48px;"></i>
+          <div class="auth-left">
+            <div class="auth-header">
+              <div class="auth-logo">
+                <i data-lucide="brain" style="width: 48px; height: 48px;"></i>
+              </div>
+              <h1>Athena Ultra</h1>
+              <p>Your Life, Intelligently Orchestrated</p>
             </div>
-            <h1>Athena Ultra</h1>
-            <p>Your Life, Intelligently Orchestrated</p>
           </div>
           
-          <div class="auth-tabs">
-            <button class="auth-tab active" data-tab="login">Login</button>
-            <button class="auth-tab" data-tab="register">Registrieren</button>
-          </div>
-          
-          <div class="auth-content">
-            <!-- Login Form -->
-            <form id="login-form" class="auth-form active">
-              <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="login-email" class="form-control" required>
-              </div>
-              <div class="form-group">
-                <label>Passwort</label>
-                <input type="password" id="login-password" class="form-control" required>
-              </div>
-              <button type="submit" class="btn btn-primary w-full">
-                <i data-lucide="log-in"></i>
-                Anmelden
-              </button>
-              <div class="auth-error" id="login-error"></div>
-            </form>
+          <div class="auth-right">
+            <div class="auth-tabs">
+              <button class="auth-tab active" data-tab="login">Login</button>
+              <button class="auth-tab" data-tab="register">Registrieren</button>
+            </div>
             
-            <!-- Register Form -->
-            <form id="register-form" class="auth-form">
-              <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="register-email" class="form-control" required>
-              </div>
-              <div class="form-group">
-                <label>Passwort (min. 6 Zeichen)</label>
-                <input type="password" id="register-password" class="form-control" required minlength="6">
-              </div>
-              <div class="form-group">
-                <label>Passwort wiederholen</label>
-                <input type="password" id="register-password-confirm" class="form-control" required>
-              </div>
-              <button type="submit" class="btn btn-primary w-full">
-                <i data-lucide="user-plus"></i>
-                Registrieren
-              </button>
-              <div class="auth-error" id="register-error"></div>
-            </form>
+            <div class="auth-content">
+              <!-- Login Form -->
+              <form id="login-form" class="auth-form active">
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="login-email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label>Passwort</label>
+                  <input type="password" id="login-password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-full">
+                  <i data-lucide="log-in"></i>
+                  Anmelden
+                </button>
+                <div class="auth-error" id="login-error"></div>
+              </form>
+              
+              <!-- Register Form -->
+              <form id="register-form" class="auth-form">
+                <div class="form-group">
+                  <label>Email</label>
+                  <input type="email" id="register-email" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label>Passwort (min. 6 Zeichen)</label>
+                  <input type="password" id="register-password" class="form-control" required minlength="6">
+                </div>
+                <div class="form-group">
+                  <label>Passwort wiederholen</label>
+                  <input type="password" id="register-password-confirm" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-full">
+                  <i data-lucide="user-plus"></i>
+                  Registrieren
+                </button>
+                <div class="auth-error" id="register-error"></div>
+            </div>
+            
+            <div class="auth-divider">oder</div>
+            
+            <button class="btn btn-secondary w-full" id="google-signin">
+              <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right: 8px;">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              Mit Google anmelden
+            </button>
           </div>
-          
-          <div class="auth-divider">oder</div>
-          
-          <button class="btn btn-secondary w-full" id="google-signin">
-            <svg width="18" height="18" viewBox="0 0 48 48" style="margin-right: 8px;">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            Mit Google anmelden
-          </button>
         </div>
       </div>
     `;
