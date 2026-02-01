@@ -34,7 +34,9 @@ const NexusStore = {
     if (window.AuthService && AuthService.user) {
       return `nexus_ultra_data_${AuthService.user.uid}`;
     }
-    return this.STORAGE_KEY_BASE;
+    // Return a temporary key for unauthenticated state - not the base key
+    // This prevents old data from being loaded for new users
+    return 'nexus_ultra_temp';
   },
   
   // Current state
@@ -85,11 +87,17 @@ const NexusStore = {
   // Listeners for state changes
   listeners: [],
   
-  // Initialize store
+  // Initialize store (does NOT load data - call reload() after auth)
   init() {
-    this.load();
-    this.seedDemoData();
+    // Don't load data here - AuthService may not be ready
+    // Data will be loaded in reload() after authentication
     return this;
+  },
+  
+  // Reload data from localStorage and cloud (call after auth is ready)
+  async reload() {
+    await this.load();
+    this.notify('store:reloaded', this.state);
   },
   
   // Load from localStorage (and cloud if available)
