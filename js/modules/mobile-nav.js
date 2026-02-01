@@ -1,13 +1,27 @@
 /* ═══════════════════════════════════════════════════════════════════════════════
-   Athena Ultra - Mobile Navigation
-   Hamburger Menu und Tab Bar für Mobile
+   Athena Ultra - Mobile Navigation Controller
+   Hamburger Menu, Tab Bar, und Touch Handling
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 const MobileNav = {
   
+  isInitialized: false,
+  currentTab: 'command-center', // 'command-center' or 'atlas'
+  
   init() {
+    if (this.isInitialized) return;
+    this.isInitialized = true;
+    
+    console.log('📱 MobileNav initializing...');
+    
+    // Wait for DOM and icons to be ready
     this.setupEventListeners();
     this.syncCloudStatus();
+    
+    // Set initial state
+    this.setActiveTab('command-center');
+    
+    console.log('✅ MobileNav initialized');
   },
   
   setupEventListeners() {
@@ -16,112 +30,196 @@ const MobileNav = {
     const sidebar = document.querySelector('.sidebar');
     const overlay = document.getElementById('sidebar-overlay');
     
-    if (menuToggle && sidebar && overlay) {
-      menuToggle.addEventListener('click', () => {
-        sidebar.classList.toggle('mobile-open');
-        overlay.classList.toggle('active');
+    if (menuToggle) {
+      menuToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.toggleSidebar();
       });
-      
-      // Close on overlay click
+    }
+    
+    if (overlay) {
       overlay.addEventListener('click', () => {
-        sidebar.classList.remove('mobile-open');
-        overlay.classList.remove('active');
+        this.closeSidebar();
       });
-      
-      // Close on nav item click
+    }
+    
+    // Close sidebar on nav item click
+    if (sidebar) {
       const navItems = sidebar.querySelectorAll('.nav-item');
       navItems.forEach(item => {
         item.addEventListener('click', () => {
-          sidebar.classList.remove('mobile-open');
-          overlay.classList.remove('active');
+          this.closeSidebar();
+          // Also switch back to command center tab
+          this.setActiveTab('command-center');
         });
       });
     }
     
-    // Mobile Tab Bar (Command Center / Atlas)
+    // Tab Bar
+    const ccTab = document.getElementById('mobile-tab-command-center');
+    const atlasTab = document.getElementById('mobile-tab-atlas');
+    
+    if (ccTab) {
+      ccTab.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.setActiveTab('command-center');
+      });
+    }
+    
+    if (atlasTab) {
+      atlasTab.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.setActiveTab('atlas');
+      });
+    }
+    
+    // Desktop Atlas toggle should work on mobile too
+    const atlasToggle = document.getElementById('atlas-toggle');
+    if (atlasToggle) {
+      atlasToggle.addEventListener('click', () => {
+        if (this.isMobile()) {
+          this.setActiveTab('atlas');
+        }
+      });
+    }
+    
+    // Handle escape key to close sidebar
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.closeSidebar();
+      }
+    });
+    
+    // Handle resize
+    window.addEventListener('resize', () => {
+      if (!this.isMobile()) {
+        this.closeSidebar();
+        // Reset atlas panel on desktop
+        const atlasPanel = document.querySelector('.atlas-panel');
+        if (atlasPanel) {
+          atlasPanel.classList.remove('mobile-active');
+        }
+      }
+    });
+  },
+  
+  toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (!sidebar) return;
+    
+    const isOpen = sidebar.classList.contains('mobile-open');
+    
+    if (isOpen) {
+      this.closeSidebar();
+    } else {
+      sidebar.classList.add('mobile-open');
+      if (overlay) overlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+  },
+  
+  closeSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (sidebar) sidebar.classList.remove('mobile-open');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  },
+  
+  setActiveTab(tab) {
+    this.currentTab = tab;
+    
     const ccTab = document.getElementById('mobile-tab-command-center');
     const atlasTab = document.getElementById('mobile-tab-atlas');
     const atlasPanel = document.querySelector('.atlas-panel');
     const ccView = document.getElementById('page-command-center');
     
-    if (ccTab && atlasTab && atlasPanel) {
-      ccTab.addEventListener('click', () => {
-        ccTab.classList.add('active');
-        atlasTab.classList.remove('active');
-        atlasPanel.classList.remove('mobile-active');
-        if (ccView) ccView.style.display = 'block';
-      });
+    if (tab === 'command-center') {
+      // Activate Command Center
+      if (ccTab) ccTab.classList.add('active');
+      if (atlasTab) atlasTab.classList.remove('active');
+      if (atlasPanel) atlasPanel.classList.remove('mobile-active');
+      if (ccView) ccView.style.display = '';
+    } else if (tab === 'atlas') {
+      // Activate Atlas
+      if (atlasTab) atlasTab.classList.add('active');
+      if (ccTab) ccTab.classList.remove('active');
+      if (atlasPanel) atlasPanel.classList.add('mobile-active');
+      if (ccView) ccView.style.display = 'none';
       
-      atlasTab.addEventListener('click', () => {
-        atlasTab.classList.add('active');
-        ccTab.classList.remove('active');
-        atlasPanel.classList.add('mobile-active');
-        if (ccView) ccView.style.display = 'none';
-      });
+      // Focus atlas input
+      setTimeout(() => {
+        const atlasInput = document.getElementById('atlas-input');
+        if (atlasInput && this.isMobile()) {
+          // Don't auto-focus on mobile to prevent keyboard popup
+        }
+      }, 300);
     }
     
-    // Sync Atlas toggle button with mobile tab
-    const atlasToggle = document.getElementById('atlas-toggle');
-    if (atlasToggle && atlasTab) {
-      atlasToggle.addEventListener('click', () => {
-        // On mobile, switch to Atlas tab
-        if (window.innerWidth <= 768) {
-          atlasTab.click();
-        }
-      });
+    // Refresh icons
+    if (window.lucide) {
+      lucide.createIcons();
     }
   },
   
-  // Sync cloud status between desktop and mobile
+  // Sync cloud status indicator between desktop and mobile
   syncCloudStatus() {
     const desktopStatus = document.getElementById('cloud-sync-status');
     const mobileStatus = document.getElementById('cloud-sync-status-mobile');
     
     if (!desktopStatus || !mobileStatus) return;
     
-    // Create observer to watch desktop status changes
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-          mobileStatus.className = desktopStatus.className;
-        }
-      });
+    // Initial sync
+    this.copyCloudStatus(desktopStatus, mobileStatus);
+    
+    // Observe changes
+    const observer = new MutationObserver(() => {
+      this.copyCloudStatus(desktopStatus, mobileStatus);
     });
     
     observer.observe(desktopStatus, {
       attributes: true,
-      attributeFilter: ['class']
-    });
-    
-    // Initial sync
-    mobileStatus.className = desktopStatus.className;
-    
-    // Also sync icon changes
-    const iconObserver = new MutationObserver(() => {
-      const desktopIcon = desktopStatus.querySelector('i');
-      const mobileIcon = mobileStatus.querySelector('i');
-      if (desktopIcon && mobileIcon) {
-        mobileIcon.setAttribute('data-lucide', desktopIcon.getAttribute('data-lucide'));
-        if (window.lucide) lucide.createIcons();
-      }
-    });
-    
-    iconObserver.observe(desktopStatus, {
       childList: true,
-      subtree: true
+      subtree: true,
+      attributeFilter: ['class']
     });
   },
   
-  // Check if mobile view
+  copyCloudStatus(source, target) {
+    if (!source || !target) return;
+    
+    // Copy class
+    target.className = source.className;
+    
+    // Copy icon
+    const sourceIcon = source.querySelector('i');
+    const targetIcon = target.querySelector('i');
+    
+    if (sourceIcon && targetIcon) {
+      const iconName = sourceIcon.getAttribute('data-lucide');
+      if (iconName) {
+        targetIcon.setAttribute('data-lucide', iconName);
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+  },
+  
   isMobile() {
     return window.innerWidth <= 768;
   }
 };
 
 // Initialize on DOM ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => MobileNav.init());
-} else {
+document.addEventListener('DOMContentLoaded', () => {
+  MobileNav.init();
+});
+
+// Also try to init if DOM already loaded
+if (document.readyState !== 'loading') {
   MobileNav.init();
 }
 
