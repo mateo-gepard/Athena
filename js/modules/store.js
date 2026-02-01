@@ -97,6 +97,40 @@ const NexusStore = {
   // Reload data from localStorage and cloud (call after auth is ready)
   async reload() {
     await this.load();
+    
+    // Setup real-time sync listener after initial load
+    if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized && !this._realtimeSyncSetup) {
+      this._realtimeSyncSetup = true;
+      CloudSync.setupRealtimeSync((cloudData) => {
+        // Only merge if cloud data is newer
+        const localVersion = this.state._version || 0;
+        const cloudVersion = cloudData._version || 0;
+        
+        if (cloudVersion > localVersion) {
+          console.log('☁️ Real-time update from cloud (version:', cloudVersion, ')');
+          
+          // Preserve current user info
+          const currentUser = { ...this.state.user };
+          
+          // Merge cloud data
+          this.state = { ...this.state, ...cloudData };
+          this.state.user = currentUser;
+          
+          // Save to localStorage
+          const storageKey = this.getStorageKey();
+          storage.setItem(storageKey, JSON.stringify(this.state));
+          
+          // Notify all listeners
+          this.notify('store:cloud-sync', cloudData);
+          
+          // Refresh UI
+          if (typeof CommandCenter !== 'undefined' && window.location.hash === '#command-center') {
+            CommandCenter.render();
+          }
+        }
+      });
+    }
+    
     this.notify('store:reloaded', this.state);
   },
   
