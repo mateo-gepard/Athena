@@ -322,12 +322,13 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 16px;
-    padding-bottom: 8px;
+    padding-bottom: 90px; /* Space for fixed input area */
     display: flex;
     flex-direction: column;
     gap: 12px;
     -webkit-overflow-scrolling: touch;
     min-height: 0; /* Important for flex scroll */
+    overscroll-behavior: contain; /* Prevent page scroll when scrolling messages */
   }
   
   .mobile-atlas-message {
@@ -390,8 +391,11 @@
     background: var(--color-surface-1);
     border-top: 1px solid var(--color-border);
     flex-shrink: 0;
-    position: relative;
-    z-index: 10;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 501;
   }
   
   .mobile-atlas-input {
