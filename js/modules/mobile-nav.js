@@ -16,6 +16,7 @@ const MobileNav = {
     
     // Wait for DOM and icons to be ready
     this.setupEventListeners();
+    this.setupMobileAtlas();
     this.syncCloudStatus();
     
     // Set initial state
@@ -135,29 +136,22 @@ const MobileNav = {
     
     const ccTab = document.getElementById('mobile-tab-command-center');
     const atlasTab = document.getElementById('mobile-tab-atlas');
-    const atlasPanel = document.querySelector('.atlas-panel');
+    const mobileAtlasChat = document.getElementById('mobile-atlas-chat');
     const ccView = document.getElementById('page-command-center');
+    const pageContent = document.querySelector('.page-content');
     
     if (tab === 'command-center') {
       // Activate Command Center
       if (ccTab) ccTab.classList.add('active');
       if (atlasTab) atlasTab.classList.remove('active');
-      if (atlasPanel) atlasPanel.classList.remove('mobile-active');
-      if (ccView) ccView.style.display = '';
+      if (mobileAtlasChat) mobileAtlasChat.classList.remove('active');
+      if (pageContent) pageContent.style.display = '';
     } else if (tab === 'atlas') {
       // Activate Atlas
       if (atlasTab) atlasTab.classList.add('active');
       if (ccTab) ccTab.classList.remove('active');
-      if (atlasPanel) atlasPanel.classList.add('mobile-active');
-      if (ccView) ccView.style.display = 'none';
-      
-      // Focus atlas input
-      setTimeout(() => {
-        const atlasInput = document.getElementById('atlas-input');
-        if (atlasInput && this.isMobile()) {
-          // Don't auto-focus on mobile to prevent keyboard popup
-        }
-      }, 300);
+      if (mobileAtlasChat) mobileAtlasChat.classList.add('active');
+      if (pageContent) pageContent.style.display = 'none';
     }
     
     // Refresh icons
@@ -204,6 +198,111 @@ const MobileNav = {
       if (iconName) {
         targetIcon.setAttribute('data-lucide', iconName);
         if (window.lucide) lucide.createIcons();
+      }
+    }
+  },
+  
+  setupMobileAtlas() {
+    const sendBtn = document.getElementById('mobile-atlas-send-btn');
+    const input = document.getElementById('mobile-atlas-input');
+    const messagesContainer = document.getElementById('mobile-atlas-messages');
+    const quickActions = document.querySelectorAll('.mobile-atlas-quick-action');
+    
+    // Send button click
+    if (sendBtn && input) {
+      sendBtn.addEventListener('click', () => this.sendMobileMessage());
+      
+      // Enter to send
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          this.sendMobileMessage();
+        }
+      });
+      
+      // Auto-resize textarea
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+      });
+    }
+    
+    // Quick actions
+    quickActions.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const action = btn.dataset.quickAction;
+        this.handleQuickAction(action);
+      });
+    });
+  },
+  
+  async sendMobileMessage() {
+    const input = document.getElementById('mobile-atlas-input');
+    const messagesContainer = document.getElementById('mobile-atlas-messages');
+    
+    if (!input || !messagesContainer) return;
+    
+    const message = input.value.trim();
+    if (!message) return;
+    
+    // Add user message
+    this.addMobileMessage('user', message);
+    input.value = '';
+    input.style.height = 'auto';
+    
+    // Show loading
+    const loadingId = this.addMobileMessage('assistant', '<div class="mobile-atlas-loading">Atlas denkt...</div>');
+    
+    try {
+      // Use the AI Service
+      if (window.AIService) {
+        const response = await AIService.sendMessage(message);
+        // Remove loading and add response
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+        this.addMobileMessage('assistant', response);
+      } else {
+        const loadingEl = document.getElementById(loadingId);
+        if (loadingEl) loadingEl.remove();
+        this.addMobileMessage('assistant', 'AI Service nicht verfügbar. Bitte lade die Seite neu.');
+      }
+    } catch (error) {
+      console.error('Mobile Atlas error:', error);
+      const loadingEl = document.getElementById(loadingId);
+      if (loadingEl) loadingEl.remove();
+      this.addMobileMessage('assistant', 'Fehler: ' + error.message);
+    }
+  },
+  
+  addMobileMessage(role, content) {
+    const messagesContainer = document.getElementById('mobile-atlas-messages');
+    if (!messagesContainer) return null;
+    
+    const id = 'msg-' + Date.now();
+    const messageEl = document.createElement('div');
+    messageEl.id = id;
+    messageEl.className = `mobile-atlas-message ${role}`;
+    messageEl.innerHTML = content;
+    
+    messagesContainer.appendChild(messageEl);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    
+    return id;
+  },
+  
+  async handleQuickAction(action) {
+    const prompts = {
+      'briefing': 'Gib mir mein Tagesbriefing. Was steht heute an?',
+      'forgotten': 'Welche Tasks habe ich vergessen oder vernachlässigt?',
+      'insights': 'Gib mir Insights zu meiner Produktivität.'
+    };
+    
+    const prompt = prompts[action];
+    if (prompt) {
+      const input = document.getElementById('mobile-atlas-input');
+      if (input) {
+        input.value = prompt;
+        this.sendMobileMessage();
       }
     }
   },
