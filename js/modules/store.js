@@ -183,27 +183,44 @@ const NexusStore = {
   async load() {
     try {
       const storageKey = this.getStorageKey();
+      console.log('📦 Loading data with key:', storageKey);
       
       // First load from localStorage (fast)
       const saved = storage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
+        console.log('💾 Loaded from localStorage:', {
+          tasks: parsed.tasks?.length || 0,
+          habits: parsed.habits?.length || 0,
+          version: parsed._version
+        });
         this.state = { ...this.state, ...parsed };
+      } else {
+        console.log('⚠️ No data in localStorage for key:', storageKey);
       }
       
       // Sync user info from AuthService
       if (window.AuthService && AuthService.user) {
         this.state.user.name = AuthService.user.displayName || AuthService.user.email.split('@')[0];
         this.state.user.email = AuthService.user.email;
+        console.log('👤 User info synced:', this.state.user.name);
       }
       
       // Then try cloud sync (if initialized)
       if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized && CloudSync.isOnline) {
+        console.log('☁️ Attempting to load from cloud...');
         const cloudData = await CloudSync.loadFromCloud();
         if (cloudData) {
           // Cloud data is newer, use it
           const localVersion = this.state._version || 0;
           const cloudVersion = cloudData._version || 0;
+          console.log('📊 Version comparison - Local:', localVersion, 'Cloud:', cloudVersion);
+          console.log('☁️ Cloud data:', {
+            tasks: cloudData.tasks?.length || 0,
+            habits: cloudData.habits?.length || 0,
+            version: cloudVersion
+          });
+          
           if (cloudVersion > localVersion) {
             console.log('☁️ Cloud data is newer, syncing...');
             this.state = { ...this.state, ...cloudData };
@@ -214,9 +231,26 @@ const NexusStore = {
             }
             // Update localStorage with cloud data
             storage.setItem(storageKey, JSON.stringify(this.state));
+            console.log('✅ Cloud data synced to localStorage');
+          } else {
+            console.log('⏭️ Local data is up to date, skipping cloud sync');
           }
+        } else {
+          console.log('⚠️ No cloud data available');
         }
+      } else {
+        console.log('⚠️ Cloud sync not available:', {
+          cloudSyncExists: typeof CloudSync !== 'undefined',
+          initialized: CloudSync?.isInitialized,
+          online: CloudSync?.isOnline
+        });
       }
+      
+      console.log('✅ Load complete. Final state:', {
+        tasks: this.state.tasks?.length || 0,
+        habits: this.state.habits?.length || 0,
+        version: this.state._version
+      });
     } catch (e) {
       console.warn('Failed to load state:', e);
     }
