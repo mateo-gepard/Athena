@@ -40,7 +40,7 @@ const HabitsModule = {
       <div class="flex items-center justify-between mb-6">
         <div>
           <h2 class="text-xl font-medium">Habits</h2>
-          <p class="text-secondary">${stats.completedToday}/${habits.length} heute erledigt</p>
+          <p class="text-secondary">${stats.completedToday}/${stats.totalDueToday} heute erledigt</p>
         </div>
         
         <div class="flex items-center gap-3">
@@ -55,7 +55,7 @@ const HabitsModule = {
       <div class="grid gap-4 mb-6" style="grid-template-columns: repeat(4, 1fr);">
         <div class="stat-card">
           <div class="stat-label">Heute</div>
-          <div class="stat-value">${stats.completedToday}/${habits.length}</div>
+          <div class="stat-value">${stats.completedToday}/${stats.totalDueToday}</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Diese Woche</div>
@@ -92,9 +92,13 @@ const HabitsModule = {
   // Get stats
   getStats(habits) {
     const today = new Date().toISOString().split('T')[0];
-    const completedToday = habits.filter(h => h.completionLog?.includes(today)).length;
     
-    // Week stats
+    // Only count habits that are due today
+    const habitsDueToday = habits.filter(h => this.isHabitDueOnDate(h, today));
+    const completedToday = habitsDueToday.filter(h => h.completionLog?.includes(today)).length;
+    const totalDueToday = habitsDueToday.length;
+    
+    // Week stats - only count days where habit was due
     const weekDays = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
@@ -103,10 +107,13 @@ const HabitsModule = {
     }
     
     let weekCompleted = 0;
-    let weekTotal = habits.length * 7;
+    let weekTotal = 0;
     habits.forEach(h => {
       weekDays.forEach(day => {
-        if (h.completionLog?.includes(day)) weekCompleted++;
+        if (this.isHabitDueOnDate(h, day)) {
+          weekTotal++;
+          if (h.completionLog?.includes(day)) weekCompleted++;
+        }
       });
     });
     const weekPercentage = weekTotal > 0 ? Math.round((weekCompleted / weekTotal) * 100) : 0;
@@ -119,7 +126,7 @@ const HabitsModule = {
       if (h.streak > currentStreak) currentStreak = h.streak;
     });
     
-    return { completedToday, weekPercentage, longestStreak, currentStreak };
+    return { completedToday, totalDueToday, weekPercentage, longestStreak, currentStreak };
   },
   
   // Render today view
@@ -144,7 +151,9 @@ const HabitsModule = {
       `;
     }
     
-    const pending = habits.filter(h => !h.completionLog?.includes(today));
+    // Only show habits in "pending" that are actually due today and not completed
+    const pending = habits.filter(h => this.isHabitDueOnDate(h, today) && !h.completionLog?.includes(today));
+    // Show completed habits for today (regardless if they were due)
     const completed = habits.filter(h => h.completionLog?.includes(today));
     
     return `
@@ -868,15 +877,28 @@ const HabitsModule = {
     const isDueToday = this.isHabitDueOnDate(habit, todayStr);
     const completedToday = completionLog.includes(todayStr);
     
-    // If due today but not completed, streak might still be valid from yesterday
-    if (isDueToday && !completedToday) {
-      // Check if we're early in the day - be lenient
-      const now = new Date();
-      if (now.getHours() >= 0) {
-        // Start counting from yesterday
+    // If NOT due today (e.g., Sunday for a Tue/Thu/Sat habit), 
+    // start counting from the last day it was due
+    if (!isDueToday) {
+      // Find the last day it was due
+      let found = false;
+      for (let i = 1; i <= 7; i++) {
+        checkDate.setDate(checkDate.getDate() - 1);
+        if (this.isHabitDueOnDate(habit, checkDate.toISOString().split('T')[0])) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        checkDate = new Date(today);
         checkDate.setDate(checkDate.getDate() - 1);
       }
+    } else if (isDueToday && !completedToday) {
+      // Due today but not completed - still allow streak from yesterday
+      // This gives leniency during the day
+      checkDate.setDate(checkDate.getDate() - 1);
     }
+    // If completed today and due today, start from today (checkDate stays at today)
     
     // Count streak backwards
     while (true) {

@@ -166,12 +166,26 @@ const SmartParser = {
     }
     cleaned = cleaned.replace(/@@\w+\s*/g, '');
     
-    // Extract time
+    // Extract time - if hours >= 24, wrap to next day (e.g., 25:00 → 01:00 next day)
     const timeMatch = cleaned.match(/\b(\d{1,2})(?::(\d{2}))?\s*(uhr)?/i);
     if (timeMatch) {
-      const hours = parseInt(timeMatch[1]);
+      let hours = parseInt(timeMatch[1]);
       const minutes = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
-      if (hours >= 0 && hours <= 23) {
+      if (hours >= 0 && hours <= 29) {
+        // Handle times >= 24:00 as next day
+        if (hours >= 24) {
+          hours = hours - 24;
+          // Shift the date to next day if we have a scheduledDate, otherwise set it to tomorrow
+          if (result.scheduledDate) {
+            const nextDay = new Date(result.scheduledDate);
+            nextDay.setDate(nextDay.getDate() + 1);
+            result.scheduledDate = nextDay.toISOString().split('T')[0];
+          } else {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            result.scheduledDate = tomorrow.toISOString().split('T')[0];
+          }
+        }
         result.scheduledTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
         // Check if this looks like a scheduled date/time
         const dateMatch = cleaned.match(this.patterns.dateRelative);
