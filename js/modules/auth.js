@@ -222,6 +222,12 @@ const AuthService = {
       CloudSync.userId = user.uid;
     }
     
+    // Remove auth screen
+    const authScreen = document.querySelector('.auth-screen');
+    if (authScreen) {
+      authScreen.remove();
+    }
+    
     // Initialize main app (instead of reload)
     if (window.NexusApp && typeof NexusApp.init === 'function') {
       NexusApp.init();
