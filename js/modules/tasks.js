@@ -17,14 +17,19 @@ const TasksModule = {
   
   // Initialize
   init() {
+    console.log('🎯 TasksModule.init() called, current view:', this.view);
     this.setupEventListeners();
     this.render();
   },
   
   // Render the tasks page
   render() {
+    console.log('🎯 TasksModule.render() called, view:', this.view);
     const container = document.getElementById('page-tasks');
-    if (!container) return;
+    if (!container) {
+      console.error('❌ page-tasks container not found!');
+      return;
+    }
     
     const tasks = this.getFilteredTasks();
     const stats = this.getStats();
@@ -965,7 +970,7 @@ const TasksModule = {
       // View toggle
       const viewTab = e.target.closest('[data-view]');
       if (viewTab && e.target.closest('#page-tasks')) {
-        console.log('  → View toggle');
+        console.log('  → View toggle clicked, switching to:', viewTab.dataset.view);
         this.view = viewTab.dataset.view;
         this.render();
         return;
