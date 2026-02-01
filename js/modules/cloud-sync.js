@@ -268,9 +268,9 @@ const CloudSync = {
       
       if (data) {
         console.log('☁️ Loaded from cloud, version:', data._version);
-        // Remove metadata before returning
+        // Keep _version in the returned data so store can compare!
+        // Only remove _lastUpdated
         delete data._lastUpdated;
-        delete data._version;
         return data;
       }
       
