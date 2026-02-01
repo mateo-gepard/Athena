@@ -41,7 +41,13 @@ const CommandCenter = {
     const hour = now.getHours();
     const greeting = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
     
-    greetingEl.textContent = `${greeting}, Mateo!`;
+    // Get username from AuthService or fallback
+    let userName = 'Nutzer';
+    if (window.AuthService && AuthService.user) {
+      userName = AuthService.user.displayName || AuthService.user.email.split('@')[0];
+    }
+    
+    greetingEl.textContent = `${greeting}, ${userName}!`;
     
     const days = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
     const months = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
