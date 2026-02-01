@@ -559,12 +559,17 @@
     display: none !important;
   }
   
+  .mobile-atlas-chat {
+    display: none !important;
+  }
+  
   .sidebar-overlay {
     display: none !important;
   }
   
   .sidebar {
     left: 0 !important;
+    transform: translateX(0) !important;
   }
   
   .main-content {
