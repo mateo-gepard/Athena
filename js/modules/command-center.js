@@ -754,49 +754,103 @@ const CommandCenter = {
     document.addEventListener('dragover', (e) => {
       if (!draggedTaskId) return;
       
-      const blockContainer = e.target.closest('.cc-time-block-tasks, .cc-needs-attention-tasks');
+      // Check multiple levels for drop zone
+      const blockContainer = e.target.closest('.cc-time-block-tasks') || 
+                           e.target.closest('.cc-needs-attention-tasks') ||
+                           e.target.closest('.cc-time-block') ||
+                           e.target.closest('.cc-needs-attention');
+      
       if (blockContainer) {
         e.preventDefault();
+        e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
-        // Visual feedback
-        blockContainer.style.background = 'var(--surface-hover)';
+        
+        // Find the actual tasks container
+        const tasksContainer = blockContainer.querySelector('.cc-time-block-tasks') || 
+                              blockContainer.querySelector('.cc-needs-attention-tasks') ||
+                              (blockContainer.classList.contains('cc-time-block-tasks') ? blockContainer : null) ||
+                              (blockContainer.classList.contains('cc-needs-attention-tasks') ? blockContainer : null);
+        
+        if (tasksContainer) {
+          tasksContainer.style.background = 'var(--surface-hover)';
+          tasksContainer.style.border = '2px dashed var(--primary)';
+        }
       }
     });
     
     document.addEventListener('dragleave', (e) => {
       const blockContainer = e.target.closest('.cc-time-block-tasks, .cc-needs-attention-tasks');
-      if (blockContainer && !blockContainer.contains(e.relatedTarget)) {
+      if (blockContainer && (!e.relatedTarget || !blockContainer.contains(e.relatedTarget))) {
         blockContainer.style.background = '';
+        blockContainer.style.border = '';
       }
     });
     
     document.addEventListener('drop', (e) => {
       if (!draggedTaskId) return;
       
-      const blockContainer = e.target.closest('.cc-time-block-tasks, .cc-needs-attention-tasks');
+      console.log('🎯 Drop event fired, target:', e.target.className);
+      
+      // Try multiple levels to find the drop zone
+      const blockContainer = e.target.closest('.cc-time-block-tasks') || 
+                           e.target.closest('.cc-needs-attention-tasks') ||
+                           e.target.closest('.cc-time-block') ||
+                           e.target.closest('.cc-needs-attention');
+      
       if (blockContainer) {
         e.preventDefault();
-        blockContainer.style.background = '';
+        e.stopPropagation();
+        
+        // Reset visual feedback
+        const tasksContainer = blockContainer.querySelector('.cc-time-block-tasks') || 
+                              blockContainer.querySelector('.cc-needs-attention-tasks') ||
+                              (blockContainer.classList.contains('cc-time-block-tasks') ? blockContainer : null) ||
+                              (blockContainer.classList.contains('cc-needs-attention-tasks') ? blockContainer : null);
+        
+        if (tasksContainer) {
+          tasksContainer.style.background = '';
+          tasksContainer.style.border = '';
+        }
         
         console.log('🎯 Drop detected on:', blockContainer.className);
         
-        // Determine which block this is
-        const timeBlock = e.target.closest('.cc-time-block');
-        const needsAttention = e.target.closest('.cc-needs-attention');
-        
+        // Determine which block this is by checking parent and IDs
         let newBlock = null;
-        if (timeBlock) {
-          // Find the block ID from the tasks container ID
-          const containerId = blockContainer.id;
+        
+        // First try to find by container ID
+        if (tasksContainer) {
+          const containerId = tasksContainer.id;
+          console.log('🎯 Container ID:', containerId);
+          
           if (containerId === 'morningTasks') newBlock = 'morning';
           else if (containerId === 'afternoonTasks') newBlock = 'afternoon';
           else if (containerId === 'eveningTasks') newBlock = 'evening';
-          
-          console.log('🎯 Dropped on time block, container ID:', containerId, 'new block:', newBlock);
-        } else if (needsAttention) {
-          newBlock = null; // Remove from command center
-          console.log('🎯 Dropped on needs attention - removing from blocks');
+          else if (containerId === 'needsAttentionTasks') newBlock = null;
         }
+        
+        // If still not found, check parent structure
+        if (newBlock === undefined) {
+          const timeBlock = blockContainer.closest('.cc-time-block');
+          const needsAttention = blockContainer.closest('.cc-needs-attention');
+          
+          if (needsAttention) {
+            newBlock = null; // Remove from command center
+            console.log('🎯 Dropped on needs attention - removing from blocks');
+          } else if (timeBlock) {
+            // Try to get from sibling heading
+            const heading = timeBlock.querySelector('.cc-block-header-title');
+            if (heading) {
+              const text = heading.textContent.trim();
+              console.log('🎯 Block heading text:', text);
+              
+              if (text.includes('Morgen') || text.includes('Morning')) newBlock = 'morning';
+              else if (text.includes('Nachmittag') || text.includes('Afternoon')) newBlock = 'afternoon';
+              else if (text.includes('Abend') || text.includes('Evening')) newBlock = 'evening';
+            }
+          }
+        }
+        
+        console.log('🎯 Determined new block:', newBlock, 'from block:', draggedFromBlock);
         
         // Update task if block changed
         if (newBlock !== draggedFromBlock) {
@@ -816,10 +870,14 @@ const CommandCenter = {
           
           console.log('✅ Task moved from', draggedFromBlock, 'to', newBlock);
           this.render();
+        } else {
+          console.log('⏭️ Same block, no change needed');
         }
         
         draggedTaskId = null;
         draggedFromBlock = null;
+      } else {
+        console.log('❌ No valid drop zone found');
       }
     });
     
