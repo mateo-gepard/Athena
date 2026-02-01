@@ -384,9 +384,9 @@
   
   .mobile-atlas-input-area {
     display: flex;
-    gap: 10px;
-    padding: 12px 16px;
-    padding-bottom: max(16px, env(safe-area-inset-bottom));
+    gap: 12px;
+    padding: 14px 16px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
     background: var(--color-surface-1);
     border-top: 1px solid var(--color-border);
     flex-shrink: 0;
@@ -396,16 +396,17 @@
   
   .mobile-atlas-input {
     flex: 1;
-    padding: 12px 14px;
+    padding: 14px 18px;
     background: var(--color-surface-2);
     border: 1px solid var(--color-border);
     border-radius: 24px;
     color: var(--color-text-primary);
-    font-size: 16px !important; /* Prevent iOS zoom */
+    font-size: 17px !important; /* Prevent iOS zoom, WhatsApp-like size */
+    line-height: 1.4;
     resize: none;
     outline: none;
-    min-height: 44px;
-    max-height: 120px;
+    min-height: 52px;
+    max-height: 150px;
   }
   
   .mobile-atlas-input::placeholder {
@@ -414,12 +415,13 @@
   
   .mobile-atlas-input:focus {
     border-color: var(--color-primary);
+    background: var(--color-surface-1);
   }
   
   .mobile-atlas-send-btn {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -429,15 +431,17 @@
     color: white;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease, background 0.2s ease;
   }
   
   .mobile-atlas-send-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.92);
+    background: var(--color-primary-dark);
   }
   
   .mobile-atlas-send-btn i {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
   }
   
   /* Mobile Atlas Loading Animation */
