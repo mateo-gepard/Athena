@@ -54,6 +54,52 @@
   border-color: var(--color-border-active);
 }
 
+/* Cloud Sync Status Indicator */
+.cloud-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.cloud-status svg {
+  width: 18px;
+  height: 18px;
+}
+
+.cloud-status.online {
+  color: var(--color-success);
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.cloud-status.online:hover {
+  background: rgba(78, 205, 196, 0.2);
+}
+
+.cloud-status.offline {
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-2);
+}
+
+.cloud-status.offline:hover {
+  background: var(--color-surface-3);
+}
+
+.cloud-status.syncing {
+  color: var(--color-accent);
+  background: rgba(107, 161, 237, 0.1);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* Secondary Button */
 .btn-secondary {
   color: var(--color-text-secondary);

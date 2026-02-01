@@ -84,23 +84,60 @@ const NexusStore = {
     return this;
   },
   
-  // Load from localStorage
-  load() {
+  // Load from localStorage (and cloud if available)
+  async load() {
     try {
+      // First load from localStorage (fast)
       const saved = storage.getItem(this.STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         this.state = { ...this.state, ...parsed };
+      }
+      
+      // Then try cloud sync (if initialized)
+      if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized && CloudSync.isOnline) {
+        const cloudData = await CloudSync.loadFromCloud();
+        if (cloudData) {
+          // Cloud data is newer, use it
+          const localVersion = this.state._version || 0;
+          const cloudVersion = cloudData._version || 0;
+          if (cloudVersion > localVersion) {
+            console.log('☁️ Cloud data is newer, syncing...');
+            this.state = { ...this.state, ...cloudData };
+            // Update localStorage with cloud data
+            storage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+          }
+        }
       }
     } catch (e) {
       console.warn('Failed to load state:', e);
     }
   },
   
-  // Save to localStorage
+  // Initialize cloud sync after store init
+  async initCloudSync() {
+    if (typeof CloudSync !== 'undefined') {
+      await CloudSync.init();
+      // Try to load from cloud after init
+      if (CloudSync.isOnline) {
+        await this.load();
+      }
+    }
+  },
+  
+  // Save to localStorage (and cloud)
   save() {
     try {
+      // Add version for conflict resolution
+      this.state._version = Date.now();
+      
+      // Always save to localStorage first (instant, offline-capable)
       storage.setItem(this.STORAGE_KEY, JSON.stringify(this.state));
+      
+      // Sync to cloud (debounced)
+      if (typeof CloudSync !== 'undefined' && CloudSync.isInitialized) {
+        CloudSync.saveToCloud(this.state);
+      }
     } catch (e) {
       console.warn('Failed to save state:', e);
     }
@@ -143,10 +180,8 @@ const NexusStore = {
     
     this.state.activities.unshift(activity); // Neueste zuerst
     
-    // Limit to last 1000 activities
-    if (this.state.activities.length > 1000) {
-      this.state.activities = this.state.activities.slice(0, 1000);
-    }
+    // No limit - keep all activities for complete history
+    // Cloud storage can handle unlimited data
     
     this.save();
   },

@@ -29,7 +29,16 @@ const NexusApp = {
   },
   
   // Start the main application
-  startApp() {
+  async startApp() {
+    // Initialize cloud sync
+    if (typeof CloudSync !== 'undefined') {
+      await CloudSync.init();
+      // Reload state from cloud if available
+      if (CloudSync.isOnline && typeof NexusStore !== 'undefined') {
+        await NexusStore.load();
+      }
+    }
+    
     // Setup event listeners
     this.setupEventListeners();
     this.setupKeyboardShortcuts();
