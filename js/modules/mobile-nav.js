@@ -268,10 +268,11 @@ const MobileNav = {
     const input = document.getElementById('mobile-atlas-input');
     const messagesContainer = document.getElementById('mobile-atlas-messages');
     const chatContainer = document.getElementById('mobile-atlas-chat');
+    const inputArea = document.querySelector('.mobile-atlas-input-area');
     const quickActions = document.querySelectorAll('.mobile-atlas-quick-action');
     
     // Handle keyboard opening/closing with Visual Viewport API
-    if (window.visualViewport && chatContainer) {
+    if (window.visualViewport && chatContainer && inputArea) {
       const resizeHandler = () => {
         // Calculate how much the viewport has shrunk (keyboard height)
         const viewportHeight = window.visualViewport.height;
@@ -279,12 +280,20 @@ const MobileNav = {
         const keyboardHeight = windowHeight - viewportHeight;
         
         if (keyboardHeight > 150) {
-          // Keyboard is open - shrink the chat container
+          // Keyboard is open - shrink the chat container and position input above keyboard
           chatContainer.style.height = `${viewportHeight - 104}px`;
           chatContainer.style.transition = 'height 0.3s ease';
+          
+          // Position input area at the bottom of the visible viewport
+          inputArea.style.position = 'fixed';
+          inputArea.style.bottom = '0';
+          inputArea.style.transform = 'translateY(0)';
         } else {
           // Keyboard is closed - restore full height
           chatContainer.style.height = `calc(100vh - 104px)`;
+          inputArea.style.position = 'fixed';
+          inputArea.style.bottom = '0';
+          inputArea.style.transform = 'translateY(0)';
         }
       };
       
