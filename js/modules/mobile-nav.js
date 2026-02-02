@@ -265,11 +265,57 @@ const MobileNav = {
     const input = document.getElementById('mobile-atlas-input');
     const messagesContainer = document.getElementById('mobile-atlas-messages');
     const chatContainer = document.getElementById('mobile-atlas-chat');
+    const inputContainer = chatContainer?.querySelector('.atlas-input-container');
     const quickActions = document.querySelectorAll('.mobile-atlas-quick-action');
     
     if (!sendBtn || !input || !messagesContainer) {
       console.warn('Mobile Atlas elements not found');
       return;
+    }
+    
+    // Virtual Keyboard API - modern way to handle keyboard on iOS/Android
+    if ('virtualKeyboard' in navigator) {
+      navigator.virtualKeyboard.overlaysContent = true;
+      
+      navigator.virtualKeyboard.addEventListener('geometrychange', () => {
+        const { height } = navigator.virtualKeyboard.boundingRect;
+        if (inputContainer) {
+          inputContainer.style.paddingBottom = height > 0 ? `${height + 12}px` : '';
+        }
+        // Scroll to bottom when keyboard appears
+        if (height > 0) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      });
+    }
+    
+    // Fallback: Use visualViewport for iOS Safari (doesn't support virtualKeyboard API yet)
+    if (window.visualViewport && !('virtualKeyboard' in navigator)) {
+      let initialHeight = window.visualViewport.height;
+      
+      window.visualViewport.addEventListener('resize', () => {
+        const currentHeight = window.visualViewport.height;
+        const keyboardHeight = initialHeight - currentHeight;
+        
+        if (keyboardHeight > 100 && inputContainer) {
+          // Keyboard is open - move input container up
+          inputContainer.style.transform = `translateY(-${keyboardHeight}px)`;
+          messagesContainer.style.paddingBottom = `${keyboardHeight}px`;
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        } else if (inputContainer) {
+          // Keyboard closed - reset
+          inputContainer.style.transform = '';
+          messagesContainer.style.paddingBottom = '';
+        }
+      });
+      
+      // Update initial height on orientation change
+      window.visualViewport.addEventListener('scroll', () => {
+        // Prevent page scroll while keyboard is open
+        if (document.body.classList.contains('atlas-chat-open')) {
+          window.scrollTo(0, 0);
+        }
+      });
     }
     
     // iOS Safari keyboard handling
@@ -278,6 +324,8 @@ const MobileNav = {
       // Slight delay to let iOS keyboard appear
       setTimeout(() => {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // Force scroll page to top to prevent iOS shifting
+        window.scrollTo(0, 0);
       }, 300);
     });
     
