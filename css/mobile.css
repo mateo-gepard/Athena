@@ -315,11 +315,38 @@
     /* iOS optimizations */
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: none;
+    /* Smooth transition for keyboard open/close */
+    transition: top 0.25s ease-out;
   }
   
   .mobile-atlas-chat.active {
     display: flex;
     flex-direction: column;
+  }
+  
+  /* When keyboard is open, hide header and expand chat to full screen */
+  body.keyboard-open .mobile-header {
+    transform: translateY(-100%);
+    transition: transform 0.25s ease-out;
+  }
+  
+  body.keyboard-open .mobile-tab-bar {
+    transform: translateY(-100%);
+    opacity: 0;
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+  }
+  
+  body.keyboard-open .mobile-atlas-chat {
+    top: 0;
+  }
+  
+  /* Ensure header has transition for smooth show/hide */
+  .mobile-header {
+    transition: transform 0.25s ease-out;
+  }
+  
+  .mobile-tab-bar {
+    transition: transform 0.25s ease-out, opacity 0.25s ease-out;
   }
   
   /* Prevent body scroll when chat is active - iOS fix */

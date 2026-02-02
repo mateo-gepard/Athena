@@ -292,6 +292,7 @@ const MobileNav = {
     // Fallback: Use visualViewport for iOS Safari (doesn't support virtualKeyboard API yet)
     if (window.visualViewport && !('virtualKeyboard' in navigator)) {
       let initialHeight = window.innerHeight;
+      let keyboardOpen = false;
       
       const handleViewportResize = () => {
         if (!document.body.classList.contains('atlas-chat-open')) return;
@@ -300,11 +301,17 @@ const MobileNav = {
         
         if (keyboardHeight > 100 && inputArea) {
           // Keyboard is open - move input area up
-          // Subtract the input area's own bottom padding (which includes safe area) to avoid double-offsetting
-          const inputAreaPadding = 10; // Base padding without safe area
-          const offset = keyboardHeight - inputAreaPadding;
+          // Reduce offset to position input directly above keyboard
+          const offset = keyboardHeight - 50;
           inputArea.style.transform = `translateY(-${offset}px)`;
           messagesContainer.style.marginBottom = `${offset}px`;
+          
+          // Hide header when keyboard opens
+          if (!keyboardOpen) {
+            keyboardOpen = true;
+            document.body.classList.add('keyboard-open');
+          }
+          
           setTimeout(() => {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }, 50);
@@ -312,6 +319,8 @@ const MobileNav = {
           // Keyboard closed - reset
           inputArea.style.transform = '';
           messagesContainer.style.marginBottom = '';
+          keyboardOpen = false;
+          document.body.classList.remove('keyboard-open');
         }
       };
       
@@ -325,6 +334,22 @@ const MobileNav = {
       });
     }
     
+    // Swipe down to show header when keyboard is open
+    let touchStartY = 0;
+    messagesContainer.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    messagesContainer.addEventListener('touchmove', (e) => {
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchY - touchStartY;
+      
+      // Swipe down (positive delta) while at top of messages
+      if (deltaY > 50 && messagesContainer.scrollTop <= 0) {
+        document.body.classList.remove('keyboard-open');
+      }
+    }, { passive: true });
+    
     // iOS Safari keyboard handling
     // When input is focused, scroll messages to bottom
     input.addEventListener('focus', () => {
@@ -334,6 +359,16 @@ const MobileNav = {
         // Force scroll page to top to prevent iOS shifting
         window.scrollTo(0, 0);
       }, 300);
+    });
+    
+    // Hide header when input is focused
+    input.addEventListener('blur', () => {
+      // Small delay to check if keyboard is really closing
+      setTimeout(() => {
+        if (document.activeElement !== input) {
+          document.body.classList.remove('keyboard-open');
+        }
+      }, 100);
     });
     
     // Send on button click
