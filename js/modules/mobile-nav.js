@@ -265,7 +265,7 @@ const MobileNav = {
     const input = document.getElementById('mobile-atlas-input');
     const messagesContainer = document.getElementById('mobile-atlas-messages');
     const chatContainer = document.getElementById('mobile-atlas-chat');
-    const inputContainer = chatContainer?.querySelector('.atlas-input-container');
+    const inputArea = chatContainer?.querySelector('.mobile-atlas-input-area');
     const quickActions = document.querySelectorAll('.mobile-atlas-quick-action');
     
     if (!sendBtn || !input || !messagesContainer) {
@@ -279,8 +279,8 @@ const MobileNav = {
       
       navigator.virtualKeyboard.addEventListener('geometrychange', () => {
         const { height } = navigator.virtualKeyboard.boundingRect;
-        if (inputContainer) {
-          inputContainer.style.paddingBottom = height > 0 ? `${height + 12}px` : '';
+        if (inputArea) {
+          inputArea.style.paddingBottom = height > 0 ? `${height + 12}px` : '';
         }
         // Scroll to bottom when keyboard appears
         if (height > 0) {
@@ -291,27 +291,31 @@ const MobileNav = {
     
     // Fallback: Use visualViewport for iOS Safari (doesn't support virtualKeyboard API yet)
     if (window.visualViewport && !('virtualKeyboard' in navigator)) {
-      let initialHeight = window.visualViewport.height;
+      let initialHeight = window.innerHeight;
       
-      window.visualViewport.addEventListener('resize', () => {
-        const currentHeight = window.visualViewport.height;
-        const keyboardHeight = initialHeight - currentHeight;
+      const handleViewportResize = () => {
+        if (!document.body.classList.contains('atlas-chat-open')) return;
         
-        if (keyboardHeight > 100 && inputContainer) {
-          // Keyboard is open - move input container up
-          inputContainer.style.transform = `translateY(-${keyboardHeight}px)`;
-          messagesContainer.style.paddingBottom = `${keyboardHeight}px`;
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        } else if (inputContainer) {
+        const keyboardHeight = initialHeight - window.visualViewport.height;
+        
+        if (keyboardHeight > 100 && inputArea) {
+          // Keyboard is open - move input area up
+          inputArea.style.transform = `translateY(-${keyboardHeight}px)`;
+          messagesContainer.style.marginBottom = `${keyboardHeight}px`;
+          setTimeout(() => {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+          }, 50);
+        } else if (inputArea) {
           // Keyboard closed - reset
-          inputContainer.style.transform = '';
-          messagesContainer.style.paddingBottom = '';
+          inputArea.style.transform = '';
+          messagesContainer.style.marginBottom = '';
         }
-      });
+      };
       
-      // Update initial height on orientation change
+      window.visualViewport.addEventListener('resize', handleViewportResize);
+      
+      // Also handle scroll to prevent page jumping
       window.visualViewport.addEventListener('scroll', () => {
-        // Prevent page scroll while keyboard is open
         if (document.body.classList.contains('atlas-chat-open')) {
           window.scrollTo(0, 0);
         }
