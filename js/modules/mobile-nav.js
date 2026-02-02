@@ -300,8 +300,11 @@ const MobileNav = {
         
         if (keyboardHeight > 100 && inputArea) {
           // Keyboard is open - move input area up
-          inputArea.style.transform = `translateY(-${keyboardHeight}px)`;
-          messagesContainer.style.marginBottom = `${keyboardHeight}px`;
+          // Subtract the input area's own bottom padding (which includes safe area) to avoid double-offsetting
+          const inputAreaPadding = 10; // Base padding without safe area
+          const offset = keyboardHeight - inputAreaPadding;
+          inputArea.style.transform = `translateY(-${offset}px)`;
+          messagesContainer.style.marginBottom = `${offset}px`;
           setTimeout(() => {
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
           }, 50);
