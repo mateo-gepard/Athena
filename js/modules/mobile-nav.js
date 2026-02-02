@@ -188,6 +188,8 @@ const MobileNav = {
         pageContent.style.display = '';
         pageContent.style.visibility = 'visible';
       }
+      // Allow body scroll
+      document.body.classList.remove('atlas-chat-open');
     } else if (tab === 'atlas') {
       // Activate Atlas
       if (atlasTab) atlasTab.classList.add('active');
@@ -195,18 +197,13 @@ const MobileNav = {
       if (mobileAtlasChat) {
         mobileAtlasChat.classList.add('active');
         mobileAtlasChat.style.display = 'flex';
-        // Focus input after a small delay for smoother transition
-        setTimeout(() => {
-          const input = document.getElementById('mobile-atlas-input');
-          if (input && this.isMobile()) {
-            // Don't auto-focus on mobile to prevent keyboard popup
-          }
-        }, 100);
       }
       if (pageContent) {
         pageContent.style.display = 'none';
         pageContent.style.visibility = 'hidden';
       }
+      // Lock body scroll when chat is open
+      document.body.classList.add('atlas-chat-open');
       
       // Scroll messages to bottom
       const messagesContainer = document.getElementById('mobile-atlas-messages');
@@ -270,35 +267,6 @@ const MobileNav = {
     const chatContainer = document.getElementById('mobile-atlas-chat');
     const inputArea = document.querySelector('.mobile-atlas-input-area');
     const quickActions = document.querySelectorAll('.mobile-atlas-quick-action');
-    
-    // Handle keyboard opening/closing with Visual Viewport API
-    if (window.visualViewport && chatContainer && inputArea) {
-      const resizeHandler = () => {
-        // Get viewport height and calculate keyboard height
-        const viewportHeight = window.visualViewport.height;
-        const windowHeight = window.innerHeight;
-        const keyboardHeight = Math.max(0, windowHeight - viewportHeight);
-        
-        console.log('Keyboard height:', keyboardHeight);
-        
-        if (keyboardHeight > 100) {
-          // Keyboard is open - move input area up above keyboard
-          inputArea.style.bottom = `${keyboardHeight}px`;
-          // Also adjust messages padding to account for moved input
-          messagesContainer.style.paddingBottom = `${keyboardHeight + 100}px`;
-        } else {
-          // Keyboard is closed - restore to bottom
-          inputArea.style.bottom = '0px';
-          messagesContainer.style.paddingBottom = '100px';
-        }
-      };
-      
-      window.visualViewport.addEventListener('resize', resizeHandler);
-      window.visualViewport.addEventListener('scroll', resizeHandler);
-      
-      // Initial call
-      resizeHandler();
-    }
     
     // Send button click
     if (sendBtn && input) {
