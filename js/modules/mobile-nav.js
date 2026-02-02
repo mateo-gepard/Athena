@@ -273,102 +273,77 @@ const MobileNav = {
       return;
     }
     
-    // Virtual Keyboard API - modern way to handle keyboard on iOS/Android
-    if ('virtualKeyboard' in navigator) {
-      navigator.virtualKeyboard.overlaysContent = true;
-      
-      navigator.virtualKeyboard.addEventListener('geometrychange', () => {
-        const { height } = navigator.virtualKeyboard.boundingRect;
-        if (inputArea) {
-          inputArea.style.paddingBottom = height > 0 ? `${height + 12}px` : '';
-        }
-        // Scroll to bottom when keyboard appears
-        if (height > 0) {
-          messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        }
-      });
-    }
+    // ═══ KEYBOARD HANDLING ═══
+    // Use CSS custom property for keyboard height - cleaner than inline styles
+    const setKeyboardHeight = (height) => {
+      document.documentElement.style.setProperty('--keyboard-height', `${height}px`);
+    };
     
-    // Fallback: Use visualViewport for iOS Safari (doesn't support virtualKeyboard API yet)
-    if (window.visualViewport && !('virtualKeyboard' in navigator)) {
-      let initialHeight = window.innerHeight;
-      let keyboardOpen = false;
+    let isKeyboardOpen = false;
+    let resizeTimeout = null;
+    const initialHeight = window.innerHeight;
+    
+    // Debounced viewport resize handler
+    const handleKeyboard = () => {
+      if (!document.body.classList.contains('atlas-chat-open')) return;
       
-      const handleViewportResize = () => {
-        if (!document.body.classList.contains('atlas-chat-open')) return;
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      const keyboardHeight = Math.max(0, initialHeight - viewportHeight);
+      const keyboardVisible = keyboardHeight > 150;
+      
+      if (keyboardVisible && !isKeyboardOpen) {
+        // Keyboard just opened
+        isKeyboardOpen = true;
+        document.body.classList.add('keyboard-open');
+        setKeyboardHeight(keyboardHeight - 40);
         
-        const keyboardHeight = initialHeight - window.visualViewport.height;
-        
-        if (keyboardHeight > 100 && inputArea) {
-          // Keyboard is open - move input area up
-          // Reduce offset to position input directly above keyboard
-          const offset = keyboardHeight - 50;
-          inputArea.style.transform = `translateY(-${offset}px)`;
-          messagesContainer.style.marginBottom = `${offset}px`;
-          
-          // Hide header when keyboard opens
-          if (!keyboardOpen) {
-            keyboardOpen = true;
-            document.body.classList.add('keyboard-open');
-          }
-          
-          setTimeout(() => {
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
-          }, 50);
-        } else if (inputArea) {
-          // Keyboard closed - reset
-          inputArea.style.transform = '';
-          messagesContainer.style.marginBottom = '';
-          keyboardOpen = false;
-          document.body.classList.remove('keyboard-open');
-        }
-      };
+        // Scroll to bottom after transition
+        setTimeout(() => {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }, 100);
+      } else if (keyboardVisible && isKeyboardOpen) {
+        // Keyboard height changed (e.g., predictive text toggle)
+        setKeyboardHeight(keyboardHeight - 40);
+      } else if (!keyboardVisible && isKeyboardOpen) {
+        // Keyboard closed
+        isKeyboardOpen = false;
+        document.body.classList.remove('keyboard-open');
+        setKeyboardHeight(0);
+      }
+    };
+    
+    // Listen to viewport changes with debounce
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(handleKeyboard, 50);
+      });
       
-      window.visualViewport.addEventListener('resize', handleViewportResize);
-      
-      // Also handle scroll to prevent page jumping
+      // Prevent page scroll when keyboard opens
       window.visualViewport.addEventListener('scroll', () => {
-        if (document.body.classList.contains('atlas-chat-open')) {
+        if (document.body.classList.contains('atlas-chat-open') && isKeyboardOpen) {
           window.scrollTo(0, 0);
         }
       });
     }
     
-    // Swipe down to show header when keyboard is open
-    let touchStartY = 0;
-    messagesContainer.addEventListener('touchstart', (e) => {
-      touchStartY = e.touches[0].clientY;
-    }, { passive: true });
-    
-    messagesContainer.addEventListener('touchmove', (e) => {
-      const touchY = e.touches[0].clientY;
-      const deltaY = touchY - touchStartY;
-      
-      // Swipe down (positive delta) while at top of messages
-      if (deltaY > 50 && messagesContainer.scrollTop <= 0) {
-        document.body.classList.remove('keyboard-open');
-      }
-    }, { passive: true });
-    
-    // iOS Safari keyboard handling
-    // When input is focused, scroll messages to bottom
+    // Focus/blur for immediate keyboard state
     input.addEventListener('focus', () => {
-      // Slight delay to let iOS keyboard appear
       setTimeout(() => {
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        // Force scroll page to top to prevent iOS shifting
         window.scrollTo(0, 0);
-      }, 300);
+      }, 350);
     });
     
-    // Hide header when input is focused
     input.addEventListener('blur', () => {
-      // Small delay to check if keyboard is really closing
+      // Delay to prevent flicker when tapping send button
       setTimeout(() => {
-        if (document.activeElement !== input) {
+        if (document.activeElement !== input && !document.activeElement?.closest('.mobile-atlas-input-area')) {
+          isKeyboardOpen = false;
           document.body.classList.remove('keyboard-open');
+          setKeyboardHeight(0);
         }
-      }, 100);
+      }, 150);
     });
     
     // Send on button click
