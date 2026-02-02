@@ -265,27 +265,41 @@ const MobileNav = {
     const input = document.getElementById('mobile-atlas-input');
     const messagesContainer = document.getElementById('mobile-atlas-messages');
     const chatContainer = document.getElementById('mobile-atlas-chat');
-    const inputArea = document.querySelector('.mobile-atlas-input-area');
     const quickActions = document.querySelectorAll('.mobile-atlas-quick-action');
     
-    // Send button click
-    if (sendBtn && input) {
-      sendBtn.addEventListener('click', () => this.sendMobileMessage());
-      
-      // Enter to send
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          this.sendMobileMessage();
-        }
-      });
-      
-      // Auto-resize textarea
-      input.addEventListener('input', () => {
-        input.style.height = 'auto';
-        input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-      });
+    if (!sendBtn || !input || !messagesContainer) {
+      console.warn('Mobile Atlas elements not found');
+      return;
     }
+    
+    // iOS Safari keyboard handling
+    // When input is focused, scroll messages to bottom
+    input.addEventListener('focus', () => {
+      // Slight delay to let iOS keyboard appear
+      setTimeout(() => {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+      }, 300);
+    });
+    
+    // Send on button click
+    sendBtn.addEventListener('click', () => this.sendMobileMessage());
+    
+    // Send on Enter (but allow Shift+Enter for new line)
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        this.sendMobileMessage();
+      }
+    });
+    
+    // Auto-resize textarea as user types
+    input.addEventListener('input', () => {
+      input.style.height = 'auto';
+      const newHeight = Math.min(input.scrollHeight, 120);
+      input.style.height = newHeight + 'px';
+      // Scroll messages to bottom when input grows
+      messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
     
     // Quick actions
     quickActions.forEach(btn => {
@@ -294,6 +308,9 @@ const MobileNav = {
         this.handleQuickAction(action);
       });
     });
+    
+    // Scroll to bottom initially
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
   },
   
   async sendMobileMessage() {

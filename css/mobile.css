@@ -298,120 +298,162 @@
     visibility: hidden !important;
   }
   
-  /* ═══ MOBILE ATLAS CHAT - WhatsApp Style ═══ */
+  /* ═══════════════════════════════════════════════════════════════════════════════
+     MOBILE ATLAS CHAT - iOS Safari & Chrome Optimized
+     Inspired by WhatsApp/iMessage for native-feeling experience
+     ═══════════════════════════════════════════════════════════════════════════════ */
+  
   .mobile-atlas-chat {
-    display: none !important;
+    display: none;
     position: fixed;
-    top: 104px; /* Header + Tab bar */
+    top: 104px;
     left: 0;
     right: 0;
     bottom: 0;
-    flex-direction: column;
     background: var(--color-surface-1);
     z-index: 500;
+    /* iOS optimizations */
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
   }
   
   .mobile-atlas-chat.active {
-    display: flex !important;
-    visibility: visible !important;
-  }
-  
-  /* Lock body scroll when chat is open */
-  body.atlas-chat-open {
-    overflow: hidden;
-    position: fixed;
-    width: 100%;
-    height: 100%;
-  }
-  
-  .mobile-atlas-messages {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 16px;
-    padding-bottom: 90px; /* Space for input area */
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior: contain;
   }
   
+  /* Prevent body scroll when chat is active - iOS fix */
+  body.atlas-chat-open {
+    overflow: hidden !important;
+    position: fixed !important;
+    width: 100% !important;
+    height: 100% !important;
+    touch-action: none;
+  }
+  
+  /* Messages container - the scrollable area */
+  .mobile-atlas-messages {
+    flex: 1 1 auto;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding: 12px 16px;
+    padding-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--color-surface-1);
+  }
+  
+  /* Individual message bubbles */
   .mobile-atlas-message {
-    padding: 12px 14px;
-    border-radius: 12px;
+    padding: 10px 14px;
+    border-radius: 18px;
     max-width: 85%;
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: 15px;
+    line-height: 1.45;
+    word-wrap: break-word;
+    animation: messageIn 0.2s ease-out;
+  }
+  
+  @keyframes messageIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
   
   .mobile-atlas-message.user {
     align-self: flex-end;
     background: var(--color-primary);
     color: white;
+    border-bottom-right-radius: 4px;
   }
   
   .mobile-atlas-message.assistant {
     align-self: flex-start;
     background: var(--color-surface-2);
     color: var(--color-text-primary);
-    max-width: 100%;
+    border-bottom-left-radius: 4px;
+    max-width: 90%;
   }
   
+  /* Quick action chips */
   .mobile-atlas-quick-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    padding: 4px 0;
   }
   
   .mobile-atlas-quick-action {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 10px 14px;
-    background: var(--color-surface-3);
-    border: 1px solid var(--color-border);
+    padding: 10px 16px;
+    background: var(--color-surface-1);
+    border: 1.5px solid var(--color-border);
     border-radius: 20px;
-    color: var(--color-text-secondary);
-    font-size: 13px;
+    color: var(--color-text-primary);
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s ease;
+    user-select: none;
+    -webkit-user-select: none;
   }
   
   .mobile-atlas-quick-action:active {
     background: var(--color-primary);
     color: white;
     border-color: var(--color-primary);
+    transform: scale(0.96);
   }
   
   .mobile-atlas-quick-action i {
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
   }
   
+  /* ═══ INPUT AREA - Fixed at bottom, iOS keyboard aware ═══ */
   .mobile-atlas-input-area {
     display: flex;
-    gap: 12px;
-    padding: 12px 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    align-items: flex-end;
+    gap: 10px;
+    padding: 10px 12px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
     background: var(--color-surface-1);
     border-top: 1px solid var(--color-border);
     flex-shrink: 0;
+    /* This ensures it stays above keyboard on iOS */
+    position: relative;
+    z-index: 10;
   }
   
   .mobile-atlas-input {
     flex: 1;
-    padding: 14px 18px;
+    padding: 12px 16px;
     background: var(--color-surface-2);
-    border: 1px solid var(--color-border);
-    border-radius: 24px;
+    border: 1.5px solid var(--color-border);
+    border-radius: 22px;
     color: var(--color-text-primary);
-    font-size: 17px !important; /* Prevent iOS zoom, WhatsApp-like size */
+    /* 16px minimum prevents iOS zoom on focus */
+    font-size: 16px;
     line-height: 1.4;
     resize: none;
     outline: none;
-    min-height: 52px;
-    max-height: 150px;
+    min-height: 44px;
+    max-height: 120px;
+    /* iOS optimizations */
+    -webkit-appearance: none;
+    appearance: none;
   }
   
   .mobile-atlas-input::placeholder {
@@ -420,13 +462,12 @@
   
   .mobile-atlas-input:focus {
     border-color: var(--color-primary);
-    background: var(--color-surface-1);
   }
   
   .mobile-atlas-send-btn {
-    width: 52px;
-    height: 52px;
-    min-width: 52px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -436,17 +477,35 @@
     color: white;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
-    transition: transform 0.1s ease, background 0.2s ease;
+    transition: transform 0.1s ease;
+    flex-shrink: 0;
   }
   
   .mobile-atlas-send-btn:active {
-    transform: scale(0.92);
-    background: var(--color-primary-dark);
+    transform: scale(0.9);
   }
   
   .mobile-atlas-send-btn i {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
+  }
+  
+  /* Loading animation */
+  .mobile-atlas-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-text-tertiary);
+    font-size: 14px;
+  }
+  
+  .mobile-atlas-loading i {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
   }
   
   /* Mobile Atlas Loading Animation */
