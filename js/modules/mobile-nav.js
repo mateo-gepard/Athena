@@ -269,8 +269,6 @@ const MobileNav = {
     const messagesContainer = document.getElementById('mobile-atlas-messages');
     const chatContainer = document.getElementById('mobile-atlas-chat');
     const inputArea = document.querySelector('.mobile-atlas-input-area');
-    const mobileHeader = document.querySelector('.mobile-header');
-    const mobileTabBar = document.querySelector('.mobile-tab-bar');
     const quickActions = document.querySelectorAll('.mobile-atlas-quick-action');
     
     // Handle keyboard opening/closing with Visual Viewport API
@@ -281,27 +279,15 @@ const MobileNav = {
         const windowHeight = window.innerHeight;
         const keyboardHeight = Math.max(0, windowHeight - viewportHeight);
         
-        console.log('Viewport height:', viewportHeight, 'Keyboard height:', keyboardHeight);
+        console.log('Keyboard height:', keyboardHeight);
         
         if (keyboardHeight > 100) {
-          // Keyboard is open - adjust entire UI to fit in visible viewport
-          const headerHeight = 56;
-          const tabBarHeight = 48;
-          const availableHeight = viewportHeight - headerHeight - tabBarHeight;
-          
-          // Shrink chat container to fit visible viewport
-          chatContainer.style.height = `${availableHeight}px`;
-          chatContainer.style.top = `${headerHeight + tabBarHeight}px`;
-          
-          // Move input area up above keyboard
+          // Keyboard is open - move input area up above keyboard
           inputArea.style.bottom = `${keyboardHeight}px`;
-          
-          // Adjust messages padding
-          messagesContainer.style.paddingBottom = `${100}px`;
+          // Also adjust messages padding to account for moved input
+          messagesContainer.style.paddingBottom = `${keyboardHeight + 100}px`;
         } else {
-          // Keyboard is closed - restore full height
-          chatContainer.style.height = '';
-          chatContainer.style.top = '104px';
+          // Keyboard is closed - restore to bottom
           inputArea.style.bottom = '0px';
           messagesContainer.style.paddingBottom = '100px';
         }
